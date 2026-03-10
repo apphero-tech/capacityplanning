@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Sprint {
+  id             String   @id
+  name           String
+  startDate      String?
+  endDate        String?
+  durationWeeks  Int      @default(4)
+  workingDays    Int      @default(20)
+  focusFactor    Float    @default(0.9)
+  velocityProven Float?
+  velocityTarget Float?
+  isCurrent      Boolean  @default(false)
+  storyCount     Int?
+  storyPoints    Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model TeamMember {
+  id           String  @id @default(uuid())
+  lastName     String
+  firstName    String
+  role         String
+  location     String  @default("")
+  stream       String
+  ftPt         String  @default("FT")
+  hrsPerWeek   Float
+  allocation   Float   @default(1.0)
+  pod          String?
+  sheetRow     Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Story {
+  key         String  @id
+  summary     String
+  status      String
+  storyPoints Float?
+  pod         String?
+  dependency  String?
+  stream      String
+  sheetRow    Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PublicHoliday {
+  id       String @id @default(uuid())
+  date     String
+  name     String
+  country  String
+  sprint   String?
+  days     Float  @default(1)
+}
+
+model ProjectHoliday {
+  id       String @id @default(uuid())
+  date     String
+  name     String
+  sprint   String?
+  days     Float  @default(1)
+}
+
+model PtoEntry {
+  id        String @id @default(uuid())
+  who       String
+  location  String @default("")
+  team      String?
+  startDate String
+  endDate   String
+}
+
+model InitialCapacity {
+  id          String  @id @default(uuid())
+  lastName    String
+  firstName   String
+  role        String
+  location    String  @default("")
+  ftPt        String  @default("FT")
+  hrsPerWeek  Float
+  isActive    Boolean @default(true)
+  refinement  Float  @default(0)
+  design      Float  @default(0)
+  development Float  @default(0)
+  qa          Float  @default(0)
+  kt          Float  @default(0)
+  lead        Float  @default(0)
+  pmo         Float  @default(0)
+  other       Float  @default(0)
+}
+
+model GuideEntry {
+  id          String @id @default(uuid())
+  section     String
+  term        String
+  defaultVal  String?
+  description String?
+}
