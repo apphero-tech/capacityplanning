@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -98,57 +98,33 @@ function findSprintForDate(dateStr: string, sprints: Sprint[]): Sprint | null {
   return null;
 }
 
-/** Compute holiday summary for a given sprint. Excludes inactive members from PTO count. */
-function computeHolidaySummary(
+/** Per-person PTO breakdown for a sprint, clamped to sprint boundaries. */
+function computePtoByPerson(
   sprint: Sprint,
-  publicHolidays: PublicHoliday[],
-  projectHolidays: ProjectHoliday[],
   ptoEntries: PtoEntry[],
   isInactive?: (who: string) => boolean,
-): Record<string, number> {
-  if (!sprint.startDate || !sprint.endDate) return {};
+): { who: string; days: number }[] {
+  if (!sprint.startDate || !sprint.endDate) return [];
 
-  const countries = ["Canada", "Quebec", "India", "USA", "Venezuela"];
-  const summary: Record<string, number> = {};
-
-  for (const country of countries) {
-    const inherited = country === "Quebec" ? ["Canada", "Quebec"] : [country];
-    summary[country] = publicHolidays
-      .filter(
-        (h) =>
-          inherited.includes(h.country) &&
-          isDateInRange(h.date, sprint.startDate!, sprint.endDate!),
-      )
-      .reduce((sum, h) => sum + h.days, 0);
+  const byPerson: Record<string, number> = {};
+  for (const e of ptoEntries) {
+    if (isInactive?.(e.who)) continue;
+    if (!isOverlapping(e.startDate, e.endDate, sprint.startDate!, sprint.endDate!)) continue;
+    const overlapStart =
+      parseLocalDate(e.startDate)! > parseLocalDate(sprint.startDate!)!
+        ? e.startDate
+        : sprint.startDate!;
+    const overlapEnd =
+      parseLocalDate(e.endDate)! < parseLocalDate(sprint.endDate!)!
+        ? e.endDate
+        : sprint.endDate!;
+    const days = computeDurationDays(overlapStart, overlapEnd);
+    byPerson[e.who] = (byPerson[e.who] || 0) + days;
   }
 
-  summary["Project"] = projectHolidays
-    .filter(
-      (h) => h.date && isDateInRange(h.date, sprint.startDate!, sprint.endDate!),
-    )
-    .reduce((sum, h) => sum + h.days, 0);
-
-  // Personal (PTO) — skip inactive members
-  if (ptoEntries.length > 0) {
-    let totalPto = 0;
-    for (const e of ptoEntries) {
-      if (isInactive?.(e.who)) continue;
-      if (!isOverlapping(e.startDate, e.endDate, sprint.startDate!, sprint.endDate!))
-        continue;
-      const overlapStart =
-        parseLocalDate(e.startDate)! > parseLocalDate(sprint.startDate!)!
-          ? e.startDate
-          : sprint.startDate!;
-      const overlapEnd =
-        parseLocalDate(e.endDate)! < parseLocalDate(sprint.endDate!)!
-          ? e.endDate
-          : sprint.endDate!;
-      totalPto += computeDurationDays(overlapStart, overlapEnd);
-    }
-    if (totalPto > 0) summary["Personal"] = totalPto;
-  }
-
-  return summary;
+  return Object.entries(byPerson)
+    .map(([who, days]) => ({ who, days }))
+    .sort((a, b) => b.days - a.days);
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +157,7 @@ export function TimeOffView({
   teamMembers,
 }: TimeOffViewProps) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<string>("public");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
   const { sprints, selectedSprint } = useSprint();
@@ -223,19 +200,6 @@ export function TimeOffView({
     const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     return inactiveNamesNorm.has(norm(who));
   };
-
-  // Dynamic holiday summary for selected sprint
-  const holidaySummary = useMemo(() => {
-    if (!selectedSprint) return {};
-    return computeHolidaySummary(
-      selectedSprint,
-      publicHolidays,
-      projectHolidays,
-      ptoEntries,
-      isPtoInactive,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSprint, publicHolidays, projectHolidays, ptoEntries, inactiveNamesNorm]);
 
   const countries = useMemo(() => {
     const set = new Set<string>();
@@ -284,16 +248,19 @@ export function TimeOffView({
     [filteredPtoEntries, inactiveNamesNorm],
   );
 
+  // Per-person PTO breakdown (clamped to sprint boundaries)
+  const ptoByPerson = useMemo(() => {
+    if (!selectedSprint) return [];
+    return computePtoByPerson(selectedSprint, ptoEntries, isPtoInactive);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSprint, ptoEntries, inactiveNamesNorm]);
+
+  // Total PTO days — derived from the clamped per-person breakdown
   const totalPtoDays = useMemo(
-    () =>
-      activePtoEntries.reduce(
-        (sum, e) => sum + computeDurationDays(e.startDate, e.endDate),
-        0,
-      ),
-    [activePtoEntries],
+    () => ptoByPerson.reduce((sum, p) => sum + p.days, 0),
+    [ptoByPerson],
   );
 
-  // Sprint-specific PTO stats (from old availability view)
   const sprintPtoStats = useMemo(() => {
     const uniquePeople = new Set(activePtoEntries.map((e) => e.who)).size;
     return { entries: activePtoEntries.length, days: totalPtoDays, people: uniquePeople };
@@ -426,7 +393,10 @@ export function TimeOffView({
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Public Holidays */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
+        <Card
+          className={`border-white/[0.06] bg-slate-900/50 cursor-pointer transition-shadow ${activeTab === "public" ? "ring-1 ring-blue-500/40" : ""}`}
+          onClick={() => setActiveTab("public")}
+        >
           <CardContent className="flex items-start gap-4 pt-6">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/15">
               <Globe className="size-5 text-blue-400" />
@@ -436,7 +406,7 @@ export function TimeOffView({
                 Public Holidays
               </p>
               <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalPublicDays}
+                {totalPublicDays} <span className="text-sm font-medium text-slate-400">days</span>
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
                 {filteredPublicHolidays.length} {filteredPublicHolidays.length === 1 ? "holiday" : "holidays"}
@@ -445,28 +415,34 @@ export function TimeOffView({
           </CardContent>
         </Card>
 
-        {/* Project Holidays */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
+        {/* Project Closures */}
+        <Card
+          className={`border-white/[0.06] bg-slate-900/50 cursor-pointer transition-shadow ${activeTab === "project" ? "ring-1 ring-purple-500/40" : ""}`}
+          onClick={() => setActiveTab("project")}
+        >
           <CardContent className="flex items-start gap-4 pt-6">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/15">
               <Building2 className="size-5 text-purple-400" />
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Project Holidays
+                Project Closures
               </p>
               <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalProjectDays}
+                {totalProjectDays} <span className="text-sm font-medium text-slate-400">days</span>
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                {filteredProjectHolidays.length} {filteredProjectHolidays.length === 1 ? "holiday" : "holidays"}
+                {filteredProjectHolidays.length} {filteredProjectHolidays.length === 1 ? "closure" : "closures"}
               </p>
             </div>
           </CardContent>
         </Card>
 
         {/* Personal Time Off */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
+        <Card
+          className={`border-white/[0.06] bg-slate-900/50 cursor-pointer transition-shadow ${activeTab === "personal" ? "ring-1 ring-amber-500/40" : ""}`}
+          onClick={() => setActiveTab("personal")}
+        >
           <CardContent className="flex items-start gap-4 pt-6">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
               <UserX className="size-5 text-amber-400" />
@@ -476,7 +452,7 @@ export function TimeOffView({
                 Personal Time Off
               </p>
               <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalPtoDays}
+                {totalPtoDays} <span className="text-sm font-medium text-slate-400">person-days</span>
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
                 {sprintPtoStats.people} {sprintPtoStats.people === 1 ? "person" : "people"} affected
@@ -493,94 +469,21 @@ export function TimeOffView({
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Total Days Lost
+                Total Days Off
               </p>
               <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalPublicDays + totalProjectDays + totalPtoDays}
+                {totalPublicDays + totalProjectDays + totalPtoDays} <span className="text-sm font-medium text-slate-400">days</span>
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                ~{(totalPublicDays + totalProjectDays + totalPtoDays) * 8} hours &middot; {teamMembers.length} team members
+                {teamMembers.filter((m) => m.isActive).length} active team members
               </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Holiday Impact per country */}
-      {selectedSprint && Object.keys(holidaySummary).length > 0 && (
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardHeader>
-            <CardTitle className="text-slate-100">
-              Holiday Impact
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Days lost per country/category in {selectedSprint.name}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-4">
-              {Object.entries(holidaySummary).map(([key, days]) => (
-                <div
-                  key={key}
-                  className="flex flex-col items-center gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3"
-                >
-                  <Badge
-                    variant="colored"
-                    interactive
-                    active={countryFilter === key}
-                    onClick={() => setCountryFilter(countryFilter === key ? "all" : key)}
-                    className={`${getBadgeClasses("country", key)} text-[10px] px-1.5 py-0`}
-                  >
-                    {key}
-                  </Badge>
-                  <span className="text-lg font-bold text-slate-100">
-                    {days}
-                  </span>
-                  <span className="text-[10px] text-slate-500">
-                    {days === 1 ? "day" : "days"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Tabs */}
-      <Tabs defaultValue="public" className="w-full">
-        <TabsList className="bg-slate-800/50">
-          <TabsTrigger value="public" className="gap-1.5">
-            <Globe className="size-3.5" />
-            Public
-            <Badge
-              variant="outline"
-              className="ml-1 h-5 border-white/10 bg-white/5 text-[10px] text-slate-400 px-1.5"
-            >
-              {filteredPublicHolidays.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="project" className="gap-1.5">
-            <Building2 className="size-3.5" />
-            Project
-            <Badge
-              variant="outline"
-              className="ml-1 h-5 border-white/10 bg-white/5 text-[10px] text-slate-400 px-1.5"
-            >
-              {filteredProjectHolidays.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="personal" className="gap-1.5">
-            <UserX className="size-3.5" />
-            Personal
-            <Badge
-              variant="outline"
-              className="ml-1 h-5 border-white/10 bg-white/5 text-[10px] text-slate-400 px-1.5"
-            >
-              {filteredPtoEntries.length}
-            </Badge>
-          </TabsTrigger>
-        </TabsList>
-
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         {/* Public Holidays Tab */}
         <TabsContent value="public">
           <Card className="border-white/[0.06] bg-slate-900/50">
@@ -690,13 +593,13 @@ export function TimeOffView({
           </Card>
         </TabsContent>
 
-        {/* Project Holidays Tab */}
+        {/* Project Closures Tab */}
         <TabsContent value="project">
           <Card className="border-white/[0.06] bg-slate-900/50">
             <CardHeader>
-              <CardTitle className="text-slate-100">Project Holidays</CardTitle>
+              <CardTitle className="text-slate-100">Project Closures</CardTitle>
               <CardDescription className="text-slate-400">
-                {filteredProjectHolidays.length} holidays &mdash;{" "}
+                {filteredProjectHolidays.length} closures &mdash;{" "}
                 {totalProjectDays} total days
                 {selectedSprint && (
                   <span className="text-slate-500">
@@ -710,7 +613,7 @@ export function TimeOffView({
                 <TableHeader>
                   <TableRow className="border-white/[0.06] hover:bg-transparent">
                     <TableHead className="text-slate-400">Date</TableHead>
-                    <TableHead className="text-slate-400">Holiday Name</TableHead>
+                    <TableHead className="text-slate-400">Name</TableHead>
                     <TableHead className="text-slate-400">Sprint</TableHead>
                     <TableHead className="text-right text-slate-400">Days</TableHead>
                   </TableRow>
@@ -722,7 +625,7 @@ export function TimeOffView({
                         colSpan={4}
                         className="text-center text-slate-500 py-8"
                       >
-                        No project holidays{selectedSprint && ` in ${selectedSprint.name}`}.
+                        No project closures{selectedSprint && ` in ${selectedSprint.name}`}.
                       </TableCell>
                     </TableRow>
                   ) : (

@@ -93,14 +93,24 @@ export const STREAM_BADGE_STYLES: Record<string, string> = {
   "X-OUT":  "bg-[#686260]/10 text-[#686260] border-[#686260]/20",
 };
 
+/** Sprint status — business labels used across the app. */
+export const SPRINT_MODE_LABELS: Record<string, string> = {
+  past:     "Past",
+  previous: "Previous Sprint — Testing",
+  current:  "Current Sprint — Development",
+  next:     "Next Sprint — Refining & Design",
+  planning: "Future Sprint — Planning",
+  future:   "Future",
+};
+
 /** Sprint status badges. */
 export const SPRINT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  past:     { label: "Past",     className: "bg-slate-700/30 text-slate-500 border-slate-700/50" },
-  previous: { label: "Previous", className: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  current:  { label: "Current",  className: "bg-[#E31837]/20 text-[#E31837] border-[#E31837]/30" },
-  next:     { label: "Next",     className: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
-  planning: { label: "Planning", className: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
-  future:   { label: "Future",   className: "bg-slate-700/30 text-slate-500 border-slate-700/50" },
+  past:     { label: SPRINT_MODE_LABELS.past,     className: "bg-slate-700/30 text-slate-500 border-slate-700/50" },
+  previous: { label: SPRINT_MODE_LABELS.previous, className: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  current:  { label: SPRINT_MODE_LABELS.current,  className: "bg-[#E31837]/20 text-[#E31837] border-[#E31837]/30" },
+  next:     { label: SPRINT_MODE_LABELS.next,      className: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+  planning: { label: SPRINT_MODE_LABELS.planning,  className: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
+  future:   { label: SPRINT_MODE_LABELS.future,    className: "bg-slate-700/30 text-slate-500 border-slate-700/50" },
 };
 
 /** Capacity coverage status badges. */
@@ -116,8 +126,6 @@ export const COUNTRY_BADGE_STYLES: Record<string, string> = {
   Canada:    "bg-red-500/15 text-red-400 border-red-500/30",
   Quebec:    "bg-[#E31837]/15 text-[#E31837] border-[#E31837]/30",
   India:     "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  USA:       "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  Venezuela: "bg-violet-500/15 text-violet-400 border-violet-500/30",
   Project:   "bg-slate-500/15 text-slate-400 border-slate-500/30",
   Personal:  "bg-pink-500/15 text-pink-400 border-pink-500/30",
 };

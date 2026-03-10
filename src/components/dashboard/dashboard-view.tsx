@@ -8,7 +8,7 @@ import {
   computeDevProjection,
 } from "@/lib/capacity-engine";
 import type { SprintForecast } from "@/lib/capacity-engine";
-import { STREAM_LABELS } from "@/lib/constants";
+import { STREAM_LABELS, SPRINT_MODE_LABELS } from "@/lib/constants";
 import { getBadgeClasses } from "@/lib/badge-utils";
 import { formatDateRangeShort } from "@/lib/date-utils";
 import type { InitialCapacity, SprintStory, SprintStatus } from "@/types";
@@ -66,7 +66,7 @@ const MODE_META: Record<SprintMode, {
   accent: { border: string; iconBg: string; iconText: string; badgeBg: string; badgeText: string };
 }> = {
   testing: {
-    label: "Testing & QA",
+    label: SPRINT_MODE_LABELS.previous,
     description: "Track QA validation and test results.",
     icon: FlaskConical,
     accent: {
@@ -76,7 +76,7 @@ const MODE_META: Record<SprintMode, {
     },
   },
   development: {
-    label: "Development",
+    label: SPRINT_MODE_LABELS.current,
     description: "Active sprint — track delivery progress.",
     icon: CalendarDays,
     accent: {
@@ -86,7 +86,7 @@ const MODE_META: Record<SprintMode, {
     },
   },
   refinement: {
-    label: "Next Sprint",
+    label: SPRINT_MODE_LABELS.next,
     description: "Refinement, design, and development capacity planning.",
     icon: Pencil,
     accent: {
@@ -96,7 +96,7 @@ const MODE_META: Record<SprintMode, {
     },
   },
   capacity: {
-    label: "Capacity Planning",
+    label: SPRINT_MODE_LABELS.planning,
     description: "Verify data inputs to ensure accurate capacity projections.",
     icon: Compass,
     accent: {
@@ -132,6 +132,7 @@ interface DashboardViewProps {
 export function DashboardView({ storiesBySprint }: DashboardViewProps) {
   const {
     selectedSprint: sprint,
+    sprints,
     forecasts,
     forecastMap,
     initialCapacities,
@@ -139,6 +140,8 @@ export function DashboardView({ storiesBySprint }: DashboardViewProps) {
     projectHolidays,
     ptoEntries,
   } = useSprint();
+
+  const currentSprint = sprints.find((s) => s.status === "current") ?? null;
 
   const computed = useMemo(() => {
     if (!sprint) return null;
@@ -230,21 +233,7 @@ export function DashboardView({ storiesBySprint }: DashboardViewProps) {
 
   return (
     <>
-      {/* ---- Mode banner (non-development) OR backlog warning ---- */}
-
-      {mode !== "capacity" && mode !== "development" && computed.storiesCount === 0 && (
-        <Link
-          href="/backlog"
-          className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-sm text-amber-400 transition-colors hover:bg-amber-500/10"
-        >
-          <AlertTriangle className="size-4 shrink-0" />
-          <span>
-            No backlog imported for <span className="font-medium">{sprint.name}</span>.{" "}
-            <span className="underline underline-offset-2">Import a backlog</span> to enable
-            {mode === "testing" ? " QA tracking" : " sprint preparation"}.
-          </span>
-        </Link>
-      )}
+      {/* ---- Mode banner ---- */}
 
       {mode === "development" && computed.storiesCount === 0 && (
         <Link
@@ -268,21 +257,45 @@ export function DashboardView({ storiesBySprint }: DashboardViewProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <p className="text-[13px] font-medium text-slate-200">{meta.label}</p>
-                <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${a.badgeBg} ${a.badgeText}`}>
-                  {sprint.name}
-                </span>
-                <span className="text-xs text-slate-600">
-                  {formatDateRangeShort(sprint.startDate, sprint.endDate)}
-                </span>
+                <p className="text-[13px] font-medium text-slate-200">
+                  {mode === "testing"
+                    ? `Testing ${sprint.name} build`
+                    : meta.label}
+                </p>
+                {mode === "testing" && currentSprint && (
+                  <span className="text-xs text-slate-600">
+                    during {currentSprint.name} ({formatDateRangeShort(currentSprint.startDate, currentSprint.endDate)})
+                  </span>
+                )}
+                {mode !== "testing" && (
+                  <>
+                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${a.badgeBg} ${a.badgeText}`}>
+                      {sprint.name}
+                    </span>
+                    <span className="text-xs text-slate-600">
+                      {formatDateRangeShort(sprint.startDate, sprint.endDate)}
+                    </span>
+                  </>
+                )}
               </div>
               {mode === "capacity" && (
                 <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
                   <ReadinessItem label="Public holidays" ok={computed.hasPublicHolidays} href="/time-off" />
-                  <ReadinessItem label="Project holidays" ok={computed.hasProjectHolidays} href="/time-off" />
-                  <ReadinessItem label="PTO entries" ok={computed.hasPtoEntries} href="/time-off" />
+                  <ReadinessItem label="Project closures" ok={computed.hasProjectHolidays} href="/time-off" />
+                  <ReadinessItem label="Personal time off" ok={computed.hasPtoEntries} href="/time-off" />
                   <ReadinessItem label="Allocations" ok={computed.hasAllocations} href="/allocations" />
                 </div>
+              )}
+              {computed.storiesCount === 0 && mode !== "capacity" && (
+                <Link
+                  href="/backlog"
+                  className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                >
+                  <AlertTriangle className="size-3 shrink-0" />
+                  <span>
+                    No backlog for {sprint.name} — <span className="underline underline-offset-2">import</span>
+                  </span>
+                </Link>
               )}
             </div>
           </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSprint } from "@/contexts/sprint-context";
 import Link from "next/link";
 import { RefreshCw, Clock, X } from "lucide-react";
+import { SPRINT_MODE_LABELS } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,11 +23,7 @@ interface BacklogReminderProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const STATUS_LABEL: Record<string, string> = {
-  previous: "Testing & QA",
-  current: "Development",
-  next: "Next Sprint",
-};
+const STATUS_LABEL = SPRINT_MODE_LABELS;
 
 function getRelativeTime(dateStr: string | null): string {
   if (!dateStr) return "never imported";

@@ -6,10 +6,10 @@ import { insertPtoEntry } from "@/lib/data";
 // Column detection patterns (flexible, case-insensitive)
 // ---------------------------------------------------------------------------
 
-const WHO_PATTERNS = [/^who$/i, /^name$/i, /^nom$/i, /^employee$/i, /^member$/i, /^person$/i, /^team\s*member$/i];
+const WHO_PATTERNS = [/^who$/i, /^name$/i, /^nom$/i, /^employee$/i, /^member$/i, /^person$/i, /^team\s*member$/i, /^assigned/i];
 const LOCATION_PATTERNS = [/^location$/i, /^country$/i, /^pays$/i, /^lieu$/i, /^site$/i];
 const START_PATTERNS = [/^start/i, /^from$/i, /^d[eé]but$/i, /^begin/i];
-const END_PATTERNS = [/^end/i, /^to$/i, /^fin$/i, /^until$/i, /^return$/i];
+const END_PATTERNS = [/^end/i, /^to$/i, /^fin$/i, /^until$/i, /^return$/i, /^due/i];
 const TEAM_PATTERNS = [/^team$/i, /^[eé]quipe$/i, /^group$/i];
 
 function matchesAny(value: string, patterns: RegExp[]): boolean {

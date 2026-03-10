@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 
 import type { SprintStatus } from "@/types"
+import { SPRINT_MODE_LABELS } from "@/lib/constants"
 
 const statusDotColors: Record<SprintStatus, string> = {
   past: "bg-slate-600",
@@ -37,14 +38,7 @@ const statusDotColors: Record<SprintStatus, string> = {
   future: "bg-slate-600",
 }
 
-const statusLabels: Record<SprintStatus, string> = {
-  past: "Past",
-  previous: "Testing & QA",
-  current: "Current",
-  next: "Next Sprint",
-  planning: "Capacity",
-  future: "Future",
-}
+const statusLabels = SPRINT_MODE_LABELS
 
 const pageConfig: Record<string, { title: string; icon: React.ElementType }> = {
   "/": { title: "Dashboard", icon: LayoutDashboard },

@@ -748,7 +748,7 @@ export function buildHolidaysSheet(
   addBlankRow(sheet);
 
   // --- Project Holidays ---
-  applySubtitleRow(sheet, "Project Holidays", colCount);
+  applySubtitleRow(sheet, "Project Closures", colCount);
 
   const projHeaders = ["Date", "Name", "Sprint", "Days", "", ""];
   const projHeaderRow = sheet.addRow(projHeaders);
@@ -759,7 +759,7 @@ export function buildHolidaysSheet(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (filteredProject.length === 0) {
-    const emptyRow = sheet.addRow(["No project holidays in selected period"]);
+    const emptyRow = sheet.addRow(["No project closures in selected period"]);
     sheet.mergeCells(emptyRow.number, 1, emptyRow.number, colCount);
     emptyRow.getCell(1).font = { italic: true, size: 10, color: { argb: "FF999999" } };
   } else {

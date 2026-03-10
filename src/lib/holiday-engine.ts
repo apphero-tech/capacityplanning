@@ -38,9 +38,9 @@ export function getHolidayDaysForMember(
 ): number {
   if (!sprint.startDate || !sprint.endDate) return 0;
 
-  // Quebec inherits Canada holidays + its own
-  const countries = location === "Quebec"
-    ? ["Canada", "Quebec"]
+  // Quebec is standalone; USA and Venezuela follow Quebec holidays
+  const countries = (location === "Venezuela" || location === "USA")
+    ? ["Quebec"]
     : [location];
 
   const pubDays = publicHolidays
@@ -88,11 +88,11 @@ export function getHolidaySummaryBySprint(
 ): Record<string, number> {
   if (!sprint.startDate || !sprint.endDate) return {};
 
-  const countries = ["Canada", "Quebec", "India", "USA", "Venezuela"];
+  const countries = ["Canada", "Quebec", "India"];
   const summary: Record<string, number> = {};
 
   for (const country of countries) {
-    const inherited = country === "Quebec" ? ["Canada", "Quebec"] : [country];
+    const inherited = [country];
     summary[country] = publicHolidays
       .filter(h =>
         inherited.includes(h.country) &&
