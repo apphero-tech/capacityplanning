@@ -153,16 +153,18 @@ export function CapacityView({ storiesBySprint }: CapacityViewProps) {
     return capacityRows.filter((r) => r.stream === streamFilter);
   }, [capacityRows, streamFilter]);
 
-  // DEV projection numbers drive the hero card.
+  // DEV projection numbers drive the hero card. Practical delivery =
+  // netDevHrs × velocity — the real throughput after accounting for
+  // allocations and days off. The aspirational target (avg × progress)
+  // is shown alongside but does NOT drive the delta: under/over-capacity
+  // must be a statement about what the team can actually produce.
   const devRow = capacityRows.find((r) => r.stream === "3-DEV");
   const devHours = devRow?.totalHrs ?? 0;
   const devScopeSP = devRow?.scopeSP ?? 0;
 
-  // Prefer the target-based projection (moving avg × (1 + progress factor))
-  // when we have historical data; fall back to velocity × hours otherwise.
   const avgCompletedSP = useMemo(() => {
     const withDone = allSprints
-      .map((s) => sprint && s.id !== sprint.id ? s : null)
+      .map((s) => (sprint && s.id !== sprint.id ? s : null))
       .filter(Boolean)
       .map((s) => s!.completedSP)
       .filter((v): v is number => v != null && v > 0);
@@ -174,20 +176,9 @@ export function CapacityView({ storiesBySprint }: CapacityViewProps) {
   const targetSP =
     avgCompletedSP != null ? avgCompletedSP * (1 + progressFactor) : null;
 
-  // When a target exists, the delta reads "target - scope" which is the
-  // user's actual planning question ("can we fit this scope in what past
-  // velocity tells us we deliver?"). Falls back to the velocity-based gap
-  // when no history is available.
-  const useTarget = targetSP != null;
-  const devProjectedSP = useTarget ? targetSP : devProjection.projectedSPProven;
-  const devGapSP = useTarget
-    ? targetSP - devScopeSP
-    : devProjection.gapProven;
-  const devCoverage = useTarget
-    ? devScopeSP > 0
-      ? (targetSP / devScopeSP) * 100
-      : 0
-    : devProjection.coverageProven * 100;
+  const devProjectedSP = devProjection.projectedSPProven;
+  const devGapSP = devProjection.gapProven;
+  const devCoverage = devProjection.coverageProven * 100;
   const deltaLabel =
     devGapSP > 0
       ? `+${fmt(devGapSP)} SP of room`
@@ -231,26 +222,19 @@ export function CapacityView({ storiesBySprint }: CapacityViewProps) {
 
         <div className="mt-4 grid gap-8 sm:grid-cols-3">
           <div>
-            <p className="text-[11px] font-medium text-slate-500">
-              {useTarget ? "Expected delivery" : "DEV capacity"}
-            </p>
+            <p className="text-[11px] font-medium text-slate-500">Practical delivery</p>
             <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-100">
-              {useTarget ? (
-                <>
-                  {fmt(targetSP!)}{" "}
-                  <span className="text-base font-normal text-slate-500">SP</span>
-                </>
-              ) : (
-                <>
-                  {fmt(devHours)}{" "}
-                  <span className="text-base font-normal text-slate-500">hrs</span>
-                </>
-              )}
+              {fmt(devProjectedSP)}{" "}
+              <span className="text-base font-normal text-slate-500">SP</span>
             </p>
             <p className="mt-1 text-[12px] text-slate-500">
-              {useTarget
-                ? `avg ${fmt(avgCompletedSP!)} SP × ${progressFactor >= 0 ? "+" : ""}${fmt(progressFactor * 100)}% progress`
-                : `proj. ${fmt(devProjectedSP)} SP @ vel ${devProjection.velocityProven.toFixed(2)}`}
+              {fmt(devHours)} hrs × vel {devProjection.velocityProven.toFixed(2)}
+              {targetSP != null && (
+                <>
+                  {" · target "}
+                  <span className="text-slate-300">{fmt(targetSP)} SP</span>
+                </>
+              )}
             </p>
           </div>
           <div>

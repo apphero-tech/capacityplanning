@@ -82,26 +82,19 @@ export function DashboardView({ storiesBySprint }: Props) {
       scope,
     );
 
-    // Match the Capacity page: prefer target SP (avg × progress) when we
-    // have history; fall back to velocity × hours when we don't.
-    const useTarget = targetSP != null;
-    const projectedSP = useTarget ? targetSP : dp.projectedSPProven;
-    const gap = useTarget ? targetSP - scope : dp.gapProven;
-    const coverage = useTarget
-      ? scope > 0
-        ? (targetSP / scope) * 100
-        : 0
-      : dp.coverageProven * 100;
-
+    // Practical capacity = net DEV hours × proven velocity. This is what
+    // the team can actually deliver given the allocations and the days
+    // off logged for this sprint. The gap/coverage read against this —
+    // not the aspirational target — because over/under-capacity is a
+    // statement about reality, not ambition.
     return {
       hours: dp.netDevCapacity,
       scopeSP: scope,
-      projectedSP,
-      gap,
-      coverage,
+      projectedSP: dp.projectedSPProven,
+      gap: dp.gapProven,
+      coverage: dp.coverageProven * 100,
       velocity: dp.velocityProven,
       stories: stories.length,
-      useTarget,
     };
   }, [
     sprint,
@@ -111,21 +104,20 @@ export function DashboardView({ storiesBySprint }: Props) {
     projectHolidays,
     ptoEntries,
     selectedForecast,
-    targetSP,
   ]);
 
-  // Next few sprints with projected SP, for a compact "what's coming" view.
+  // Sprints still open for planning. Current is excluded — its scope is
+  // frozen. Shows practical projection (net DEV hrs × velocity) so the
+  // number reflects what the team can actually deliver.
   const upcoming = useMemo(() => {
     return allSprints
       .filter((s) => !s.isDemo)
-      .filter(
-        (s) => s.status === "current" || s.status === "next" || s.status === "planning",
-      )
+      .filter((s) => s.status === "next" || s.status === "planning")
       .slice(0, 3)
-      .map((s) => {
-        const f = forecastMap.get(s.id);
-        return { sprint: s, projectedSP: f?.projectedSPProven ?? null };
-      });
+      .map((s) => ({
+        sprint: s,
+        projectedSP: forecastMap.get(s.id)?.projectedSPProven ?? null,
+      }));
   }, [allSprints, forecastMap]);
 
   if (!sprint) {
@@ -153,26 +145,19 @@ export function DashboardView({ storiesBySprint }: Props) {
 
           <div className="mt-5 grid gap-8 sm:grid-cols-3">
             <div>
-              <p className="text-[11px] font-medium text-slate-500">
-                {devStats.useTarget ? "Expected delivery" : "DEV capacity"}
-              </p>
+              <p className="text-[11px] font-medium text-slate-500">Practical delivery</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-100">
-                {devStats.useTarget ? (
-                  <>
-                    {fmt(devStats.projectedSP)}{" "}
-                    <span className="text-sm font-normal text-slate-500">SP</span>
-                  </>
-                ) : (
-                  <>
-                    {fmt(devStats.hours)}{" "}
-                    <span className="text-sm font-normal text-slate-500">hrs</span>
-                  </>
-                )}
+                {fmt(devStats.projectedSP)}{" "}
+                <span className="text-sm font-normal text-slate-500">SP</span>
               </p>
               <p className="mt-1 text-[12px] text-slate-500">
-                {devStats.useTarget
-                  ? `avg ${fmt(avgCompletedSP!)} SP × ${progressFactor >= 0 ? "+" : ""}${fmt(progressFactor * 100)}% progress`
-                  : `proj. ${fmt(devStats.projectedSP)} SP · vel ${devStats.velocity.toFixed(2)}`}
+                {fmt(devStats.hours)} hrs × vel {devStats.velocity.toFixed(2)}
+                {targetSP != null && (
+                  <>
+                    {" · target "}
+                    <span className="text-slate-300">{fmt(targetSP)} SP</span>
+                  </>
+                )}
               </p>
             </div>
             <div>

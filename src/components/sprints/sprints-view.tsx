@@ -48,7 +48,6 @@ export function SprintsView() {
     selectedSprint,
     allSprints: sprints,
     forecastMap,
-    selectedForecast,
   } = useSprint();
   const totalSprints = sprints.length;
 
@@ -57,22 +56,47 @@ export function SprintsView() {
     if (ok) router.refresh();
   }
 
-  // Total projected SP across future sprints (current + next + future). Demo
-  // sprints are excluded — they aren't planned for delivery.
+  // Target SP for upcoming sprints = moving-average of completed SP across
+  // every sprint with data, times (1 + progressFactor). Same math as
+  // Dashboard, Capacity and Velocity so every page agrees on the number.
+  const { targetSP } = useMemo(() => {
+    const done = sprints
+      .map((s) => s.completedSP)
+      .filter((v): v is number => v != null && v > 0);
+    if (done.length === 0) return { avg: null as number | null, targetSP: null as number | null };
+    const avg = done.reduce((sum, v) => sum + v, 0) / done.length;
+    const pf = sprints[0]?.progressFactor ?? 0;
+    return { avg, targetSP: avg * (1 + pf) };
+  }, [sprints]);
+
+  // For any non-demo sprint: actual completedSP if closed, otherwise the
+  // practical projection (netDevHrs × velocity) — the real capacity after
+  // allocations and days off. Target lives alongside as an aspiration but
+  // the number in the table is what the team can actually produce.
+  function sprintExpectedSP(
+    s: (typeof sprints)[number],
+    fallbackProjected: number | null | undefined,
+  ): number | null {
+    if (s.isDemo) return null;
+    if (s.completedSP != null && s.completedSP > 0) return s.completedSP;
+    return fallbackProjected ?? null;
+  }
+
+  // Total practical delivery across upcoming sprints (the ones still open
+  // for planning). "current" is excluded — its scope is already locked in.
   const futureProjectedSP = useMemo(() => {
     return sprints
       .filter(
         (s) =>
           !s.isDemo &&
-          (s.status === "current" ||
-            s.status === "next" ||
+          (s.status === "next" ||
             s.status === "planning" ||
             s.status === "future"),
       )
-      .reduce((sum, s) => {
-        const f = forecastMap.get(s.id);
-        return sum + (f?.projectedSPProven ?? 0);
-      }, 0);
+      .reduce(
+        (sum, s) => sum + (forecastMap.get(s.id)?.projectedSPProven ?? 0),
+        0,
+      );
   }, [sprints, forecastMap]);
 
   // Sprint Plan — Gantt chart data
@@ -134,17 +158,29 @@ export function SprintsView() {
           { label: "Total sprints", value: totalSprints },
           { label: "Selected", value: selectedSprint?.name ?? "—", muted: !selectedSprint },
           {
-            label: "Projected SP",
-            value: selectedForecast ? fmt(selectedForecast.projectedSPProven, 0) : "—",
-            hint: selectedForecast
-              ? `${fmt(selectedForecast.netDevHrs)} dev hrs × ${fmt(selectedForecast.velocityProven, 2)} vel`
-              : undefined,
-            muted: !selectedForecast,
+            label: "Expected delivery",
+            value:
+              selectedSprint != null
+                ? (() => {
+                    const expected = sprintExpectedSP(
+                      selectedSprint,
+                      forecastMap.get(selectedSprint.id)?.projectedSPProven,
+                    );
+                    return expected != null ? `${fmt(expected, 0)} SP` : "—";
+                  })()
+                : "—",
+            hint:
+              selectedSprint?.completedSP != null && selectedSprint.completedSP > 0
+                ? "actual"
+                : targetSP != null
+                  ? "historical target"
+                  : undefined,
+            muted: !selectedSprint,
           },
           {
             label: "Remaining capacity",
             value: `${fmt(futureProjectedSP, 0)} SP`,
-            hint: "current + future",
+            hint: "upcoming sprints",
           },
         ]}
       />
@@ -261,7 +297,8 @@ export function SprintsView() {
 
                   {/* Sprint bars */}
                   {sprintPlan.rows.map((s, i) => {
-                    const sp = s.forecast?.projectedSPProven ?? 0;
+                    const sp =
+                      sprintExpectedSP(s, s.forecast?.projectedSPProven) ?? 0;
                     return (
                       <div
                         key={s.id}
@@ -309,7 +346,8 @@ export function SprintsView() {
                 {/* SP column */}
                 <div className="w-14 shrink-0">
                   {sprintPlan.rows.map((s) => {
-                    const sp = s.forecast?.projectedSPProven ?? 0;
+                    const sp =
+                      sprintExpectedSP(s, s.forecast?.projectedSPProven) ?? 0;
                     return (
                       <div
                         key={s.id}
@@ -361,7 +399,7 @@ export function SprintsView() {
                   DEV hrs
                 </TableHead>
                 <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
-                  Projected SP
+                  Delivery SP
                 </TableHead>
                 <TableHead className="text-[11px] font-medium text-slate-500 text-center w-28">
                   Status
@@ -436,17 +474,24 @@ export function SprintsView() {
                         )}
                       </TableCell>
 
-                      {/* Projected SP (suppressed for demo sprints) */}
+                      {/* Expected SP — actual for closed sprints, target for upcoming */}
                       <TableCell className="text-right">
-                        {s.isDemo ? (
-                          <span className="text-slate-600">&mdash;</span>
-                        ) : forecast && forecast.projectedSPProven > 0 ? (
-                          <span className="font-semibold text-emerald-400">
-                            {fmt(forecast.projectedSPProven, 0)}
-                          </span>
-                        ) : (
-                          <span className="text-slate-600">&mdash;</span>
-                        )}
+                        {(() => {
+                          const expected = sprintExpectedSP(s, forecast?.projectedSPProven);
+                          if (expected == null) {
+                            return <span className="text-slate-600">&mdash;</span>;
+                          }
+                          const isActual =
+                            s.completedSP != null && s.completedSP > 0;
+                          return (
+                            <span
+                              className={`font-semibold ${isActual ? "text-slate-100" : "text-emerald-400"}`}
+                              title={isActual ? "Actual completedSP" : "Historical target"}
+                            >
+                              {fmt(expected, 0)}
+                            </span>
+                          );
+                        })()}
                       </TableCell>
 
                       {/* Status */}
