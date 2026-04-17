@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     sheet: string;
     organization: string;
     imported: number;
-    importedInactive: number;
+    skippedNoRole: number;
     skippedEmpty: number;
     rows: number;
   }[] = [];
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
     const col = buildColumnIndex(ws, headerRow);
     const organization = ws.name.trim();
     let imported = 0;
-    let importedInactive = 0;
+    let skippedNoRole = 0;
     let skippedEmpty = 0;
     let totalRows = 0;
 
@@ -195,16 +195,16 @@ export async function POST(request: NextRequest) {
       }
 
       totalRows++;
-      const rawRole = cellString(getCell(ws, r, col.role)).trim();
-      const comments = cellString(getCell(ws, r, col.comments)).trim();
-
-      // Rows with no role are usually placeholders for future resources
-      // (e.g. a planned SFMC team flagged by a "Comments" cell). Import them
-      // as inactive so they're visible on the Team page but don't inflate
-      // the capacity calculation. The role defaults to the Comments text
-      // when present, or "TBD" otherwise.
-      const isActive = rawRole.length > 0;
-      const role = rawRole || comments || "TBD";
+      const role = cellString(getCell(ws, r, col.role)).trim();
+      // Rows without a role are placeholders (e.g. future SFMC team — flagged
+      // by a "Comments" cell in the xlsx). Skip them: one line = one actual
+      // resource. When those people join, their role gets filled in the
+      // source sheet and the next import will pick them up.
+      if (!role) {
+        skippedNoRole++;
+        errors.push({ sheet: ws.name, row: r, reason: "Missing role — likely placeholder, skipped" });
+        continue;
+      }
 
       const ftPtRaw = cellString(getCell(ws, r, col.ftPt)).trim().toUpperCase();
       const ftPt = ftPtRaw === "PT" ? "PT" : "FT";
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
           stream: cellString(getCell(ws, r, col.stream)).trim(),
           ftPt,
           hrsPerWeek: toNumber(getCell(ws, r, col.hrsPerWeek)),
-          isActive,
+          isActive: true,
           refinement: toPercent(getCell(ws, r, col.refinement)),
           design: toPercent(getCell(ws, r, col.design)),
           development: toPercent(getCell(ws, r, col.development)),
@@ -233,7 +233,6 @@ export async function POST(request: NextRequest) {
           other: toPercent(getCell(ws, r, col.other)),
         });
         imported++;
-        if (!isActive) importedInactive++;
       } catch (e) {
         errors.push({
           sheet: ws.name,
@@ -247,7 +246,7 @@ export async function POST(request: NextRequest) {
       sheet: ws.name,
       organization,
       imported,
-      importedInactive,
+      skippedNoRole,
       skippedEmpty,
       rows: totalRows,
     });

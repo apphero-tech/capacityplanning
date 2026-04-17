@@ -22,6 +22,8 @@ type PerSheet = {
   rows: number;
 };
 
+// Keep in sync with API route.
+
 type ImportResult = {
   success: boolean;
   imported: number;
@@ -194,7 +196,7 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
                     </div>
                     {p.skippedNoRole > 0 && (
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        {p.skippedNoRole} row{p.skippedNoRole !== 1 ? "s" : ""} skipped (no role)
+                        {p.skippedNoRole} placeholder row{p.skippedNoRole !== 1 ? "s" : ""} skipped (no role — not a resource yet)
                       </p>
                     )}
                   </li>

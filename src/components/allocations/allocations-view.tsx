@@ -561,10 +561,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
               <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
                 Organization
               </p>
-              <div className="flex items-center gap-2">
-                <ImportAllocationsDialog onImported={handleAdd} />
-                <AddMemberDialog onAdd={handleAdd} />
-              </div>
+              <ImportAllocationsDialog onImported={handleAdd} />
             </div>
             {/* Org toggle pills — always show All + known orgs */}
             <div className="flex items-center gap-1 rounded-lg border border-white/[0.06] bg-slate-800/50 p-1 mb-2">
