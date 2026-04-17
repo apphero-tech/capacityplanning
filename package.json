@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "migrate:local": "tsx scripts/migrate-local-db.ts",
-    "sync": "git pull && npm install && npm run migrate:local && npx prisma generate",
+    "setup": "tsx scripts/setup.ts",
+    "sync": "git pull && npm install && npm run setup",
     "up": "npm run sync && npm run dev"
   },
   "dependencies": {
