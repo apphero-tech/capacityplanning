@@ -164,6 +164,9 @@ export function VelocityView() {
               <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
                 Velocity
               </TableHead>
+              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+                Target
+              </TableHead>
               <TableHead className="text-[11px] font-medium text-slate-500 text-right w-20">
                 Source
               </TableHead>
@@ -172,7 +175,7 @@ export function VelocityView() {
           <TableBody>
             {sprints.length === 0 ? (
               <TableRow className="border-white/[0.04]">
-                <TableCell colSpan={7} className="text-center text-slate-500 py-8">
+                <TableCell colSpan={8} className="text-center text-slate-500 py-8">
                   No sprints yet — define them in the Sprints page.
                 </TableCell>
               </TableRow>
@@ -236,6 +239,20 @@ export function VelocityView() {
                       {forecast && forecast.velocityProven > 0
                         ? fmt(forecast.velocityProven, 2)
                         : "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {targetSP != null &&
+                      (s.status === "current" ||
+                        s.status === "next" ||
+                        s.status === "planning" ||
+                        s.status === "future") ? (
+                        <span className="text-slate-200 font-medium">
+                          {fmt(targetSP, 0)}{" "}
+                          <span className="text-slate-500 font-normal">SP</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       {srcInfo && forecast && forecast.velocityProven > 0 ? (

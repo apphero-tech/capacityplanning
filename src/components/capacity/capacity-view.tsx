@@ -157,9 +157,37 @@ export function CapacityView({ storiesBySprint }: CapacityViewProps) {
   const devRow = capacityRows.find((r) => r.stream === "3-DEV");
   const devHours = devRow?.totalHrs ?? 0;
   const devScopeSP = devRow?.scopeSP ?? 0;
-  const devProjectedSP = devProjection.projectedSPProven;
-  const devGapSP = devProjection.gapProven;
-  const devCoverage = devProjection.coverageProven * 100;
+
+  // Prefer the target-based projection (moving avg × (1 + progress factor))
+  // when we have historical data; fall back to velocity × hours otherwise.
+  const avgCompletedSP = useMemo(() => {
+    const withDone = allSprints
+      .map((s) => sprint && s.id !== sprint.id ? s : null)
+      .filter(Boolean)
+      .map((s) => s!.completedSP)
+      .filter((v): v is number => v != null && v > 0);
+    if (withDone.length === 0) return null;
+    return withDone.reduce((sum, v) => sum + v, 0) / withDone.length;
+  }, [allSprints, sprint]);
+
+  const progressFactor = sprint.progressFactor ?? 0;
+  const targetSP =
+    avgCompletedSP != null ? avgCompletedSP * (1 + progressFactor) : null;
+
+  // When a target exists, the delta reads "target - scope" which is the
+  // user's actual planning question ("can we fit this scope in what past
+  // velocity tells us we deliver?"). Falls back to the velocity-based gap
+  // when no history is available.
+  const useTarget = targetSP != null;
+  const devProjectedSP = useTarget ? targetSP : devProjection.projectedSPProven;
+  const devGapSP = useTarget
+    ? targetSP - devScopeSP
+    : devProjection.gapProven;
+  const devCoverage = useTarget
+    ? devScopeSP > 0
+      ? (targetSP / devScopeSP) * 100
+      : 0
+    : devProjection.coverageProven * 100;
   const deltaLabel =
     devGapSP > 0
       ? `+${fmt(devGapSP)} SP of room`
@@ -203,12 +231,26 @@ export function CapacityView({ storiesBySprint }: CapacityViewProps) {
 
         <div className="mt-4 grid gap-8 sm:grid-cols-3">
           <div>
-            <p className="text-[11px] font-medium text-slate-500">DEV capacity</p>
+            <p className="text-[11px] font-medium text-slate-500">
+              {useTarget ? "Expected delivery" : "DEV capacity"}
+            </p>
             <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-100">
-              {fmt(devHours)} <span className="text-base font-normal text-slate-500">hrs</span>
+              {useTarget ? (
+                <>
+                  {fmt(targetSP!)}{" "}
+                  <span className="text-base font-normal text-slate-500">SP</span>
+                </>
+              ) : (
+                <>
+                  {fmt(devHours)}{" "}
+                  <span className="text-base font-normal text-slate-500">hrs</span>
+                </>
+              )}
             </p>
             <p className="mt-1 text-[12px] text-slate-500">
-              proj. {fmt(devProjectedSP)} SP @ velocity {devProjection.velocityProven.toFixed(2)}
+              {useTarget
+                ? `avg ${fmt(avgCompletedSP!)} SP × ${progressFactor >= 0 ? "+" : ""}${fmt(progressFactor * 100)}% progress`
+                : `proj. ${fmt(devProjectedSP)} SP @ vel ${devProjection.velocityProven.toFixed(2)}`}
             </p>
           </div>
           <div>
