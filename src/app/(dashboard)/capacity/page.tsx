@@ -4,16 +4,14 @@ import {
 } from "@/lib/data";
 import { isExcludedStory } from "@/lib/capacity-engine";
 import { CapacityView } from "@/components/capacity/capacity-view";
-import { FocusFactorInput } from "@/components/sprints/focus-factor-input";
 import type { SprintStory } from "@/types";
 
 export default async function CapacityPage() {
   const sprints = await getAllSprints();
-  const focus = sprints[0]?.focusFactor ?? 0.9;
 
-  // Fetch stories for every sprint (not just the active window) so the capacity
-  // view can pull the previous sprint's QA scope and the next sprint's
-  // refining scope when computing the 3-cycle capacity of the selected sprint.
+  // Only the selected sprint's stories are needed now — no more adjacent-
+  // sprint lookups since the Plan page only answers "can we deliver THIS
+  // sprint's scope with THIS sprint's hours".
   const allSprintStories = await Promise.all(
     sprints.map(async (sprint) => {
       const stories = await getStoriesBySprint(sprint.id);
@@ -33,16 +31,13 @@ export default async function CapacityPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-            Capacity Planning
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Available hours vs. required story points per cycle.
-          </p>
-        </div>
-        <FocusFactorInput initial={focus} />
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-100">
+          Plan
+        </h2>
+        <p className="text-sm text-slate-400 mt-1">
+          Can the Deloitte team fit the upcoming sprint&apos;s scope?
+        </p>
       </div>
 
       <CapacityView storiesBySprint={storiesBySprint} />

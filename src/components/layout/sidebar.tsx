@@ -25,18 +25,16 @@ import {
 } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
 
-// Ordered so the user follows the natural data-entry flow from top to
-// bottom: sprint calendar first, then what goes in each sprint (backlog),
-// then the people and how their time is split, then their days off, and
-// finally the derived views (Capacity, Velocity).
+// Inputs (top) → answer (bottom). Plan is the single output page that
+// answers "can we deliver the next sprint?". Velocity was folded into
+// Plan's historical footer in the v2 simplification.
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/sprints", label: "Sprints", icon: Calendar },
   { href: "/backlog", label: "Backlog", icon: ListTodo },
   { href: "/team", label: "Team", icon: Users },
   { href: "/time-off", label: "Time Off", icon: CalendarOff },
-  { href: "/capacity", label: "Capacity", icon: BarChart3 },
-  { href: "/velocity", label: "Velocity", icon: Activity },
+  { href: "/capacity", label: "Plan", icon: BarChart3 },
 ] as const
 
 const bottomNavItems = [

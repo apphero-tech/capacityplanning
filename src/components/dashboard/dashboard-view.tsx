@@ -9,11 +9,22 @@ import {
 } from "@/lib/capacity-engine";
 import type { SprintStory } from "@/types";
 import { formatDateRangeShort } from "@/lib/date-utils";
+import {
+  Check,
+  AlertTriangle,
+  Calendar,
+  Users,
+  CalendarOff,
+  ListTodo,
+  ArrowRight,
+} from "lucide-react";
 
-function fmt(n: number, decimals = 0): string {
-  return new Intl.NumberFormat("en-US", {
+function fmt(n: number | null | undefined, decimals = 0): string {
+  if (n === null || n === undefined) return "—";
+  return Number(n).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
-  }).format(n);
+  });
 }
 
 interface Props {
@@ -21,53 +32,29 @@ interface Props {
 }
 
 /**
- * Dashboard — answers the user's three opening questions in one screen:
- *   1. Where are we in the delivery cycle?
- *   2. Can DEV deliver the current sprint?
- *   3. Is anything missing to plan further out?
+ * Dashboard — one-liner verdict on the upcoming sprint + quick actions.
  *
- * The third question lives on the OnboardingProgress panel above this view.
- * Everything else is stripped — no mode banners, no coloured KPI stacks,
- * no chart-junk. If the user wants deeper analysis they click through to
- * the owner page (Sprints, Team, Capacity, Velocity).
+ * Landing view for every session. Tells the user in one glance whether
+ * the next sprint fits what the team can deliver, and gives them fast
+ * access to the four input pages. That's it. Everything else is on the
+ * Plan page.
  */
 export function DashboardView({ storiesBySprint }: Props) {
   const {
-    selectedSprint,
-    allSprints,
-    selectedForecast,
+    selectedSprint: sprint,
     initialCapacities,
     publicHolidays,
     projectHolidays,
     ptoEntries,
-    forecastMap,
+    selectedForecast,
   } = useSprint();
 
-  const sprint = selectedSprint;
-  const currentSprint = allSprints.find((s) => s.isCurrent) ?? null;
-
-  // Moving-average completed SP across every sprint with data. This is the
-  // same calculation Velocity and Capacity use so all three pages tell the
-  // user the same "we deliver about N SP per sprint" number.
-  const avgCompletedSP = useMemo(() => {
-    const done = allSprints
-      .map((s) => s.completedSP)
-      .filter((v): v is number => v != null && v > 0);
-    if (done.length === 0) return null;
-    return done.reduce((sum, v) => sum + v, 0) / done.length;
-  }, [allSprints]);
-
-  const progressFactor = sprint?.progressFactor ?? 0;
-  const targetSP =
-    avgCompletedSP != null ? avgCompletedSP * (1 + progressFactor) : null;
-
-  const devStats = useMemo(() => {
+  const verdict = useMemo(() => {
     if (!sprint) return null;
     const stories = storiesBySprint[sprint.id] ?? [];
-    const scope = stories
+    const scopeSP = stories
       .filter((s) => !s.isExcluded)
       .reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
-
     const devCaps = computeDevCapacityFromIC(
       initialCapacities.filter((c) => c.organization === "Deloitte"),
       sprint,
@@ -79,22 +66,13 @@ export function DashboardView({ storiesBySprint }: Props) {
       devCaps,
       selectedForecast?.velocityProven ?? sprint.velocityProven ?? 0,
       selectedForecast?.velocityTarget ?? sprint.velocityTarget ?? 0,
-      scope,
+      scopeSP,
     );
-
-    // Practical capacity = net DEV hours × proven velocity. This is what
-    // the team can actually deliver given the allocations and the days
-    // off logged for this sprint. The gap/coverage read against this —
-    // not the aspirational target — because over/under-capacity is a
-    // statement about reality, not ambition.
     return {
-      hours: dp.netDevCapacity,
-      scopeSP: scope,
-      projectedSP: dp.projectedSPProven,
-      gap: dp.gapProven,
-      coverage: dp.coverageProven * 100,
-      velocity: dp.velocityProven,
-      stories: stories.length,
+      teamCanDeliver: dp.projectedSPProven,
+      scopeSP,
+      delta: dp.projectedSPProven - scopeSP,
+      hasVelocity: dp.velocityProven > 0,
     };
   }, [
     sprint,
@@ -106,155 +84,120 @@ export function DashboardView({ storiesBySprint }: Props) {
     selectedForecast,
   ]);
 
-  // Sprints still open for planning. Current is excluded — its scope is
-  // frozen. Shows practical projection (net DEV hrs × velocity) so the
-  // number reflects what the team can actually deliver.
-  const upcoming = useMemo(() => {
-    return allSprints
-      .filter((s) => !s.isDemo)
-      .filter((s) => s.status === "next" || s.status === "planning")
-      .slice(0, 3)
-      .map((s) => ({
-        sprint: s,
-        projectedSP: forecastMap.get(s.id)?.projectedSPProven ?? null,
-      }));
-  }, [allSprints, forecastMap]);
-
-  if (!sprint) {
+  if (!sprint || !verdict) {
     return (
       <p className="text-sm text-slate-400">
-        Select a sprint in the top bar to see delivery numbers.
+        Select a sprint in the top bar.
       </p>
     );
   }
 
+  const fits = verdict.delta >= 0;
+  const VerdictIcon = fits ? Check : AlertTriangle;
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Hero — selected sprint DEV snapshot (Deloitte side) */}
-      {devStats && (
-        <section className="rounded-2xl border border-white/[0.06] bg-slate-900/40 p-6">
-          <div className="flex items-baseline justify-between flex-wrap gap-2">
-            <p className="text-[12px] text-slate-500">
-              {sprint.isCurrent ? "Current sprint" : "Selected sprint"}
-            </p>
-            <p className="text-[12px] text-slate-500">
-              {formatDateRangeShort(sprint.startDate, sprint.endDate)}
-            </p>
-          </div>
-          <h3 className="mt-1 text-xl font-semibold text-slate-100">{sprint.name}</h3>
+    <div className="flex flex-col gap-8">
+      {/* Verdict hero */}
+      <Link
+        href="/capacity"
+        className="group block rounded-2xl border border-white/[0.06] bg-slate-900/40 p-6 transition-colors hover:bg-slate-900/60"
+      >
+        <div className="flex items-baseline justify-between flex-wrap gap-2">
+          <p className="text-[12px] text-slate-500">Next sprint</p>
+          <p className="text-[12px] text-slate-500">
+            {formatDateRangeShort(sprint.startDate, sprint.endDate)}
+          </p>
+        </div>
+        <h3 className="mt-1 text-xl font-semibold text-slate-100">{sprint.name}</h3>
 
-          <div className="mt-5 grid gap-8 sm:grid-cols-3">
+        {verdict.hasVelocity ? (
+          <div className="mt-5 flex items-baseline justify-between flex-wrap gap-3">
             <div>
-              <p className="text-[11px] font-medium text-slate-500">Practical delivery</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-100">
-                {fmt(devStats.projectedSP)}{" "}
-                <span className="text-sm font-normal text-slate-500">SP</span>
-              </p>
-              <p className="mt-1 text-[12px] text-slate-500">
-                {fmt(devStats.hours)} hrs × vel {devStats.velocity.toFixed(2)}
-                {targetSP != null && (
-                  <>
-                    {" · target "}
-                    <span className="text-slate-300">{fmt(targetSP)} SP</span>
-                  </>
-                )}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Scope</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-100">
-                {fmt(devStats.scopeSP)}{" "}
-                <span className="text-sm font-normal text-slate-500">SP</span>
-              </p>
-              <p className="mt-1 text-[12px] text-slate-500">
-                {devStats.stories} stories in {sprint.name}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium text-slate-500">Delta</p>
               <p
-                className={`mt-1 text-2xl font-semibold tabular-nums ${
-                  devStats.gap > 0
-                    ? "text-emerald-300"
-                    : devStats.gap < 0
-                      ? "text-red-300"
-                      : "text-slate-300"
+                className={`text-3xl font-semibold tabular-nums flex items-center gap-2 ${
+                  fits ? "text-emerald-300" : "text-red-300"
                 }`}
               >
-                {devStats.gap > 0
-                  ? `+${fmt(devStats.gap)} SP`
-                  : devStats.gap < 0
-                    ? `${fmt(devStats.gap)} SP`
-                    : "balanced"}
+                <VerdictIcon className="size-5" />
+                {fits
+                  ? `Fits — ${fmt(verdict.delta)} SP of room`
+                  : `Overflow — ${fmt(Math.abs(verdict.delta))} SP to cut`}
               </p>
               <p className="mt-1 text-[12px] text-slate-500">
-                coverage {fmt(devStats.coverage)}%
+                team can deliver{" "}
+                <span className="text-slate-300">{fmt(verdict.teamCanDeliver)} SP</span>
+                {" · "}scope{" "}
+                <span className="text-slate-300">{fmt(verdict.scopeSP)} SP</span>
               </p>
             </div>
+            <span className="text-[12px] text-slate-400 group-hover:text-slate-200 flex items-center gap-1">
+              Open Plan
+              <ArrowRight className="size-3.5" />
+            </span>
           </div>
+        ) : (
+          <p className="mt-5 text-[13px] text-amber-300">
+            No velocity data yet — enter past sprints&apos; completed SP on the Plan page.
+          </p>
+        )}
+      </Link>
 
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
-              <div
-                className={`h-full rounded-full ${
-                  devStats.coverage >= 100
-                    ? "bg-emerald-400/70"
-                    : devStats.coverage >= 80
-                      ? "bg-amber-400/70"
-                      : "bg-red-400/70"
-                }`}
-                style={{ width: `${Math.max(0, Math.min(devStats.coverage, 120))}%` }}
-              />
-            </div>
-            <Link
-              href="/capacity"
-              className="text-[12px] font-medium text-slate-400 hover:text-slate-200"
-            >
-              Open capacity →
-            </Link>
-          </div>
-        </section>
-      )}
-
-      {/* Upcoming sprints — quick projection */}
-      {upcoming.length > 0 && (
-        <section>
-          <div className="flex items-baseline justify-between mb-3">
-            <h3 className="text-[13px] font-medium text-slate-300">Coming up</h3>
-            {currentSprint && (
-              <p className="text-[12px] text-slate-500">
-                starting from <span className="text-slate-300">{currentSprint.name}</span>
-              </p>
-            )}
-          </div>
-          <div className="rounded-2xl border border-white/[0.04] divide-y divide-white/[0.04]">
-            {upcoming.map(({ sprint: s, projectedSP }) => (
-              <Link
-                key={s.id}
-                href="/capacity"
-                className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-white/[0.02]"
-              >
-                <div>
-                  <p className="text-[13px] text-slate-200">{s.name}</p>
-                  <p className="text-[11px] text-slate-500">
-                    {formatDateRangeShort(s.startDate, s.endDate)} · {s.durationWeeks}w
-                  </p>
-                </div>
-                <p className="text-[13px] tabular-nums text-slate-400">
-                  {projectedSP != null && projectedSP > 0 ? (
-                    <>
-                      <span className="text-slate-200 font-medium">{fmt(projectedSP)}</span>
-                      <span className="ml-1 text-slate-500">SP projected</span>
-                    </>
-                  ) : (
-                    <span className="text-slate-600">—</span>
-                  )}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Input quick-tiles */}
+      <section>
+        <h3 className="text-[13px] font-medium text-slate-300 mb-3">Inputs</h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <InputTile
+            href="/sprints"
+            icon={Calendar}
+            label="Sprints"
+            hint="Calendar & dates"
+          />
+          <InputTile
+            href="/team"
+            icon={Users}
+            label="Team"
+            hint="Members & allocations"
+          />
+          <InputTile
+            href="/time-off"
+            icon={CalendarOff}
+            label="Time Off"
+            hint="Holidays & PTO"
+          />
+          <InputTile
+            href="/backlog"
+            icon={ListTodo}
+            label="Backlog"
+            hint="Stories from Jira"
+          />
+        </div>
+      </section>
     </div>
+  );
+}
+
+function InputTile({
+  href,
+  icon: Icon,
+  label,
+  hint,
+}: {
+  href: string;
+  icon: typeof Calendar;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-xl border border-white/[0.04] bg-slate-900/30 px-4 py-3 transition-colors hover:bg-slate-900/60"
+    >
+      <Icon className="size-4 text-slate-500 group-hover:text-slate-300" />
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-medium text-slate-200">{label}</p>
+        <p className="text-[11px] text-slate-500">{hint}</p>
+      </div>
+      <ArrowRight className="size-3.5 text-slate-600 group-hover:text-slate-300 transition-colors" />
+    </Link>
   );
 }
