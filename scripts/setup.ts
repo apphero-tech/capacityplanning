@@ -76,6 +76,15 @@ function main() {
     run("npm run migrate:local", "npm run migrate:local");
   }
 
+  // Apply historical migration scripts whose schema changes aren't captured in
+  // schema.prisma (SprintStory table, Phase table, Sprint velocity columns).
+  // Every one is idempotent (CREATE TABLE IF NOT EXISTS, guarded ALTER TABLEs)
+  // so running them on an already-migrated DB is a no-op.
+  console.log("\nApplying extra migration scripts...");
+  run("npx tsx scripts/migrate-add-sprint-backlog.ts", "migrate-add-sprint-backlog");
+  run("npx tsx scripts/migrate-add-phases.ts", "migrate-add-phases");
+  run("npx tsx scripts/migrate-add-velocity-tracking.ts", "migrate-add-velocity-tracking");
+
   run("npx prisma generate", "npx prisma generate");
 
   console.log("\nSetup complete. You can now run:  npm run dev");
