@@ -24,12 +24,10 @@ export function AddSprintDialog() {
     name: "",
     startDate: "",
     endDate: "",
-    workingDays: 20,
-    isCurrent: false,
   });
 
   function reset() {
-    setForm({ name: "", startDate: "", endDate: "", workingDays: 20, isCurrent: false });
+    setForm({ name: "", startDate: "", endDate: "" });
     setError(null);
   }
 
@@ -50,8 +48,6 @@ export function AddSprintDialog() {
           name: form.name.trim(),
           startDate: form.startDate || null,
           endDate: form.endDate || null,
-          workingDays: form.workingDays,
-          isCurrent: form.isCurrent,
         }),
       });
       const json = await res.json();
@@ -128,29 +124,12 @@ export function AddSprintDialog() {
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-slate-400 mb-1 block">Working days in sprint</label>
-            <Input
-              type="number"
-              min={1}
-              max={40}
-              value={form.workingDays}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, workingDays: parseInt(e.target.value) || 20 }))
-              }
-              className="border-white/10 bg-slate-800 text-slate-200"
-            />
-          </div>
-
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input
-              type="checkbox"
-              checked={form.isCurrent}
-              onChange={(e) => setForm((f) => ({ ...f, isCurrent: e.target.checked }))}
-              className="size-4 accent-[#E31837]"
-            />
-            Mark as current sprint
-          </label>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Working days are counted automatically from the date range (Mon–Fri).
+            The sprint is marked as <em>current</em> whenever today falls inside its
+            dates. Public holidays and PTO are subtracted from effective capacity
+            later, in the Capacity view.
+          </p>
 
           {error && (
             <div className="flex items-start gap-2 rounded-md border border-red-900/50 bg-red-950/30 p-2 text-xs text-red-300">

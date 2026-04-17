@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatDateShort, parseLocalDate } from "@/lib/date-utils";
 import { useSprint } from "@/contexts/sprint-context";
 import {
@@ -44,6 +45,7 @@ function fmt(n: number, decimals = 1): string {
 // ---------------------------------------------------------------------------
 
 export function SprintsView() {
+  const router = useRouter();
   const {
     selectedSprint,
     allSprints: sprints,
@@ -51,6 +53,11 @@ export function SprintsView() {
     selectedForecast,
   } = useSprint();
   const totalSprints = sprints.length;
+
+  async function patchSprint(id: string, body: Record<string, unknown>) {
+    const ok = await saveSprintField(id, body);
+    if (ok) router.refresh();
+  }
 
   // Total projected SP across future sprints (current + next + future)
   const futureProjectedSP = useMemo(() => {
@@ -455,16 +462,22 @@ export function SprintsView() {
                               s.isCurrent ? "bg-[#E31837] animate-pulse" : "bg-blue-400"
                             }`} />
                           )}
-                          {s.name}
+                          <EditableText
+                            value={s.name}
+                            onSave={(next) => patchSprint(s.id, { name: next })}
+                          />
                         </div>
                       </TableCell>
 
                       {/* Dates (compact) */}
                       <TableCell className="text-slate-400 text-xs">
-                        {s.startDate && s.endDate
-                          ? `${formatDateShort(s.startDate)} – ${formatDateShort(s.endDate)}`
-                          : <span className="text-slate-600">&mdash;</span>
-                        }
+                        <EditableDates
+                          startDate={s.startDate}
+                          endDate={s.endDate}
+                          onSave={(start, end) =>
+                            patchSprint(s.id, { startDate: start, endDate: end })
+                          }
+                        />
                       </TableCell>
 
                       {/* Weeks */}
@@ -474,7 +487,10 @@ export function SprintsView() {
 
                       {/* Focus */}
                       <TableCell className="text-center text-slate-300">
-                        {Math.round(s.focusFactor * 100)}%
+                        <EditablePercent
+                          value={s.focusFactor}
+                          onSave={(next) => patchSprint(s.id, { focusFactor: next })}
+                        />
                       </TableCell>
 
                       {/* DEV hrs */}
@@ -516,5 +532,187 @@ export function SprintsView() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Inline edit helpers
+// ---------------------------------------------------------------------------
+
+async function saveSprintField(
+  id: string,
+  body: Record<string, unknown>,
+): Promise<boolean> {
+  const res = await fetch(`/api/sprints/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.ok;
+}
+
+/** Click-to-edit text cell. Enter saves, Escape cancels. */
+function EditableText({
+  value,
+  onSave,
+  className,
+}: {
+  value: string;
+  onSave: (next: string) => Promise<void> | void;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  if (!editing) {
+    return (
+      <span
+        className={`cursor-text hover:underline hover:decoration-slate-600 hover:underline-offset-2 ${className ?? ""}`}
+        onClick={() => {
+          setDraft(value);
+          setEditing(true);
+        }}
+        title="Click to edit"
+      >
+        {value || <span className="text-slate-600">—</span>}
+      </span>
+    );
+  }
+
+  return (
+    <input
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={async () => {
+        if (draft !== value) await onSave(draft);
+        setEditing(false);
+      }}
+      onKeyDown={async (e) => {
+        if (e.key === "Enter") {
+          e.currentTarget.blur();
+        } else if (e.key === "Escape") {
+          setDraft(value);
+          setEditing(false);
+        }
+      }}
+      className="w-full bg-slate-800 border border-white/20 rounded px-1 py-0.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
+    />
+  );
+}
+
+/** Two date inputs shown side by side for start/end. */
+function EditableDates({
+  startDate,
+  endDate,
+  onSave,
+}: {
+  startDate: string | null;
+  endDate: string | null;
+  onSave: (start: string | null, end: string | null) => Promise<void> | void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [s, setS] = useState(startDate ?? "");
+  const [e, setE] = useState(endDate ?? "");
+
+  if (!editing) {
+    return (
+      <span
+        className="cursor-text hover:underline hover:decoration-slate-600 hover:underline-offset-2"
+        onClick={() => {
+          setS(startDate ?? "");
+          setE(endDate ?? "");
+          setEditing(true);
+        }}
+        title="Click to edit"
+      >
+        {startDate && endDate
+          ? `${formatDateShort(startDate)} – ${formatDateShort(endDate)}`
+          : <span className="text-slate-600">—</span>}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="date"
+        value={s}
+        onChange={(ev) => setS(ev.target.value)}
+        className="bg-slate-800 border border-white/20 rounded px-1 py-0.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
+      />
+      <span className="text-slate-500 text-xs">–</span>
+      <input
+        type="date"
+        value={e}
+        onChange={(ev) => setE(ev.target.value)}
+        className="bg-slate-800 border border-white/20 rounded px-1 py-0.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
+      />
+      <button
+        className="text-[11px] text-emerald-400 hover:text-emerald-300 px-1"
+        onClick={async () => {
+          await onSave(s || null, e || null);
+          setEditing(false);
+        }}
+      >
+        Save
+      </button>
+      <button
+        className="text-[11px] text-slate-500 hover:text-slate-400 px-1"
+        onClick={() => setEditing(false)}
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
+/** Percent input (0–100 displayed, stored as 0–1). */
+function EditablePercent({
+  value,
+  onSave,
+}: {
+  value: number;
+  onSave: (next: number) => Promise<void> | void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(Math.round(value * 100)));
+
+  if (!editing) {
+    return (
+      <span
+        className="cursor-text hover:underline hover:decoration-slate-600 hover:underline-offset-2"
+        onClick={() => {
+          setDraft(String(Math.round(value * 100)));
+          setEditing(true);
+        }}
+        title="Click to edit"
+      >
+        {Math.round(value * 100)}%
+      </span>
+    );
+  }
+
+  return (
+    <input
+      autoFocus
+      type="number"
+      min={0}
+      max={100}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={async () => {
+        const n = Number(draft);
+        if (!Number.isNaN(n) && n !== value * 100) {
+          await onSave(Math.max(0, Math.min(100, n)) / 100);
+        }
+        setEditing(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") setEditing(false);
+      }}
+      className="w-14 bg-slate-800 border border-white/20 rounded px-1 py-0.5 text-xs text-center text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
+    />
   );
 }

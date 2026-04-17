@@ -10,6 +10,7 @@
     "migrate:local": "tsx scripts/migrate-local-db.ts",
     "setup": "tsx scripts/setup.ts",
     "setup:fresh": "rm -f prisma/dev.db prisma/dev.db-shm prisma/dev.db-wal && npm run setup",
+    "seed:york": "tsx scripts/seed-york-sprints.ts",
     "sync": "git pull && npm install && npm run setup",
     "up": "npm run sync && npm run dev"
   },

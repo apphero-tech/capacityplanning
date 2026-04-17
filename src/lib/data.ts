@@ -7,6 +7,7 @@
 
 import Database from "better-sqlite3";
 import path from "path";
+import { differenceInBusinessDays } from "date-fns";
 
 import type {
   Sprint,
@@ -411,31 +412,61 @@ export async function getAllSprints(): Promise<Sprint[]> {
  * Update commitment/completed SP for a sprint.
  * Returns true if a row was updated.
  */
-/** Create a new sprint with the given params. Returns the generated id. */
+/**
+ * Create a new sprint.
+ *
+ * Business-day count and current-sprint flag are derived from the dates so
+ * callers don't need to think about them:
+ *   - workingDays = business days between startDate and endDate inclusive
+ *     (falls back to 4 weeks * 5 days = 20 when dates are missing)
+ *   - isCurrent is true when today is within [startDate, endDate]
+ *
+ * When a new sprint is marked current, any previously-current sprint is
+ * cleared so the app's "current" invariant (single active sprint) holds.
+ */
 export function insertSprint(input: {
   name: string;
   startDate?: string | null;
   endDate?: string | null;
   durationWeeks?: number;
-  workingDays?: number;
   focusFactor?: number;
-  isCurrent?: boolean;
 }): string {
   const db = getDb();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+
+  const startDate = input.startDate ?? null;
+  const endDate = input.endDate ?? null;
+
+  let workingDays = 20;
+  let durationWeeks = input.durationWeeks ?? 4;
+  let isCurrent = false;
+  if (startDate && endDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${endDate}T00:00:00`);
+    workingDays = differenceInBusinessDays(end, start) + 1;
+    durationWeeks = Math.max(1, Math.ceil(workingDays / 5));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    isCurrent = today >= start && today <= end;
+  }
+
+  if (isCurrent) {
+    db.prepare("UPDATE Sprint SET isCurrent = 0 WHERE isCurrent = 1").run();
+  }
+
   db.prepare(
     `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     input.name,
-    input.startDate ?? null,
-    input.endDate ?? null,
-    input.durationWeeks ?? 4,
-    input.workingDays ?? 20,
+    startDate,
+    endDate,
+    durationWeeks,
+    workingDays,
     input.focusFactor ?? 0.9,
-    input.isCurrent ? 1 : 0,
+    isCurrent ? 1 : 0,
     now,
     now,
   );
@@ -446,6 +477,75 @@ export function insertSprint(input: {
 export function deleteSprint(id: string): boolean {
   const db = getDb();
   const result = db.prepare("DELETE FROM Sprint WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+/**
+ * Update any subset of a sprint's editable fields. When the start/end dates
+ * change, workingDays, durationWeeks and isCurrent are recomputed from them.
+ * Returns true when a row was updated.
+ */
+export function updateSprint(
+  id: string,
+  updates: {
+    name?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    focusFactor?: number;
+  },
+): boolean {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM Sprint WHERE id = ?").get(id) as SprintRow | undefined;
+  if (!row) return false;
+
+  const nextStart = updates.startDate !== undefined ? updates.startDate : row.startDate;
+  const nextEnd = updates.endDate !== undefined ? updates.endDate : row.endDate;
+
+  let workingDays = row.workingDays;
+  let durationWeeks = row.durationWeeks;
+  let isCurrent = row.isCurrent;
+
+  if (updates.startDate !== undefined || updates.endDate !== undefined) {
+    if (nextStart && nextEnd) {
+      const start = new Date(`${nextStart}T00:00:00`);
+      const end = new Date(`${nextEnd}T00:00:00`);
+      workingDays = differenceInBusinessDays(end, start) + 1;
+      durationWeeks = Math.max(1, Math.ceil(workingDays / 5));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      isCurrent = today >= start && today <= end ? 1 : 0;
+    }
+  }
+
+  const now = new Date().toISOString();
+
+  if (isCurrent === 1 && row.isCurrent !== 1) {
+    db.prepare("UPDATE Sprint SET isCurrent = 0 WHERE isCurrent = 1 AND id != ?").run(id);
+  }
+
+  const sets: string[] = [];
+  const values: unknown[] = [];
+
+  if (updates.name !== undefined) {
+    sets.push("name = ?");
+    values.push(updates.name);
+  }
+  if (updates.startDate !== undefined) {
+    sets.push("startDate = ?");
+    values.push(updates.startDate);
+  }
+  if (updates.endDate !== undefined) {
+    sets.push("endDate = ?");
+    values.push(updates.endDate);
+  }
+  if (updates.focusFactor !== undefined) {
+    sets.push("focusFactor = ?");
+    values.push(updates.focusFactor);
+  }
+  sets.push("workingDays = ?", "durationWeeks = ?", "isCurrent = ?", "updatedAt = ?");
+  values.push(workingDays, durationWeeks, isCurrent, now, id);
+
+  const result = db.prepare(`UPDATE Sprint SET ${sets.join(", ")} WHERE id = ?`).run(...values);
   return result.changes > 0;
 }
 
