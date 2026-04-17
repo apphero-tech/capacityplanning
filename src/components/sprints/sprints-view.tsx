@@ -7,10 +7,8 @@ import { useSprint } from "@/contexts/sprint-context";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
+import { StatStrip } from "@/components/ui/stat-strip";
 import {
   Table,
   TableBody,
@@ -131,99 +129,36 @@ export function SprintsView() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#E31837]/15">
-              <CalendarDays className="size-5 text-[#E31837]" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Total Sprints
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalSprints}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15">
-              <Zap className="size-5 text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Selected Sprint
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {selectedSprint?.name ?? "None"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Projected SP for selected sprint */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
-              <TrendingUp className="size-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Projected SP
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {selectedForecast
-                  ? fmt(selectedForecast.projectedSPProven, 0)
-                  : "N/A"}
-                {selectedForecast && (
-                  <span className="text-sm font-normal text-slate-500 ml-1">SP</span>
-                )}
-              </p>
-              {selectedForecast && (
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  {fmt(selectedForecast.netDevHrs)} dev hrs × {fmt(selectedForecast.velocityProven, 2)} vel
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Remaining projected SP */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
-              <Target className="size-5 text-amber-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Remaining Capacity
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {fmt(futureProjectedSP, 0)}
-                <span className="text-sm font-normal text-slate-500 ml-1">SP</span>
-              </p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                current + future sprints
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <StatStrip
+        stats={[
+          { label: "Total sprints", value: totalSprints },
+          { label: "Selected", value: selectedSprint?.name ?? "—", muted: !selectedSprint },
+          {
+            label: "Projected SP",
+            value: selectedForecast ? fmt(selectedForecast.projectedSPProven, 0) : "—",
+            hint: selectedForecast
+              ? `${fmt(selectedForecast.netDevHrs)} dev hrs × ${fmt(selectedForecast.velocityProven, 2)} vel`
+              : undefined,
+            muted: !selectedForecast,
+          },
+          {
+            label: "Remaining capacity",
+            value: `${fmt(futureProjectedSP, 0)} SP`,
+            hint: "current + future",
+          },
+        ]}
+      />
 
       {/* Sprint Plan — Gantt Timeline */}
       {sprintPlan && (
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardHeader>
-            <CardTitle className="text-slate-100">Sprint Plan</CardTitle>
-            <CardDescription className="text-slate-400">
-              Project timeline with capacity projections
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
+        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-5">
+          <div className="mb-4">
+            <h3 className="text-[13px] font-medium text-slate-300">Sprint plan</h3>
+            <p className="text-[12px] text-slate-500 mt-0.5">
+              Timeline with capacity projection
+            </p>
+          </div>
+          <div className="overflow-x-auto">
             <div className="min-w-[600px]">
               {/* Month header row */}
               <div className="flex h-7 items-end">
@@ -401,34 +336,34 @@ export function SprintsView() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      {/* Sprint Table — 7 columns: Name, Dates, Weeks, Focus, DEV hrs, Projected SP, Status */}
-      <Card className="border-white/[0.06] bg-slate-900/50">
-        <CardHeader>
-          <CardTitle className="text-slate-100">All Sprints</CardTitle>
-          <CardDescription className="text-slate-400">
-            Sprint parameters and projected delivery capacity
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Sprint Table — 7 columns: Name, Dates, Weeks, DEV hrs, Projected SP, Status */}
+      <div>
+        <div className="mb-3">
+          <h3 className="text-[13px] font-medium text-slate-300">All sprints</h3>
+          <p className="text-[12px] text-slate-500 mt-0.5">
+            Click any name, date range or focus cell to edit
+          </p>
+        </div>
+        <div>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/[0.06] hover:bg-transparent">
-                <TableHead className="text-slate-400">Name</TableHead>
-                <TableHead className="text-slate-400">Dates</TableHead>
-                <TableHead className="text-center text-slate-400">
+              <TableRow className="border-white/[0.04] hover:bg-transparent">
+                <TableHead className="text-[11px] font-medium text-slate-500">Name</TableHead>
+                <TableHead className="text-[11px] font-medium text-slate-500">Dates</TableHead>
+                <TableHead className="text-[11px] font-medium text-slate-500 text-center w-16">
                   Weeks
                 </TableHead>
-                <TableHead className="text-right text-slate-400">
+                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
                   DEV hrs
                 </TableHead>
-                <TableHead className="text-right text-slate-400">
-                  <span className="font-semibold text-emerald-400">Projected SP</span>
+                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+                  Projected SP
                 </TableHead>
-                <TableHead className="text-center text-slate-400">
+                <TableHead className="text-[11px] font-medium text-slate-500 text-center w-28">
                   Status
                 </TableHead>
               </TableRow>
@@ -541,8 +476,8 @@ export function SprintsView() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
