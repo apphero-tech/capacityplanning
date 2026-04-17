@@ -559,41 +559,47 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Filters
+                Organization
               </p>
               <div className="flex items-center gap-2">
                 <ImportAllocationsDialog onImported={handleAdd} />
                 <AddMemberDialog onAdd={handleAdd} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={orgFilter} onValueChange={setOrgFilter}>
-                <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">
-                  <SelectValue placeholder="All orgs" />
-                </SelectTrigger>
-                <SelectContent className="border-white/[0.06] bg-slate-900">
-                  <SelectItem value="all">All orgs</SelectItem>
-                  {organizations.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent className="border-white/[0.06] bg-slate-900">
-                  <SelectItem value="all">All roles</SelectItem>
-                  {roles.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Org toggle pills — always show All + known orgs */}
+            <div className="flex items-center gap-1 rounded-lg border border-white/[0.06] bg-slate-800/50 p-1 mb-2">
+              {(() => {
+                const base = ["all", "Deloitte", "York"];
+                const extras = organizations.filter((o) => !base.includes(o));
+                const options = [...base, ...extras];
+                return options.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setOrgFilter(opt)}
+                    className={`flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                      orgFilter === opt
+                        ? "bg-[#E31837] text-white"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    {opt === "all" ? "All" : opt}
+                  </button>
+                ));
+              })()}
             </div>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent className="border-white/[0.06] bg-slate-900">
+                <SelectItem value="all">All roles</SelectItem>
+                {roles.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </CardContent>
         </Card>
       </div>
