@@ -129,15 +129,17 @@ export async function POST(request: NextRequest) {
       const startRaw = stripInvisible(row[startCol] ?? "");
       const endRaw = stripInvisible(row[endCol] ?? "");
 
-      const startDate = normaliseDate(startRaw);
-      const endDate = normaliseDate(endRaw);
+      let startDate = normaliseDate(startRaw);
+      let endDate = normaliseDate(endRaw);
 
-      if (!startDate) {
-        errors.push(`Row ${rowNum}: invalid start date "${startRaw}" for ${who}`);
-        continue;
-      }
-      if (!endDate) {
-        errors.push(`Row ${rowNum}: invalid end date "${endRaw}" for ${who}`);
+      // One-date rows mean a single-day PTO. Fall back to the other date so
+      // we still capture the entry instead of dropping it. If neither is
+      // valid we skip and keep the warning.
+      if (startDate && !endDate) endDate = startDate;
+      if (!startDate && endDate) startDate = endDate;
+
+      if (!startDate || !endDate) {
+        errors.push(`Row ${rowNum}: no valid date for ${who}`);
         continue;
       }
 
