@@ -1,4 +1,3 @@
-import { differenceInBusinessDays } from "date-fns";
 import type { Sprint, PublicHoliday, ProjectHoliday, PtoEntry } from "@/types";
 
 function isDateInRange(dateStr: string, startStr: string, endStr: string): boolean {
@@ -8,24 +7,23 @@ function isDateInRange(dateStr: string, startStr: string, endStr: string): boole
   return d >= start && d <= end;
 }
 
-/** Count business days of a PTO entry that overlap with a sprint. */
-function ptoDaysInSprint(entry: PtoEntry, sprint: Sprint): number {
-  if (!sprint.startDate || !sprint.endDate) return 0;
-
-  const ptoStart = new Date(entry.startDate + "T00:00:00");
-  const ptoEnd = new Date(entry.endDate + "T00:00:00");
-  const sprintStart = new Date(sprint.startDate + "T00:00:00");
-  const sprintEnd = new Date(sprint.endDate + "T00:00:00");
-
-  // No overlap
-  if (ptoEnd < sprintStart || ptoStart > sprintEnd) return 0;
-
-  // Clamp to sprint range
-  const overlapStart = ptoStart > sprintStart ? ptoStart : sprintStart;
-  const overlapEnd = ptoEnd < sprintEnd ? ptoEnd : sprintEnd;
-
-  const days = differenceInBusinessDays(overlapEnd, overlapStart) + 1;
-  return Math.max(days, 0);
+/**
+ * Expand a start→end range (both inclusive, ISO YYYY-MM-DD) into every
+ * business day between them. Used to deduplicate days when a member is off
+ * for both a public holiday and a PTO on the same date — the day only
+ * counts once.
+ */
+function businessDaysInRange(start: Date, end: Date): string[] {
+  const out: string[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const dow = cursor.getDay(); // 0 Sun, 6 Sat
+    if (dow !== 0 && dow !== 6) {
+      out.push(cursor.toISOString().slice(0, 10));
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
 }
 
 export function getHolidayDaysForMember(
@@ -43,41 +41,52 @@ export function getHolidayDaysForMember(
     ? ["Quebec"]
     : [location];
 
-  const pubDays = publicHolidays
-    .filter(h =>
-      countries.includes(h.country) &&
-      isDateInRange(h.date, sprint.startDate!, sprint.endDate!)
-    )
-    .reduce((sum, h) => sum + h.days, 0);
+  // Build a single Set of distinct "off" dates within the sprint window.
+  // Public, project and personal time off that fall on the same date are
+  // deduplicated — the member loses 1 day of work, not 2 or 3.
+  const offDates = new Set<string>();
 
-  const projDays = projectHolidays
-    .filter(h =>
-      h.date && isDateInRange(h.date, sprint.startDate!, sprint.endDate!)
-    )
-    .reduce((sum, h) => sum + h.days, 0);
+  publicHolidays.forEach((h) => {
+    if (countries.includes(h.country) && isDateInRange(h.date, sprint.startDate!, sprint.endDate!)) {
+      offDates.add(h.date);
+    }
+  });
 
-  // PTO days for this specific member
-  // PTO `who` may be "LastName, FirstName" while memberName is "FirstName LastName"
-  // Also strip accents for robust matching (e.g. "Séréna" matches "Serena")
-  let ptoDays = 0;
+  projectHolidays.forEach((h) => {
+    if (h.date && isDateInRange(h.date, sprint.startDate!, sprint.endDate!)) {
+      offDates.add(h.date);
+    }
+  });
+
   if (ptoEntries && memberName) {
     const stripAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const normalized = stripAccents(memberName.toLowerCase().trim());
-    ptoDays = ptoEntries
-      .filter(e => {
-        const ptoName = stripAccents(e.who.toLowerCase().trim());
-        if (ptoName === normalized) return true;
-        // Convert "LastName, FirstName" → "FirstName LastName"
-        if (ptoName.includes(",")) {
-          const [last, first] = ptoName.split(",").map(s => s.trim());
-          if (`${first} ${last}` === normalized) return true;
-        }
-        return false;
-      })
-      .reduce((sum, e) => sum + ptoDaysInSprint(e, sprint), 0);
+    const sprintStart = new Date(sprint.startDate + "T00:00:00");
+    const sprintEnd = new Date(sprint.endDate + "T00:00:00");
+
+    for (const e of ptoEntries) {
+      const ptoName = stripAccents(e.who.toLowerCase().trim());
+      let matches = ptoName === normalized;
+      if (!matches && ptoName.includes(",")) {
+        const [last, first] = ptoName.split(",").map((s) => s.trim());
+        if (`${first} ${last}` === normalized) matches = true;
+      }
+      if (!matches) continue;
+
+      const ptoStart = new Date(e.startDate + "T00:00:00");
+      const ptoEnd = new Date(e.endDate + "T00:00:00");
+      if (ptoEnd < sprintStart || ptoStart > sprintEnd) continue;
+
+      const overlapStart = ptoStart > sprintStart ? ptoStart : sprintStart;
+      const overlapEnd = ptoEnd < sprintEnd ? ptoEnd : sprintEnd;
+
+      for (const d of businessDaysInRange(overlapStart, overlapEnd)) {
+        offDates.add(d);
+      }
+    }
   }
 
-  return pubDays + projDays + ptoDays;
+  return offDates.size;
 }
 
 export function getHolidaySummaryBySprint(
