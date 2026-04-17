@@ -7,6 +7,8 @@ import type { Sprint, PublicHoliday, ProjectHoliday, PtoEntry } from "@/types";
 import { useSprint } from "@/contexts/sprint-context";
 import { formatDate, parseLocalDate } from "@/lib/date-utils";
 import { getBadgeClasses } from "@/lib/badge-utils";
+import { StatStrip } from "@/components/ui/stat-strip";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   Card,
   CardContent,
@@ -390,96 +392,52 @@ export function TimeOffView({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Public Holidays */}
-        <Card
-          className={`border-white/[0.06] bg-slate-900/50 cursor-pointer transition-shadow ${activeTab === "public" ? "ring-1 ring-blue-500/40" : ""}`}
-          onClick={() => setActiveTab("public")}
-        >
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/15">
-              <Globe className="size-5 text-blue-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Public Holidays
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalPublicDays} <span className="text-sm font-medium text-slate-400">days</span>
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {filteredPublicHolidays.length} {filteredPublicHolidays.length === 1 ? "holiday" : "holidays"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <StatStrip
+        stats={[
+          { label: "Public holidays", value: `${totalPublicDays} days`, hint: `${filteredPublicHolidays.length} entries` },
+          { label: "Project closures", value: `${totalProjectDays} days`, hint: `${filteredProjectHolidays.length} entries` },
+          { label: "Personal time off", value: `${totalPtoDays} p-days`, hint: `${sprintPtoStats.people} ${sprintPtoStats.people === 1 ? "person" : "people"}` },
+          {
+            label: "Total days off",
+            value: `${totalPublicDays + totalProjectDays + totalPtoDays}`,
+            hint: `${teamMembers.filter((m) => m.isActive).length} active members`,
+          },
+        ]}
+      />
 
-        {/* Project Closures */}
-        <Card
-          className={`border-white/[0.06] bg-slate-900/50 cursor-pointer transition-shadow ${activeTab === "project" ? "ring-1 ring-purple-500/40" : ""}`}
-          onClick={() => setActiveTab("project")}
-        >
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/15">
-              <Building2 className="size-5 text-purple-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Project Closures
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalProjectDays} <span className="text-sm font-medium text-slate-400">days</span>
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {filteredProjectHolidays.length} {filteredProjectHolidays.length === 1 ? "closure" : "closures"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Personal Time Off */}
-        <Card
-          className={`border-white/[0.06] bg-slate-900/50 cursor-pointer transition-shadow ${activeTab === "personal" ? "ring-1 ring-amber-500/40" : ""}`}
-          onClick={() => setActiveTab("personal")}
-        >
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
-              <UserX className="size-5 text-amber-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Personal Time Off
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalPtoDays} <span className="text-sm font-medium text-slate-400">person-days</span>
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {sprintPtoStats.people} {sprintPtoStats.people === 1 ? "person" : "people"} affected
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Days Lost */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-red-500/15">
-              <Clock className="size-5 text-red-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Total Days Off
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalPublicDays + totalProjectDays + totalPtoDays} <span className="text-sm font-medium text-slate-400">days</span>
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {teamMembers.filter((m) => m.isActive).length} active team members
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center flex-wrap gap-3">
+        <SegmentedControl
+          options={[
+            { value: "public",   label: "Public holidays" },
+            { value: "project",  label: "Project closures" },
+            { value: "personal", label: "Personal time off" },
+          ]}
+          value={activeTab as "public" | "project" | "personal"}
+          onChange={(v) => setActiveTab(v)}
+        />
+        <div className="ml-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+            onClick={() => ptoCsvFileRef.current?.click()}
+            disabled={ptoCsvImporting}
+          >
+            {ptoCsvImporting ? (
+              <Loader2 className="size-4 animate-spin mr-1.5" />
+            ) : (
+              <Download className="size-4 mr-1.5" />
+            )}
+            Import CSV
+          </Button>
+          <input
+            ref={ptoCsvFileRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handlePtoCsvImport}
+          />
+        </div>
       </div>
 
       {/* Tabs */}

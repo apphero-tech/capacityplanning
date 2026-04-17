@@ -23,6 +23,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { StatStrip } from "@/components/ui/stat-strip";
 import {
   Table,
   TableBody,
@@ -132,107 +133,45 @@ export function CapacityView({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ----------------------------------------------------------------- */}
-      {/* Section 1 – Sprint Info Cards                                     */}
-      {/* ----------------------------------------------------------------- */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Sprint Name + Dates */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#E31837]/15">
-              <CalendarDays className="size-5 text-[#E31837]" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Current Sprint
-              </p>
-              <p className="mt-1 text-lg font-semibold text-slate-100 truncate">
-                {sprint.name}
-              </p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {formatDateRange(sprint.startDate, sprint.endDate)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <StatStrip
+        stats={[
+          {
+            label: "Sprint",
+            value: sprint.name,
+            hint: formatDateRange(sprint.startDate, sprint.endDate),
+          },
+          {
+            label: "Duration",
+            value: `${sprint.durationWeeks}w`,
+            hint: `${sprint.workingDays} working days`,
+          },
+          {
+            label: "Focus factor",
+            value: `${Math.round(sprint.focusFactor * 100)}%`,
+            hint: "productivity",
+          },
+          {
+            label: "Scope",
+            value: `${fmt(totalScopeSP, 0)} USP`,
+            hint: `${capacityRows.reduce((s, r) => s + r.stories, 0)} stories`,
+          },
+        ]}
+      />
 
-        {/* Duration */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
-              <Clock className="size-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Duration
-              </p>
-              <p className="mt-1 text-lg font-semibold text-slate-100">
-                {sprint.durationWeeks} weeks
-              </p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {sprint.workingDays} working days
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Focus Factor */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15">
-              <Target className="size-5 text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Focus Factor
-              </p>
-              <p className="mt-1 text-lg font-semibold text-slate-100">
-                {Math.round(sprint.focusFactor * 100)}%
-              </p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Productivity multiplier
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sprint Scope */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
-              <Layers className="size-5 text-amber-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Sprint Scope
-              </p>
-              <p className="mt-1 text-lg font-semibold text-slate-100">
-                {fmt(totalScopeSP, 0)} USP
-              </p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Across {capacityRows.reduce((s, r) => s + r.stories, 0)} stories
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ----------------------------------------------------------------- */}
-      {/* Section 2 – Capacity vs Scope Table                               */}
-      {/* ----------------------------------------------------------------- */}
-      <Card className="border-white/[0.06] bg-slate-900/50">
-        <CardHeader>
-          <CardTitle className="text-slate-100">Capacity vs. Scope</CardTitle>
-          <CardDescription className="text-slate-400">
-            Breakdown by stream with projected capacity and coverage analysis
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Capacity vs Scope table */}
+      <div>
+        <div className="mb-3">
+          <h3 className="text-[13px] font-medium text-slate-300">Capacity vs. scope</h3>
+          <p className="text-[12px] text-slate-500 mt-0.5">
+            Breakdown by stream with projected capacity and coverage
+          </p>
+        </div>
+        <div>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/[0.06] hover:bg-transparent">
-                <TableHead className="text-slate-400">Stream</TableHead>
-                <TableHead className="text-right text-slate-400">
+              <TableRow className="border-white/[0.04] hover:bg-transparent">
+                <TableHead className="text-[11px] font-medium text-slate-500">Stream</TableHead>
+                <TableHead className="text-[11px] font-medium text-slate-500 text-right">
                   Stories
                 </TableHead>
                 <TableHead className="text-right text-slate-400">
@@ -368,8 +307,8 @@ export function CapacityView({
               </TableRow>
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* ----------------------------------------------------------------- */}
       {/* Section 3 – DEV Projection Cards                                  */}

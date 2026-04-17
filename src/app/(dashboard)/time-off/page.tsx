@@ -23,15 +23,18 @@ export default async function TimeOffPage() {
     isActive: m.isActive,
   }));
 
+  const subtitle =
+    publicHolidays.length + projectHolidays.length + ptoEntries.length === 0
+      ? "No time-off data yet — import the Planner CSV to populate PTO, and add holidays."
+      : `${publicHolidays.length} public holiday${publicHolidays.length !== 1 ? "s" : ""} · ${projectHolidays.length} project closure${projectHolidays.length !== 1 ? "s" : ""} · ${ptoEntries.length} PTO entries`;
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-slate-100">
           Time Off
         </h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Public holidays, project closures, and personal time off impacting team capacity.
-        </p>
+        <p className="text-sm text-slate-400 mt-1">{subtitle}</p>
       </div>
 
       <TimeOffView

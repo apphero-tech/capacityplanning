@@ -35,6 +35,8 @@ import {
   X,
 } from "lucide-react";
 import { getBadgeClasses } from "@/lib/badge-utils";
+import { StatStrip } from "@/components/ui/stat-strip";
+import { ChipFilter } from "@/components/ui/segmented-control";
 import { useSprint } from "@/contexts/sprint-context";
 import type { SprintStory } from "@/types";
 
@@ -269,101 +271,49 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
   // Render
   // ---------------------------------------------------------------------------
 
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Sprint context bar (no import button — that lives in the page header) */}
-      <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-slate-900/50 px-4 py-3">
-        <FileSpreadsheet className="size-4 text-slate-400" />
-        <span className="text-sm text-slate-300">
-          Jira backlog for{" "}
-          <span className="font-medium text-slate-100">
-            {selectedSprint?.name ?? "—"}
-          </span>
-        </span>
-        {stories.length > 0 && (
-          <Badge
-            variant="outline"
-            className="border-transparent bg-slate-800 text-xs text-slate-400"
-          >
-            {stories.length} stories
-          </Badge>
-        )}
-      </div>
+  // Build stream chip options for the filter bar
+  const streamChipOptions = [
+    { value: "all", label: `All streams` },
+    ...Object.entries(stats.byStream)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([stream, data]) => ({
+        value: stream,
+        label: `${stream} ${data.count}`,
+      })),
+  ];
 
-      {/* Summary stats cards */}
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Stat strip — only once we have stories */}
       {stories.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="rounded-xl border border-white/[0.06] bg-slate-900/50 px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Total Stories
-            </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-slate-100">
-              {stats.totalStories}
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/[0.06] bg-slate-900/50 px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Total SP
-            </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-slate-100">
-              {stats.totalSP}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 ml-2">
-            {Object.entries(stats.byStream)
-              .sort(([a], [b]) => a.localeCompare(b))
-              .map(([stream, data]) => {
-                const isActive = streamFilter === stream;
-                return (
-                  <Badge
-                    key={stream}
-                    variant="colored"
-                    interactive
-                    active={isActive}
-                    onClick={() => setStreamFilter(isActive ? "all" : stream)}
-                    className={`text-xs font-medium ${getBadgeClasses("stream", stream)}`}
-                  >
-                    {stream}: {data.count} ({data.sp} SP)
-                  </Badge>
-                );
-              })}
-          </div>
-        </div>
+        <StatStrip
+          stats={[
+            { label: "Sprint", value: selectedSprint?.name ?? "—", muted: !selectedSprint },
+            { label: "Stories", value: stats.totalStories },
+            { label: "Story points", value: stats.totalSP, hint: "total" },
+            { label: "Showing", value: filtered.length, hint: `of ${stats.totalStories}` },
+          ]}
+        />
       )}
 
-      {/* Filter bar */}
+      {/* Toolbar row 1: search + filters + excluded toggle */}
       {stories.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-3">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
             <Input
-              placeholder="Search key or summary…"
+              placeholder="Search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-64 pl-9 border-white/[0.06] bg-slate-900/50 text-slate-300 placeholder:text-slate-600"
+              className="h-8 w-56 pl-8 border-white/10 bg-slate-900/60 text-[13px] text-slate-300 placeholder:text-slate-600"
             />
           </div>
-
-          <Select value={streamFilter} onValueChange={setStreamFilter}>
-            <SelectTrigger className="w-36 border-white/[0.06] bg-slate-900/50 text-slate-300">
-              <SelectValue placeholder="All Streams" />
-            </SelectTrigger>
-            <SelectContent className="border-white/[0.06] bg-slate-900">
-              <SelectItem value="all">All Streams</SelectItem>
-              {streams.map((stream) => (
-                <SelectItem key={stream} value={stream}>
-                  {stream}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-52 border-white/[0.06] bg-slate-900/50 text-slate-300">
-              <SelectValue placeholder="All Statuses" />
+            <SelectTrigger className="h-8 w-[200px] border-white/10 bg-slate-900/60 text-[13px] text-slate-300">
+              <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent className="border-white/[0.06] bg-slate-900">
-              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               {statuses.map((status) => (
                 <SelectItem key={status} value={status}>
                   {status}
@@ -371,14 +321,13 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
               ))}
             </SelectContent>
           </Select>
-
           <Select value={podFilter} onValueChange={setPodFilter}>
-            <SelectTrigger className="w-36 border-white/[0.06] bg-slate-900/50 text-slate-300">
-              <SelectValue placeholder="All Pods" />
+            <SelectTrigger className="h-8 w-[120px] border-white/10 bg-slate-900/60 text-[13px] text-slate-300">
+              <SelectValue placeholder="All pods" />
             </SelectTrigger>
             <SelectContent className="border-white/[0.06] bg-slate-900">
-              <SelectItem value="all">All Pods</SelectItem>
-              <SelectItem value="none">No Pod</SelectItem>
+              <SelectItem value="all">All pods</SelectItem>
+              <SelectItem value="none">No pod</SelectItem>
               {pods.map((pod) => (
                 <SelectItem key={pod} value={pod}>
                   {pod}
@@ -386,27 +335,27 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
               ))}
             </SelectContent>
           </Select>
-
           <button
             onClick={() => setShowExcluded(!showExcluded)}
-            className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors ${
+            className={`h-8 flex items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium transition-colors ${
               showExcluded
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                : "border-white/[0.06] bg-slate-900/50 text-slate-500 hover:text-slate-300"
+                ? "bg-white/[0.06] text-slate-50"
+                : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.03]"
             }`}
           >
-            {showExcluded ? (
-              <Eye className="size-3.5" />
-            ) : (
-              <EyeOff className="size-3.5" />
-            )}
-            {showExcluded ? "Excluded shown" : "Show excluded"}
+            {showExcluded ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+            Excluded
           </button>
-
-          <span className="ml-auto text-xs text-slate-500">
-            {filtered.length} stories
-          </span>
         </div>
+      )}
+
+      {/* Toolbar row 2: stream chip filter */}
+      {stories.length > 0 && streams.length > 0 && (
+        <ChipFilter
+          options={streamChipOptions}
+          value={streamFilter}
+          onChange={setStreamFilter}
+        />
       )}
 
       {/* Empty state */}
@@ -424,7 +373,7 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
 
       {/* Table */}
       {stories.length > 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-slate-900/50 overflow-hidden">
+        <div>
           <Table>
             <TableHeader>
               <TableRow className="border-white/[0.06] hover:bg-transparent">
