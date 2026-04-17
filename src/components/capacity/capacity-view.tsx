@@ -4,27 +4,13 @@ import { useMemo, useState } from "react";
 import { SegmentedControl, ChipFilter } from "@/components/ui/segmented-control";
 import type { CapacityRow, SprintStory } from "@/types";
 import { useSprint } from "@/contexts/sprint-context";
-import { formatDateRange } from "@/lib/date-utils";
-import {
-  STREAM_LABELS,
-  STREAM_COLORS,
-  COVERAGE_STATUS_BADGE,
-} from "@/lib/constants";
-import { getBadgeClasses } from "@/lib/badge-utils";
 import {
   computeDevCapacityFromIC,
   computeStreamCapacityFromIC,
   computeDevProjection,
   computeCapacityRows,
 } from "@/lib/capacity-engine";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { StatStrip } from "@/components/ui/stat-strip";
+import { STREAM_LABELS } from "@/lib/constants";
 import {
   Table,
   TableBody,
@@ -33,62 +19,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  CalendarDays,
-  Clock,
-  Target,
-  Layers,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-} from "lucide-react";
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Formatting helpers
 // ---------------------------------------------------------------------------
 
-function fmt(n: number | null | undefined, decimals = 1): string {
-  if (n === null || n === undefined) return "-";
+function fmt(n: number | null | undefined, decimals = 0): string {
+  if (n === null || n === undefined) return "—";
   return Number(n).toLocaleString("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   });
 }
 
-function fmtPct(n: number | null | undefined): string {
-  if (n === null || n === undefined) return "-";
-  return `${fmt(n, 1)}%`;
-}
-
-function gapColor(gap: number | null): string {
-  if (gap === null) return "text-slate-500";
-  if (gap >= 0) return "text-emerald-400";
-  return "text-red-400";
-}
-
-function coverageColor(pct: number | null): string {
-  if (pct === null) return "text-slate-500";
-  if (pct >= 100) return "text-emerald-400";
-  if (pct >= 80) return "text-amber-400";
-  return "text-red-400";
-}
-
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
-
 interface CapacityViewProps {
   storiesBySprint: Record<string, SprintStory[]>;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-export function CapacityView({
-  storiesBySprint,
-}: CapacityViewProps) {
+/**
+ * Capacity planning — DEV-first simplification.
+ *
+ * The whole page is built around one question: "Can we deliver the selected
+ * sprint?" The hero answers it in three numbers (available DEV hours, scope
+ * in story points, delta). The four-cycle breakdown lives below as a
+ * supporting table — visible but not the first thing you read.
+ */
+export function CapacityView({ storiesBySprint }: CapacityViewProps) {
   const {
     selectedSprint: sprint,
     allSprints,
@@ -99,19 +55,16 @@ export function CapacityView({
     ptoEntries,
   } = useSprint();
 
-  // Capacity conversations center on Deloitte first — York is a separate
-  // review pass, All shows the combined available pool.
   const [orgFilter, setOrgFilter] = useState<string>("Deloitte");
-  // Stream filter only covers the four workflow cycles (Refining, Design,
-  // Development, QA). Lead/PMO/Retro/OCM stay out because they aren't
-  // delivery streams — they don't convert hours into story points.
   const [streamFilter, setStreamFilter] = useState<string>("all");
 
-  // Scope org filter to the capacity engine.
-  const scopedCapacities = useMemo(() => {
-    if (orgFilter === "all") return initialCapacities;
-    return initialCapacities.filter((c) => c.organization === orgFilter);
-  }, [initialCapacities, orgFilter]);
+  const scopedCapacities = useMemo(
+    () =>
+      orgFilter === "all"
+        ? initialCapacities
+        : initialCapacities.filter((c) => c.organization === orgFilter),
+    [initialCapacities, orgFilter],
+  );
 
   const { capacityRows, devProjection, cycleInfo } = useMemo(() => {
     const emptyProjection = {
@@ -134,23 +87,16 @@ export function CapacityView({
       };
     }
 
-    // Find the previous/next delivery sprints (demo sprints are skipped so a
-    // Product Demo sprint doesn't shift the scope by one slot).
-    const orderedSprints = [...allSprints]
+    const ordered = [...allSprints]
       .filter((s) => !s.isDemo)
       .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
-    const idx = orderedSprints.findIndex((s) => s.id === sprint.id);
-    const prev = idx > 0 ? orderedSprints[idx - 1] : null;
-    const next = idx >= 0 && idx < orderedSprints.length - 1 ? orderedSprints[idx + 1] : null;
+    const idx = ordered.findIndex((s) => s.id === sprint.id);
+    const prev = idx > 0 ? ordered[idx - 1] : null;
+    const next = idx >= 0 && idx < ordered.length - 1 ? ordered[idx + 1] : null;
 
-    // Apply the 3-cycle rule:
-    //   refining (cycle 1) at sprint N = stories that will be dev-ed at N+1
-    //   design   (cycle 1) at sprint N = same pool as refining
-    //   dev      (cycle 2) at sprint N = stories planned for sprint N
-    //   qa       (cycle 3) at sprint N = stories dev-ed at N-1
-    const refineScope = next ? (storiesBySprint[next.id] ?? []) : [];
+    const refineScope = next ? storiesBySprint[next.id] ?? [] : [];
     const devScope = storiesBySprint[sprint.id] ?? [];
-    const qaScope = prev ? (storiesBySprint[prev.id] ?? []) : [];
+    const qaScope = prev ? storiesBySprint[prev.id] ?? [] : [];
 
     const storiesByStream = {
       "1-REF": refineScope,
@@ -159,10 +105,21 @@ export function CapacityView({
       "4-QA": qaScope,
     } as const;
 
-    const devCapacities = computeDevCapacityFromIC(scopedCapacities, sprint, publicHolidays, projectHolidays, ptoEntries);
-    const streamHrs = computeStreamCapacityFromIC(scopedCapacities, sprint, publicHolidays, projectHolidays, ptoEntries);
+    const devCapacities = computeDevCapacityFromIC(
+      scopedCapacities,
+      sprint,
+      publicHolidays,
+      projectHolidays,
+      ptoEntries,
+    );
+    const streamHrs = computeStreamCapacityFromIC(
+      scopedCapacities,
+      sprint,
+      publicHolidays,
+      projectHolidays,
+      ptoEntries,
+    );
 
-    // DEV projection is driven by the current sprint's own scope.
     const totalBacklogSP = devScope
       .filter((s) => !s.isExcluded)
       .reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
@@ -171,392 +128,199 @@ export function CapacityView({
       devCapacities,
       selectedForecast?.velocityProven ?? sprint.velocityProven ?? 0,
       selectedForecast?.velocityTarget ?? sprint.velocityTarget ?? 0,
-      totalBacklogSP
+      totalBacklogSP,
     );
 
     const rows = computeCapacityRows(storiesByStream, [], dp, streamHrs);
     return { capacityRows: rows, devProjection: dp, cycleInfo: { prev, next } };
-  }, [scopedCapacities, storiesBySprint, sprint, allSprints, publicHolidays, projectHolidays, ptoEntries, selectedForecast]);
+  }, [
+    scopedCapacities,
+    storiesBySprint,
+    sprint,
+    allSprints,
+    publicHolidays,
+    projectHolidays,
+    ptoEntries,
+    selectedForecast,
+  ]);
 
-  // Optional per-cycle filter on the rows displayed in the Capacity table.
+  if (!sprint) {
+    return <p className="text-sm text-slate-400">Select a sprint in the top bar.</p>;
+  }
+
   const visibleRows = useMemo(() => {
     if (streamFilter === "all") return capacityRows;
     return capacityRows.filter((r) => r.stream === streamFilter);
   }, [capacityRows, streamFilter]);
 
-  if (!sprint) {
-    return <p className="text-sm text-slate-400">No sprint selected.</p>;
-  }
-
-  const totalScopeSP = visibleRows.reduce((s, r) => s + r.scopeSP, 0);
+  // DEV projection numbers drive the hero card.
+  const devRow = capacityRows.find((r) => r.stream === "3-DEV");
+  const devHours = devRow?.totalHrs ?? 0;
+  const devScopeSP = devRow?.scopeSP ?? 0;
+  const devProjectedSP = devProjection.projectedSPProven;
+  const devGapSP = devProjection.gapProven;
+  const devCoverage = devProjection.coverageProven * 100;
+  const deltaLabel =
+    devGapSP > 0
+      ? `+${fmt(devGapSP)} SP of room`
+      : devGapSP < 0
+        ? `${fmt(devGapSP)} SP short`
+        : "balanced";
+  const deltaTone =
+    devGapSP > 0 ? "text-emerald-300" : devGapSP < 0 ? "text-red-300" : "text-slate-400";
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Filter toolbar — same pattern as Team page */}
+    <div className="flex flex-col gap-8">
+      {/* Filter toolbar */}
       <div className="flex items-center flex-wrap gap-x-4 gap-y-3">
         <SegmentedControl
           options={[
-            { value: "all",      label: "All" },
+            { value: "all", label: "All" },
             { value: "Deloitte", label: "Deloitte" },
-            { value: "York",     label: "York" },
+            { value: "York", label: "York" },
           ]}
           value={orgFilter}
           onChange={setOrgFilter}
         />
         <ChipFilter
           options={[
-            { value: "all",    label: "All streams" },
-            { value: "1-REF",  label: "Refining" },
-            { value: "2-DES",  label: "Design" },
-            { value: "3-DEV",  label: "Development" },
-            { value: "4-QA",   label: "QA" },
+            { value: "all", label: "All streams" },
+            { value: "1-REF", label: "Refining" },
+            { value: "2-DES", label: "Design" },
+            { value: "3-DEV", label: "Development" },
+            { value: "4-QA", label: "QA" },
           ]}
           value={streamFilter}
           onChange={setStreamFilter}
         />
       </div>
 
-      {/* Cycle scope provenance — reminds the user which sprint feeds each cycle */}
-      <p className="text-[12px] text-slate-500">
-        Team available at <span className="text-slate-300">{sprint.name}</span>
-        {cycleInfo.next && (
-          <>
-            {" · "}refining &amp; design from{" "}
-            <span className="text-slate-300">{cycleInfo.next.name}</span>
-          </>
-        )}
-        {cycleInfo.prev && (
-          <>
-            {" · "}QA from <span className="text-slate-300">{cycleInfo.prev.name}</span>
-          </>
-        )}
-      </p>
+      {/* Hero — can we deliver DEV this sprint? */}
+      <section className="rounded-2xl border border-white/[0.06] bg-slate-900/40 p-6">
+        <p className="text-[12px] text-slate-500">
+          Can we deliver <span className="text-slate-200 font-medium">{sprint.name}</span>?
+        </p>
 
-      <StatStrip
-        stats={[
-          {
-            label: "Sprint",
-            value: sprint.name,
-            hint: formatDateRange(sprint.startDate, sprint.endDate),
-          },
-          {
-            label: "Duration",
-            value: `${sprint.durationWeeks}w`,
-            hint: `${sprint.workingDays} working days`,
-          },
-          {
-            label: "Focus factor",
-            value: `${Math.round(sprint.focusFactor * 100)}%`,
-            hint: "productivity",
-          },
-          {
-            label: "Scope",
-            value: `${fmt(totalScopeSP, 0)} USP`,
-            hint: `${visibleRows.reduce((s, r) => s + r.stories, 0)} stories`,
-          },
-        ]}
-      />
-
-      {/* Capacity vs Scope table */}
-      <div>
-        <h3 className="text-[13px] font-medium text-slate-300 mb-3">Capacity vs. scope</h3>
-        <div>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-white/[0.04] hover:bg-transparent">
-                <TableHead className="text-[11px] font-medium text-slate-500">Stream</TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-right">
-                  Stories
-                </TableHead>
-                <TableHead className="text-right text-slate-400">
-                  Scope (SP)
-                </TableHead>
-                <TableHead className="text-right text-slate-400">
-                  Capacity (hrs)
-                </TableHead>
-                <TableHead className="text-right text-slate-400">
-                  Velocity (SP/hr)
-                </TableHead>
-                <TableHead className="text-right text-slate-400">
-                  Projected SP
-                </TableHead>
-                <TableHead className="text-right text-slate-400">
-                  Gap (SP)
-                </TableHead>
-                <TableHead className="text-right text-slate-400">
-                  Coverage
-                </TableHead>
-                <TableHead className="text-center text-slate-400">
-                  Status
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleRows.map((row) => (
-                  <TableRow
-                    key={row.stream}
-                    className="border-white/[0.06] hover:bg-white/[0.02]"
-                  >
-                    {/* Stream */}
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="inline-block size-2.5 rounded-full"
-                          style={{
-                            backgroundColor:
-                              STREAM_COLORS[row.stream] ?? "#6b7280",
-                          }}
-                        />
-                        <span className="font-medium text-slate-200">
-                          {STREAM_LABELS[row.stream] ?? row.stream}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    {/* Stories */}
-                    <TableCell className="text-right text-slate-300">
-                      {row.stories}
-                    </TableCell>
-
-                    {/* Scope (SP) */}
-                    <TableCell className="text-right font-medium text-slate-200">
-                      {fmt(row.scopeSP, 0)}
-                    </TableCell>
-
-                    {/* Capacity hrs */}
-                    <TableCell className="text-right text-slate-300">
-                      {fmt(row.totalHrs)}
-                    </TableCell>
-
-                    {/* Velocity */}
-                    <TableCell className="text-right text-slate-300">
-                      {row.velocity !== null ? fmt(row.velocity, 2) : (
-                        <span className="text-slate-600">-</span>
-                      )}
-                    </TableCell>
-
-                    {/* Projected SP */}
-                    <TableCell className="text-right text-slate-300">
-                      {row.projectedSP !== null ? fmt(row.projectedSP) : (
-                        <span className="text-slate-600">-</span>
-                      )}
-                    </TableCell>
-
-                    {/* Gap */}
-                    <TableCell
-                      className={`text-right font-medium ${gapColor(row.gap)}`}
-                    >
-                      {row.gap !== null ? (
-                        <span className="inline-flex items-center gap-1">
-                          {row.gap > 0 ? "+" : ""}
-                          {fmt(row.gap)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-600">-</span>
-                      )}
-                    </TableCell>
-
-                    {/* Coverage */}
-                    <TableCell
-                      className={`text-right font-medium ${coverageColor(
-                        row.coveragePercent
-                      )}`}
-                    >
-                      {row.coveragePercent !== null
-                        ? fmtPct(row.coveragePercent)
-                        : <span className="text-slate-600">-</span>}
-                    </TableCell>
-
-                    {/* Status */}
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="colored"
-                        className={getBadgeClasses("coverage", row.status)}
-                      >
-                        {row.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-
-              {/* Totals row */}
-              <TableRow className="border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.03]">
-                <TableCell className="font-semibold text-slate-200">
-                  Total
-                </TableCell>
-                <TableCell className="text-right font-semibold text-slate-200">
-                  {visibleRows.reduce((s, r) => s + r.stories, 0)}
-                </TableCell>
-                <TableCell className="text-right font-semibold text-slate-200">
-                  {fmt(totalScopeSP, 0)}
-                </TableCell>
-                <TableCell className="text-right font-semibold text-slate-200">
-                  {fmt(visibleRows.reduce((s, r) => s + r.totalHrs, 0))}
-                </TableCell>
-                <TableCell />
-                <TableCell />
-                <TableCell />
-                <TableCell />
-                <TableCell />
-              </TableRow>
-            </TableBody>
-          </Table>
+        <div className="mt-4 grid gap-8 sm:grid-cols-3">
+          <div>
+            <p className="text-[11px] font-medium text-slate-500">DEV capacity</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-100">
+              {fmt(devHours)} <span className="text-base font-normal text-slate-500">hrs</span>
+            </p>
+            <p className="mt-1 text-[12px] text-slate-500">
+              proj. {fmt(devProjectedSP)} SP @ velocity {devProjection.velocityProven.toFixed(2)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-slate-500">DEV scope</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-100">
+              {fmt(devScopeSP)} <span className="text-base font-normal text-slate-500">SP</span>
+            </p>
+            <p className="mt-1 text-[12px] text-slate-500">
+              {devRow?.stories ?? 0} stories planned for {sprint.name}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-slate-500">Delta</p>
+            <p className={`mt-1 text-3xl font-semibold tabular-nums ${deltaTone}`}>
+              {deltaLabel}
+            </p>
+            <p className="mt-1 text-[12px] text-slate-500">
+              coverage {fmt(devCoverage, 0)}%
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* ----------------------------------------------------------------- */}
-      {/* Section 3 – DEV Projection Cards                                  */}
-      {/* ----------------------------------------------------------------- */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Realistic (Proven Velocity) */}
-        <ProjectionCard
-          title="Realistic"
-          subtitle="Proven Velocity"
-          accentColor="text-[#E31837]"
-          accentBg="bg-[#E31837]/15"
-          netDevCapacity={devProjection.netDevCapacity}
-          velocity={devProjection.velocityProven}
-          projectedSP={devProjection.projectedSPProven}
-          backlogDevSP={devProjection.backlogDevSP}
-          gap={devProjection.gapProven}
-          coverage={devProjection.coverageProven * 100}
-        />
-
-        {/* Optimistic (Target Velocity) */}
-        <ProjectionCard
-          title="Optimistic"
-          subtitle="Target Velocity"
-          accentColor="text-emerald-400"
-          accentBg="bg-emerald-500/15"
-          netDevCapacity={devProjection.netDevCapacity}
-          velocity={devProjection.velocityTarget}
-          projectedSP={devProjection.projectedSPTarget}
-          backlogDevSP={devProjection.backlogDevSP}
-          gap={devProjection.gapTarget}
-          coverage={devProjection.coverageTarget * 100}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Projection Card sub-component
-// ---------------------------------------------------------------------------
-
-interface ProjectionCardProps {
-  title: string;
-  subtitle: string;
-  accentColor: string;
-  accentBg: string;
-  netDevCapacity: number;
-  velocity: number;
-  projectedSP: number;
-  backlogDevSP: number;
-  gap: number;
-  coverage: number;
-}
-
-function ProjectionCard({
-  title,
-  subtitle,
-  accentColor,
-  accentBg,
-  netDevCapacity,
-  velocity,
-  projectedSP,
-  backlogDevSP,
-  gap,
-  coverage,
-}: ProjectionCardProps) {
-  const GapIcon = gap > 0 ? TrendingUp : gap < 0 ? TrendingDown : Minus;
-
-  return (
-    <Card className="border-white/[0.06] bg-slate-900/50">
-      <CardHeader>
-        <div className="flex items-center gap-3">
+        {/* Coverage bar */}
+        <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.04]">
           <div
-            className={`flex size-9 items-center justify-center rounded-lg ${accentBg}`}
-          >
-            <TrendingUp className={`size-4 ${accentColor}`} />
-          </div>
-          <div>
-            <CardTitle className="text-slate-100">{title}</CardTitle>
-            <CardDescription className="text-slate-400">
-              {subtitle}
-            </CardDescription>
-          </div>
+            className={`h-full rounded-full transition-all ${
+              devCoverage >= 100
+                ? "bg-emerald-400/70"
+                : devCoverage >= 80
+                  ? "bg-amber-400/70"
+                  : "bg-red-400/70"
+            }`}
+            style={{ width: `${Math.max(0, Math.min(devCoverage, 120))}%` }}
+          />
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {/* Net Dev Capacity */}
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Net Dev Capacity
-            </p>
-            <p className="mt-1 text-xl font-bold text-slate-100">
-              {fmt(netDevCapacity)} hrs
-            </p>
-          </div>
+      </section>
 
-          {/* Velocity */}
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Velocity
-            </p>
-            <p className={`mt-1 text-xl font-bold ${accentColor}`}>
-              {fmt(velocity, 2)} SP/hr
-            </p>
-          </div>
-
-          {/* Projected SP */}
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Projected
-            </p>
-            <p className="mt-1 text-xl font-bold text-slate-100">
-              {fmt(projectedSP)} SP
-            </p>
-          </div>
-
-          {/* Sprint Scope */}
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Sprint Scope
-            </p>
-            <p className="mt-1 text-xl font-bold text-slate-100">
-              {fmt(backlogDevSP, 0)} SP
-            </p>
-          </div>
-
-          {/* Gap */}
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Gap
-            </p>
-            <div className={`mt-1 flex items-center gap-1.5 ${gapColor(gap)}`}>
-              <GapIcon className="size-4" />
-              <span className="text-xl font-bold">
-                {gap > 0 ? "+" : ""}
-                {fmt(gap)} SP
-              </span>
-            </div>
-          </div>
-
-          {/* Coverage */}
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Coverage
-            </p>
-            <p
-              className={`mt-1 text-xl font-bold ${coverageColor(coverage)}`}
-            >
-              {fmtPct(coverage)}
-            </p>
-          </div>
+      {/* Secondary — other cycles + scope provenance */}
+      <section>
+        <div className="mb-3 flex items-baseline justify-between flex-wrap gap-2">
+          <h3 className="text-[13px] font-medium text-slate-300">By cycle</h3>
+          <p className="text-[12px] text-slate-500">
+            Team at <span className="text-slate-300">{sprint.name}</span>
+            {cycleInfo.next && (
+              <>
+                {" · "}refining &amp; design from{" "}
+                <span className="text-slate-300">{cycleInfo.next.name}</span>
+              </>
+            )}
+            {cycleInfo.prev && (
+              <>
+                {" · "}QA from <span className="text-slate-300">{cycleInfo.prev.name}</span>
+              </>
+            )}
+          </p>
         </div>
-      </CardContent>
-    </Card>
+
+        <Table>
+          <TableHeader>
+            <TableRow className="border-white/[0.04] hover:bg-transparent">
+              <TableHead className="text-[11px] font-medium text-slate-500">Cycle</TableHead>
+              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-20">
+                Scope SP
+              </TableHead>
+              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-16">
+                Stories
+              </TableHead>
+              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+                Hours
+              </TableHead>
+              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+                Coverage
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleRows.map((row) => {
+              const cov = row.coveragePercent;
+              const covColor =
+                cov === null
+                  ? "text-slate-600"
+                  : cov >= 100
+                    ? "text-emerald-400"
+                    : cov >= 80
+                      ? "text-amber-400"
+                      : "text-red-400";
+              return (
+                <TableRow
+                  key={row.stream}
+                  className="border-white/[0.04] hover:bg-white/[0.02]"
+                >
+                  <TableCell className="font-medium text-slate-200">
+                    {STREAM_LABELS[row.stream] ?? row.stream}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-slate-200">
+                    {fmt(row.scopeSP)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-slate-400">
+                    {row.stories}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-slate-400">
+                    {fmt(row.totalHrs, 1)}
+                  </TableCell>
+                  <TableCell className={`text-right tabular-nums font-medium ${covColor}`}>
+                    {cov === null ? "—" : `${fmt(cov, 0)}%`}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </section>
+    </div>
   );
 }
