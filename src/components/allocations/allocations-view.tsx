@@ -45,14 +45,17 @@ import { ImportAllocationsDialog } from "@/components/allocations/import-allocat
 // ---------------------------------------------------------------------------
 
 const ALLOCATION_COLUMNS = [
-  { key: "refinement", label: "Refinement", short: "REF" },
-  { key: "design", label: "Design", short: "DES" },
-  { key: "development", label: "Development", short: "DEV" },
-  { key: "qa", label: "QA", short: "QA" },
-  { key: "kt", label: "KT", short: "KT" },
-  { key: "lead", label: "Lead", short: "Lead" },
-  { key: "pmo", label: "PMO", short: "PMO" },
-  { key: "other", label: "Other", short: "Other" },
+  { key: "refinement",  label: "Refinement",                short: "REF" },
+  { key: "design",      label: "Design",                    short: "DES" },
+  { key: "development", label: "Development",               short: "DEV" },
+  { key: "qa",          label: "QA",                        short: "QA" },
+  { key: "kt",          label: "KT",                        short: "KT" },
+  { key: "lead",        label: "Lead",                      short: "Lead" },
+  { key: "pmo",         label: "PMO",                       short: "PMO" },
+  { key: "retrofits",   label: "Retrofits / Integrations",  short: "Retro" },
+  { key: "ocmComms",    label: "OCM Comms & Engagement",    short: "OCM-C" },
+  { key: "ocmTraining", label: "OCM End-User Training",     short: "OCM-T" },
+  { key: "other",       label: "Other",                     short: "Other" },
 ] as const;
 
 type AllocKey = (typeof ALLOCATION_COLUMNS)[number]["key"];
@@ -447,6 +450,7 @@ interface AllocationsViewProps {
 export function AllocationsView({ capacities }: AllocationsViewProps) {
   const router = useRouter();
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [orgFilter, setOrgFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -458,10 +462,21 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
     return Array.from(set).sort();
   }, [capacities]);
 
+  const organizations = useMemo(() => {
+    const set = new Set<string>();
+    capacities.forEach((c) => {
+      if (c.organization) set.add(c.organization);
+    });
+    return Array.from(set).sort();
+  }, [capacities]);
+
   const filtered = useMemo(() => {
-    if (roleFilter === "all") return capacities;
-    return capacities.filter((c) => c.role === roleFilter);
-  }, [capacities, roleFilter]);
+    return capacities.filter((c) => {
+      if (roleFilter !== "all" && c.role !== roleFilter) return false;
+      if (orgFilter !== "all" && c.organization !== orgFilter) return false;
+      return true;
+    });
+  }, [capacities, roleFilter, orgFilter]);
 
   const totalMembers = filtered.length;
   const avgHrsPerWeek =
@@ -544,26 +559,41 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Filter by Role
+                Filters
               </p>
               <div className="flex items-center gap-2">
                 <ImportAllocationsDialog onImported={handleAdd} />
                 <AddMemberDialog onAdd={handleAdd} />
               </div>
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent className="border-white/[0.06] bg-slate-900">
-                <SelectItem value="all">All Roles</SelectItem>
-                {roles.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={orgFilter} onValueChange={setOrgFilter}>
+                <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">
+                  <SelectValue placeholder="All orgs" />
+                </SelectTrigger>
+                <SelectContent className="border-white/[0.06] bg-slate-900">
+                  <SelectItem value="all">All orgs</SelectItem>
+                  {organizations.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {o}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent className="border-white/[0.06] bg-slate-900">
+                  <SelectItem value="all">All roles</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -584,6 +614,9 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
               <TableRow className="border-white/[0.06] hover:bg-transparent">
                 <TableHead className="text-slate-400 min-w-[160px]">
                   Name
+                </TableHead>
+                <TableHead className="text-slate-400 min-w-[80px]">
+                  Org
                 </TableHead>
                 <TableHead className="text-slate-400">Role</TableHead>
                 <TableHead className="text-slate-400 min-w-[80px]">
@@ -649,6 +682,14 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                             className="font-medium text-slate-200"
                           />
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <EditableTextCell
+                          value={cap.organization}
+                          onSave={(v) => saveField(cap.id, "organization", v)}
+                          saving={isSaving}
+                          className="text-slate-400 text-xs"
+                        />
                       </TableCell>
                       <TableCell>
                         <EditableTextCell

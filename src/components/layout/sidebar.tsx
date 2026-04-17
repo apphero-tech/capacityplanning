@@ -34,7 +34,6 @@ const navItems = [
   { href: "/sprints", label: "Sprints", icon: Calendar },
   { href: "/backlog", label: "Backlog", icon: ListTodo },
   { href: "/team", label: "Team", icon: Users },
-  { href: "/allocations", label: "Allocations", icon: PieChart },
   { href: "/time-off", label: "Time Off", icon: CalendarOff },
   { href: "/capacity", label: "Capacity", icon: BarChart3 },
   { href: "/velocity", label: "Velocity", icon: Activity },
