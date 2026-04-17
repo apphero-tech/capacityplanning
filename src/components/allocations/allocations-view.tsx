@@ -451,8 +451,26 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
   const router = useRouter();
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [orgFilter, setOrgFilter] = useState<string>("all");
+  const [streamFilter, setStreamFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  /**
+   * Primary stream of a member = the allocation column holding the largest
+   * percentage. Returns null when every allocation is 0. We derive it on the
+   * fly rather than trusting cap.stream so it stays in sync with any edit
+   * made to the matrix cells.
+   */
+  const primaryStreamOf = useCallback((cap: InitialCapacity): string | null => {
+    let best: { label: string; value: number } | null = null;
+    for (const col of ALLOCATION_COLUMNS) {
+      const v = cap[col.key as AllocKey] as number;
+      if (v > 0 && (!best || v > best.value)) {
+        best = { label: col.short, value: v };
+      }
+    }
+    return best?.label ?? null;
+  }, []);
 
   const roles = useMemo(() => {
     const set = new Set<string>();
@@ -470,13 +488,47 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
     return Array.from(set).sort();
   }, [capacities]);
 
+  // Streams available in the currently-selected org slice (to pre-filter before role).
+  // A stream only appears as a pill if at least one member of the current org
+  // actually has > 0 in that allocation column — empty streams are hidden.
+  const availableStreams = useMemo(() => {
+    const forOrg = orgFilter === "all"
+      ? capacities
+      : capacities.filter((c) => c.organization === orgFilter);
+    const set = new Set<string>();
+    forOrg.forEach((c) => {
+      const s = primaryStreamOf(c);
+      if (s) set.add(s);
+    });
+    // Preserve canonical pipeline order from ALLOCATION_COLUMNS.
+    return ALLOCATION_COLUMNS.filter((col) => set.has(col.short)).map((c) => c.short);
+  }, [capacities, orgFilter, primaryStreamOf]);
+
+  // Auto-reset streamFilter when the current selection disappears from the pills.
+  useEffect(() => {
+    if (streamFilter !== "all" && !availableStreams.includes(streamFilter)) {
+      setStreamFilter("all");
+    }
+  }, [availableStreams, streamFilter]);
+
   const filtered = useMemo(() => {
     return capacities.filter((c) => {
       if (roleFilter !== "all" && c.role !== roleFilter) return false;
       if (orgFilter !== "all" && c.organization !== orgFilter) return false;
+      if (streamFilter !== "all" && primaryStreamOf(c) !== streamFilter) return false;
       return true;
     });
-  }, [capacities, roleFilter, orgFilter]);
+  }, [capacities, roleFilter, orgFilter, streamFilter, primaryStreamOf]);
+
+  // Allocation columns that carry any non-zero value for the filtered rows.
+  // This hides Lead/PMO when viewing York, and OCM-C/OCM-T/Retro when viewing
+  // Deloitte, without hardcoding the split.
+  const visibleAllocationColumns = useMemo(() => {
+    if (filtered.length === 0) return ALLOCATION_COLUMNS;
+    return ALLOCATION_COLUMNS.filter((col) =>
+      filtered.some((c) => (c[col.key as AllocKey] as number) > 0),
+    );
+  }, [filtered]);
 
   const totalMembers = filtered.length;
   const avgHrsPerWeek =
@@ -584,6 +636,36 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                 ));
               })()}
             </div>
+
+            {/* Stream pills — only streams present in the current org slice */}
+            {availableStreams.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1 rounded-lg border border-white/[0.06] bg-slate-800/50 p-1 mb-2">
+                <button
+                  onClick={() => setStreamFilter("all")}
+                  className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                    streamFilter === "all"
+                      ? "bg-[#E31837] text-white"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  All streams
+                </button>
+                {availableStreams.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setStreamFilter(s)}
+                    className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                      streamFilter === s
+                        ? "bg-[#E31837] text-white"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">
                 <SelectValue placeholder="All roles" />
@@ -634,7 +716,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                 <TableHead className="text-center text-slate-400 w-16">
                   Active
                 </TableHead>
-                {ALLOCATION_COLUMNS.map((col) => (
+                {visibleAllocationColumns.map((col) => (
                   <TableHead
                     key={col.key}
                     className="text-center text-slate-400 min-w-[70px]"
@@ -750,7 +832,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                           {cap.isActive ? "Active" : "Inactive"}
                         </button>
                       </TableCell>
-                      {ALLOCATION_COLUMNS.map((col) => {
+                      {visibleAllocationColumns.map((col) => {
                         const val = cap[col.key as AllocKey] as number;
                         return (
                           <TableCell key={col.key} className="p-1">
