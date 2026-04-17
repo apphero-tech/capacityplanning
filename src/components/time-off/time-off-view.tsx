@@ -168,12 +168,6 @@ export function TimeOffView({
   const [isPending, startTransition] = useTransition();
   const { sprints, selectedSprint } = useSprint();
 
-  // PTO form state
-  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
-  const [ptoStartDate, setPtoStartDate] = useState<string>("");
-  const [ptoEndDate, setPtoEndDate] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   // PTO inline edit state
   const [editingPtoId, setEditingPtoId] = useState<string | null>(null);
   const [editPtoStart, setEditPtoStart] = useState("");
@@ -312,50 +306,9 @@ export function TimeOffView({
     return { entries: activePtoEntries.length, days: totalPtoDays, people: uniquePeople };
   }, [activePtoEntries, totalPtoDays]);
 
-  // Sorted team members for the dropdown
-  const sortedMembers = useMemo(
-    () =>
-      [...teamMembers].sort((a, b) =>
-        `${a.lastName} ${a.firstName}`.localeCompare(
-          `${b.lastName} ${b.firstName}`,
-        ),
-      ),
-    [teamMembers],
-  );
-
   // ---------------------------------------------------------------------------
   // PTO CRUD handlers
   // ---------------------------------------------------------------------------
-
-  async function handleAddPto() {
-    if (!selectedMemberId || !ptoStartDate || !ptoEndDate) return;
-
-    const member = teamMembers.find((m) => m.id === selectedMemberId);
-    if (!member) return;
-
-    setIsSubmitting(true);
-    try {
-      const res = await fetch("/api/pto", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          who: `${member.lastName}, ${member.firstName}`,
-          location: member.location,
-          team: null,
-          startDate: ptoStartDate,
-          endDate: ptoEndDate,
-        }),
-      });
-      if (res.ok) {
-        setSelectedMemberId("");
-        setPtoStartDate("");
-        setPtoEndDate("");
-        startTransition(() => router.refresh());
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 
   async function handleDeletePto(id: string) {
     const res = await fetch(`/api/pto/${id}`, { method: "DELETE" });
@@ -711,147 +664,40 @@ export function TimeOffView({
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-6">
-              {/* Add PTO form + CSV upload */}
-              <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 flex flex-col gap-4">
-                {/* Manual entry row */}
-                <div className="flex items-end gap-3 flex-wrap">
-                  <div className="flex flex-col gap-1.5 min-w-[200px]">
-                    <Label className="text-xs text-slate-400">Team Member</Label>
-                    <Select
-                      value={selectedMemberId}
-                      onValueChange={setSelectedMemberId}
-                    >
-                      <SelectTrigger className="border-white/[0.06] bg-slate-800/50 text-slate-300">
-                        <SelectValue placeholder="Select member" />
-                      </SelectTrigger>
-                      <SelectContent className="border-white/[0.06] bg-slate-900">
-                        {sortedMembers.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.lastName}, {m.firstName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs text-slate-400">Start Date</Label>
-                    <Input
-                      type="date"
-                      value={ptoStartDate}
-                      onChange={(e) => setPtoStartDate(e.target.value)}
-                      className="border-white/[0.06] bg-slate-800/50 text-slate-300"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs text-slate-400">End Date</Label>
-                    <Input
-                      type="date"
-                      value={ptoEndDate}
-                      onChange={(e) => setPtoEndDate(e.target.value)}
-                      className="border-white/[0.06] bg-slate-800/50 text-slate-300"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleAddPto}
-                    disabled={
-                      isSubmitting ||
-                      !selectedMemberId ||
-                      !ptoStartDate ||
-                      !ptoEndDate
-                    }
-                    className="gap-1.5 bg-[#E31837] hover:bg-[#AF0D1A] text-white"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="size-3.5" />
+              {/* CSV import result (when present — non-blocking banner) */}
+              {ptoCsvResult && ptoCsvResult.success && (
+                <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-[12px] text-emerald-300">
+                  <span>
+                    {ptoCsvResult.imported} PTO {ptoCsvResult.imported === 1 ? "entry" : "entries"} imported
+                    {ptoCsvResult.detectedColumns && (
+                      <span className="text-slate-500"> · {ptoCsvResult.detectedColumns.join(", ")}</span>
                     )}
-                    Add PTO
-                  </Button>
-
-                  {/* Separator */}
-                  <div className="mx-2 h-8 w-px bg-white/[0.08]" />
-
-                  {/* CSV upload */}
-                  <input
-                    ref={ptoCsvFileRef}
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    onChange={handlePtoCsvImport}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 gap-1.5 border border-white/[0.06] bg-slate-800/50 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-                    onClick={() => ptoCsvFileRef.current?.click()}
-                    disabled={ptoCsvImporting}
-                  >
-                    {ptoCsvImporting ? (
-                      <>
-                        <Loader2 className="size-3.5 animate-spin" />
-                        Importing…
-                      </>
-                    ) : (
-                      <>
-                        <Download className="size-3.5" />
-                        Import CSV
-                      </>
+                    {ptoCsvResult.warnings && ptoCsvResult.warnings.length > 0 && (
+                      <span className="text-amber-300"> · {ptoCsvResult.warnings.length} skipped</span>
                     )}
-                  </Button>
+                  </span>
+                  <button
+                    onClick={() => setPtoCsvResult(null)}
+                    className="text-slate-500 hover:text-slate-300"
+                  >
+                    <X className="size-3.5" />
+                  </button>
                 </div>
-
-                {/* CSV import result feedback */}
-                {ptoCsvResult && (
-                  <div className={`flex items-start justify-between rounded-lg px-3 py-2 ${
-                    ptoCsvResult.success
-                      ? "border border-emerald-500/20 bg-emerald-500/5"
-                      : "border border-red-500/20 bg-red-500/5"
-                  }`}>
-                    <div className="flex-1">
-                      {ptoCsvResult.success ? (
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="size-4 text-emerald-400" />
-                          <span className="text-sm text-emerald-400">
-                            {ptoCsvResult.imported} PTO entries imported
-                          </span>
-                          {ptoCsvResult.detectedColumns && (
-                            <span className="text-xs text-slate-500">
-                              ({ptoCsvResult.detectedColumns.join(", ")})
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="size-4 text-red-400" />
-                          <span className="text-sm text-red-400">{ptoCsvResult.error}</span>
-                        </div>
-                      )}
-                      {ptoCsvResult.warnings && ptoCsvResult.warnings.length > 0 && (
-                        <ul className="mt-1 text-xs text-amber-400/70 space-y-0.5">
-                          {ptoCsvResult.warnings.slice(0, 5).map((w, i) => (
-                            <li key={i}>• {w}</li>
-                          ))}
-                          {ptoCsvResult.warnings.length > 5 && (
-                            <li>… and {ptoCsvResult.warnings.length - 5} more</li>
-                          )}
-                        </ul>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setPtoCsvResult(null)}
-                      className="text-slate-500 hover:text-slate-300 ml-2"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-                )}
-
-                {/* CSV format hint */}
-                <p className="text-[11px] text-slate-600">
-                  CSV format: Who, Location, Start Date, End Date (headers auto-detected)
-                </p>
-              </div>
+              )}
+              {ptoCsvResult && !ptoCsvResult.success && (
+                <div className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-[12px] text-red-300">
+                  <span className="flex items-center gap-2">
+                    <AlertCircle className="size-3.5" />
+                    {ptoCsvResult.error}
+                  </span>
+                  <button
+                    onClick={() => setPtoCsvResult(null)}
+                    className="text-slate-500 hover:text-slate-300"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
 
               {/* PTO Table */}
               <Table>
@@ -875,7 +721,7 @@ export function TimeOffView({
                       >
                         No personal time off
                         {selectedSprint && ` in ${selectedSprint.name}`}.
-                        Use the form above to add PTO entries.
+                        Use the Import CSV button above to bring a new Planner export.
                       </TableCell>
                     </TableRow>
                   ) : (
