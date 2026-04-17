@@ -80,22 +80,27 @@ model PtoEntry {
 }
 
 model InitialCapacity {
-  id          String  @id @default(uuid())
-  lastName    String
-  firstName   String
-  role        String
-  location    String  @default("")
-  ftPt        String  @default("FT")
-  hrsPerWeek  Float
-  isActive    Boolean @default(true)
-  refinement  Float  @default(0)
-  design      Float  @default(0)
-  development Float  @default(0)
-  qa          Float  @default(0)
-  kt          Float  @default(0)
-  lead        Float  @default(0)
-  pmo         Float  @default(0)
-  other       Float  @default(0)
+  id           String  @id @default(uuid())
+  lastName     String
+  firstName    String
+  role         String
+  location     String  @default("")
+  organization String  @default("")
+  stream       String  @default("")
+  ftPt         String  @default("FT")
+  hrsPerWeek   Float
+  isActive     Boolean @default(true)
+  refinement   Float   @default(0)
+  design       Float   @default(0)
+  development  Float   @default(0)
+  qa           Float   @default(0)
+  kt           Float   @default(0)
+  lead         Float   @default(0)
+  pmo          Float   @default(0)
+  retrofits    Float   @default(0)
+  ocmComms     Float   @default(0)
+  ocmTraining  Float   @default(0)
+  other        Float   @default(0)
 }
 
 model GuideEntry {

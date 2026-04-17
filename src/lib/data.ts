@@ -117,6 +117,8 @@ interface InitialCapacityRow {
   firstName: string;
   role: string;
   location: string;
+  organization: string;
+  stream: string;
   ftPt: string;
   hrsPerWeek: number;
   isActive: number; // SQLite stores booleans as 0/1
@@ -127,6 +129,9 @@ interface InitialCapacityRow {
   kt: number;
   lead: number;
   pmo: number;
+  retrofits: number;
+  ocmComms: number;
+  ocmTraining: number;
   other: number;
 }
 
@@ -287,6 +292,8 @@ function mapInitialCapacity(row: InitialCapacityRow): InitialCapacity {
     firstName: row.firstName,
     role: row.role,
     location: (row.location || "") as Country,
+    organization: row.organization ?? "",
+    stream: row.stream ?? "",
     ftPt: row.ftPt as FtPt,
     hrsPerWeek: row.hrsPerWeek,
     isActive: row.isActive !== 0,
@@ -297,6 +304,9 @@ function mapInitialCapacity(row: InitialCapacityRow): InitialCapacity {
     kt: row.kt,
     lead: row.lead,
     pmo: row.pmo,
+    retrofits: row.retrofits ?? 0,
+    ocmComms: row.ocmComms ?? 0,
+    ocmTraining: row.ocmTraining ?? 0,
     other: row.other,
   };
 }
@@ -489,14 +499,18 @@ export function insertInitialCapacity(entry: Omit<InitialCapacity, "id">): Initi
   const db = getDb();
   const id = crypto.randomUUID();
   db.prepare(
-    `INSERT INTO InitialCapacity (id, lastName, firstName, role, location, ftPt, hrsPerWeek, isActive,
-     refinement, design, development, qa, kt, lead, pmo, other)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO InitialCapacity (id, lastName, firstName, role, location, organization, stream,
+     ftPt, hrsPerWeek, isActive,
+     refinement, design, development, qa, kt, lead, pmo, retrofits, ocmComms, ocmTraining, other)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id, entry.lastName, entry.firstName, entry.role, entry.location,
+    entry.organization ?? "", entry.stream ?? "",
     entry.ftPt, entry.hrsPerWeek, entry.isActive ? 1 : 0,
     entry.refinement, entry.design, entry.development, entry.qa,
-    entry.kt, entry.lead, entry.pmo, entry.other,
+    entry.kt, entry.lead, entry.pmo,
+    entry.retrofits ?? 0, entry.ocmComms ?? 0, entry.ocmTraining ?? 0,
+    entry.other,
   );
   return { id, ...entry };
 }
@@ -526,6 +540,13 @@ export function deleteInitialCapacity(id: string): boolean {
   const db = getDb();
   const result = db.prepare("DELETE FROM InitialCapacity WHERE id = ?").run(id);
   return result.changes > 0;
+}
+
+/** Delete all initial capacity entries. Returns the number of rows removed. */
+export function deleteAllInitialCapacities(): number {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM InitialCapacity").run();
+  return result.changes;
 }
 
 /** Insert a new PTO entry. */

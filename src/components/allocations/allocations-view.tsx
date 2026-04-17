@@ -38,6 +38,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Users, PieChart, Plus, Trash2, Loader2 } from "lucide-react";
+import { ImportAllocationsDialog } from "@/components/allocations/import-allocations-dialog";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -545,7 +546,10 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
               <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
                 Filter by Role
               </p>
-              <AddMemberDialog onAdd={handleAdd} />
+              <div className="flex items-center gap-2">
+                <ImportAllocationsDialog onImported={handleAdd} />
+                <AddMemberDialog onAdd={handleAdd} />
+              </div>
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">

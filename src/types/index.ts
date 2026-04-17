@@ -107,6 +107,8 @@ export interface InitialCapacity {
   firstName: string;
   role: string;
   location: Country;
+  organization: string;
+  stream: string;
   ftPt: FtPt;
   hrsPerWeek: number;
   isActive: boolean;
@@ -117,6 +119,9 @@ export interface InitialCapacity {
   kt: number;
   lead: number;
   pmo: number;
+  retrofits: number;
+  ocmComms: number;
+  ocmTraining: number;
   other: number;
 }
 
