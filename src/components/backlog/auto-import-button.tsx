@@ -20,7 +20,9 @@ type AutoImportResult = {
   assigned: number;
   perSprint: { sprintId: string; sprintName: string; imported: number; replaced: number }[];
   noSprintByStatus: Record<string, number>;
+  postDevSkippedByStatus: Record<string, number>;
   unknownSprintCounts: Record<string, number>;
+  newStatusStories: { key: string; summary: string; sprint: string }[];
   warnings: string[];
   detectedColumns: string[];
 };
@@ -72,6 +74,10 @@ export function BacklogAutoImportButton() {
   const unknownSprintTotal = result
     ? Object.values(result.unknownSprintCounts).reduce((s, n) => s + n, 0)
     : 0;
+  const postDevSkippedTotal = result
+    ? Object.values(result.postDevSkippedByStatus ?? {}).reduce((s, n) => s + n, 0)
+    : 0;
+  const newStatusTotal = result?.newStatusStories?.length ?? 0;
 
   return (
     <>
@@ -147,6 +153,40 @@ export function BacklogAutoImportButton() {
                   </h4>
                   <ul className="rounded-md border border-white/[0.06] bg-slate-800/40 divide-y divide-white/[0.04] max-h-40 overflow-auto">
                     {Object.entries(result.noSprintByStatus).map(([status, n]) => (
+                      <li key={status} className="flex items-center justify-between px-3 py-1.5">
+                        <span className="text-slate-400">{status}</span>
+                        <span className="text-slate-500">{n}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {newStatusTotal > 0 && (
+                <section>
+                  <h4 className="text-slate-300 font-medium mb-1.5">
+                    {newStatusTotal} stor{newStatusTotal !== 1 ? "ies" : "y"} in &quot;New&quot; status — please set a real workflow status in Jira
+                  </h4>
+                  <ul className="rounded-md border border-amber-500/20 bg-amber-500/5 divide-y divide-amber-500/10 max-h-40 overflow-auto">
+                    {result.newStatusStories.map((s) => (
+                      <li key={s.key} className="px-3 py-1.5 text-amber-200">
+                        <span className="font-mono">{s.key}</span>
+                        <span className="text-amber-100 ml-2">{s.summary}</span>
+                        <span className="text-amber-400/70 ml-2">({s.sprint})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {postDevSkippedTotal > 0 && (
+                <section>
+                  <h4 className="text-slate-300 font-medium mb-1.5">
+                    {postDevSkippedTotal} post-DEV stor{postDevSkippedTotal !== 1 ? "ies" : "y"} skipped from non-active sprints
+                    <span className="text-slate-500 font-normal"> (DEV cycle already complete — Jira drops them from board count)</span>
+                  </h4>
+                  <ul className="rounded-md border border-white/[0.06] bg-slate-800/40 divide-y divide-white/[0.04] max-h-32 overflow-auto">
+                    {Object.entries(result.postDevSkippedByStatus).map(([status, n]) => (
                       <li key={status} className="flex items-center justify-between px-3 py-1.5">
                         <span className="text-slate-400">{status}</span>
                         <span className="text-slate-500">{n}</span>

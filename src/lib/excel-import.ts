@@ -5,7 +5,7 @@
  * and flexible header detection.
  */
 
-import { deriveStream, cleanStatus } from "./stream-mapper";
+import { deriveStream, cleanStatus, withOrderPrefix } from "./stream-mapper";
 import type { BacklogStream } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -21,7 +21,8 @@ interface ColumnMap {
   pod: number | null;
   dependency: number | null;
   group: number | null;
-  sprint: number | null;
+  /** Jira may split the Sprint field across several "Sprint" columns — collect every index. */
+  sprintIdxs: number[];
 }
 
 /** A parsed story row before DB insertion. */
@@ -86,10 +87,18 @@ function toNumber(val: string): number | null {
 /** Detect column mapping from an array of header strings. Returns 0-based indices. */
 function detectColumnsFromArray(headers: string[]): ColumnMap | null {
   const map: Partial<ColumnMap> = {};
+  const sprintIdxs: number[] = [];
 
   for (let i = 0; i < headers.length; i++) {
     const val = stripInvisible(headers[i]);
     if (!val) continue;
+
+    // Sprint may appear multiple times (Jira splits multi-valued history across
+    // columns). Collect every occurrence, handled outside the if/else chain.
+    if (matchesAny(val, SPRINT_PATTERNS)) {
+      sprintIdxs.push(i);
+      continue;
+    }
 
     if (map.key === undefined && matchesAny(val, KEY_PATTERNS)) map.key = i;
     else if (map.summary === undefined && matchesAny(val, SUMMARY_PATTERNS)) map.summary = i;
@@ -98,7 +107,6 @@ function detectColumnsFromArray(headers: string[]): ColumnMap | null {
     else if (map.pod === undefined && matchesAny(val, POD_PATTERNS)) map.pod = i;
     else if (map.dependency === undefined && matchesAny(val, DEP_PATTERNS)) map.dependency = i;
     else if (map.group === undefined && matchesAny(val, GROUP_PATTERNS)) map.group = i;
-    else if (map.sprint === undefined && matchesAny(val, SPRINT_PATTERNS)) map.sprint = i;
   }
 
   // Key, summary, and status are required
@@ -112,7 +120,7 @@ function detectColumnsFromArray(headers: string[]): ColumnMap | null {
     pod: map.pod ?? null,
     dependency: map.dependency ?? null,
     group: map.group ?? null,
-    sprint: map.sprint ?? null,
+    sprintIdxs,
   };
 }
 
@@ -123,7 +131,9 @@ function buildDetectedList(cm: ColumnMap): string[] {
   if (cm.pod !== null) detected.push("Pod");
   if (cm.dependency !== null) detected.push("Dependency");
   if (cm.group !== null) detected.push("Group");
-  if (cm.sprint !== null) detected.push("Sprint");
+  if (cm.sprintIdxs.length > 0) {
+    detected.push(`Sprint${cm.sprintIdxs.length > 1 ? ` (${cm.sprintIdxs.length} cols)` : ""}`);
+  }
   return detected;
 }
 
@@ -165,7 +175,10 @@ function processRows(
     }
     seenKeys.add(key);
 
-    const status = cleanStatus(rawStatus);
+    // Keep the stream mapping on the cleaned (un-prefixed) status, but store
+    // the prefixed form so an alphabetical sort follows the workflow pipeline.
+    const cleanedStatus = cleanStatus(rawStatus);
+    const status = withOrderPrefix(cleanedStatus);
 
     const storyPoints =
       columnMap.storyPoints !== null ? toNumber(row[columnMap.storyPoints] ?? "") : null;
@@ -179,10 +192,14 @@ function processRows(
     const groupName =
       columnMap.group !== null ? stripInvisible(row[columnMap.group] ?? "") || null : null;
 
-    const sprintRaw =
-      columnMap.sprint !== null ? stripInvisible(row[columnMap.sprint] ?? "") || null : null;
+    // Concatenate every Sprint column's non-empty value with ";" so the later
+    // "pick latest" logic can split on ; or , and pick the rightmost entry.
+    const sprintValues = columnMap.sprintIdxs
+      .map((i) => stripInvisible(row[i] ?? ""))
+      .filter((v) => v.length > 0);
+    const sprintRaw = sprintValues.length > 0 ? sprintValues.join(";") : null;
 
-    const stream = deriveStream(status);
+    const stream = deriveStream(cleanedStatus);
 
     stories.push({
       key,
