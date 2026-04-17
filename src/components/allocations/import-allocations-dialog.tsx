@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Download, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Download, Loader2, AlertTriangle, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,40 +13,51 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-type ImportResult = {
+type PerSheet = {
+  sheet: string;
+  organization: string;
   imported: number;
-  deleted: number;
+  skippedNoRole: number;
+  skippedEmpty: number;
+  rows: number;
+};
+
+type ImportResult = {
+  success: boolean;
+  imported: number;
   replaced: boolean;
-  organization?: string;
-  errors: { row: number; reason: string }[];
+  deleted: number;
+  perSheet: PerSheet[];
+  errors: { sheet: string; row: number; reason: string }[];
 };
 
 export function ImportAllocationsDialog({ onImported }: { onImported: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [replaceAll, setReplaceAll] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [replaceAll, setReplaceAll] = useState(true);
+  const [dragging, setDragging] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
-    setData("");
-    setOrganization("");
     setResult(null);
     setError(null);
     setReplaceAll(true);
   }
 
-  async function handleImport() {
+  async function uploadFile(file: File) {
     setBusy(true);
     setError(null);
     setResult(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("replaceAll", replaceAll ? "true" : "false");
+
     try {
-      const res = await fetch("/api/allocations/import", {
+      const res = await fetch("/api/allocations/import-xlsx", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data, replaceAll, organization }),
+        body: formData,
       });
       const json = await res.json();
       if (!res.ok) {
@@ -59,7 +70,15 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) uploadFile(file);
   }
 
   return (
@@ -80,84 +99,125 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
           Import
         </Button>
       </DialogTrigger>
-      <DialogContent className="border-white/[0.06] bg-slate-900 text-slate-100 max-w-2xl">
+      <DialogContent className="border-white/[0.06] bg-slate-900 text-slate-100 max-w-xl">
         <DialogHeader>
-          <DialogTitle>Import Allocations</DialogTitle>
+          <DialogTitle>Import team allocations</DialogTitle>
           <DialogDescription className="text-slate-400">
-            Paste rows copied from Excel or Google Sheets. The first row must be headers.
-            Column order doesn&apos;t matter — headers are matched by name.
-            <span className="block mt-1 font-mono text-[11px] text-slate-500">
-              Last name · First name · Role · FT/PT · Hrs/week · Stream · Refinement · Design · Development · QA · KT · Lead · PMO · Retrofits/Integrations · OCM (Comms & Engagement) · OCM (End-User Training) · Other
-            </span>
+            Drop your <span className="font-mono">Team allocation.xlsx</span> file.
+            Each sheet becomes an organization (e.g. <span className="font-mono">York</span>, <span className="font-mono">Deloitte</span>). Headers are auto-detected by name so extra columns don&apos;t matter.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3">
-          <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Organization <span className="text-slate-600">(applied to every imported row)</span>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xlsx"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) uploadFile(f);
+          }}
+        />
+
+        {!result && !error && (
+          <div className="grid gap-3">
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileRef.current?.click()}
+              className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 cursor-pointer transition-colors ${
+                dragging
+                  ? "border-[#E31837]/60 bg-[#E31837]/5"
+                  : "border-white/10 bg-slate-800/40 hover:border-white/20 hover:bg-slate-800/60"
+              }`}
+            >
+              <FileSpreadsheet className="size-10 text-slate-500 mb-3" />
+              <p className="text-sm text-slate-300 font-medium mb-1">
+                Drop .xlsx here or click to browse
+              </p>
+              <p className="text-[11px] text-slate-500">
+                One sheet per organization · headers in row 1 or 2
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={replaceAll}
+                onChange={(e) => setReplaceAll(e.target.checked)}
+                className="size-4 accent-[#E31837]"
+              />
+              Replace all existing entries before import
             </label>
-            <input
-              value={organization}
-              onChange={(e) => setOrganization(e.target.value)}
-              placeholder="e.g. Deloitte, York, ..."
-              className="w-full text-sm rounded-md border border-white/10 bg-slate-800 px-2 py-1.5 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
-            />
           </div>
+        )}
 
-          <textarea
-            value={data}
-            onChange={(e) => setData(e.target.value)}
-            placeholder={"Last name\tFirst name\tRole\tFT/PT\tHrs per week\tRefinement\tDesign\tDevelopment\tQA\tKT\tLead\tPMO\tOther\nVan Oordt\tMarc\tEngagement Manager\tPT\t16\t\t\t\t\t\t\t50%\t50%\n..."}
-            className="min-h-[200px] font-mono text-xs rounded-md border border-white/10 bg-slate-800 p-2 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
-            spellCheck={false}
-          />
+        {busy && (
+          <div className="flex items-center justify-center gap-2 py-6 text-slate-300">
+            <Loader2 className="size-4 animate-spin" />
+            Reading spreadsheet…
+          </div>
+        )}
 
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input
-              type="checkbox"
-              checked={replaceAll}
-              onChange={(e) => setReplaceAll(e.target.checked)}
-              className="size-4 accent-[#E31837]"
-            />
-            Replace all existing entries before import
-          </label>
+        {error && (
+          <div className="flex items-start gap-2 rounded-md border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">
+            <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
 
-          {error && (
-            <div className="flex items-start gap-2 rounded-md border border-red-900/50 bg-red-950/30 p-2 text-xs text-red-300">
-              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {result && (
-            <div className="rounded-md border border-white/10 bg-slate-800/50 p-3 text-xs text-slate-300">
-              <div className="flex items-center gap-2 text-emerald-400 font-medium mb-1">
-                <CheckCircle2 className="size-4" />
-                Imported {result.imported} {result.imported === 1 ? "entry" : "entries"}
+        {result && (
+          <div className="grid gap-3 text-xs">
+            <div className="flex items-center gap-2 rounded-md border border-emerald-900/40 bg-emerald-950/20 p-3 text-emerald-300">
+              <CheckCircle2 className="size-4 shrink-0" />
+              <span>
+                Imported {result.imported} team member{result.imported !== 1 ? "s" : ""}
                 {result.replaced && result.deleted > 0 && (
-                  <span className="text-slate-400 font-normal">
-                    (replaced {result.deleted} previous)
-                  </span>
+                  <span className="text-slate-400"> (replaced {result.deleted} previous)</span>
                 )}
-              </div>
-              {result.errors.length > 0 && (
-                <div className="mt-2">
-                  <div className="text-amber-400 font-medium mb-1">
-                    {result.errors.length} row(s) skipped:
-                  </div>
-                  <ul className="list-disc list-inside space-y-0.5 text-slate-400 max-h-32 overflow-auto">
-                    {result.errors.map((er, i) => (
-                      <li key={i}>
-                        Row {er.row}: {er.reason}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              </span>
             </div>
-          )}
-        </div>
+
+            <section>
+              <h4 className="text-slate-300 font-medium mb-1.5">Per sheet</h4>
+              <ul className="rounded-md border border-white/[0.06] bg-slate-800/40 divide-y divide-white/[0.04]">
+                {result.perSheet.map((p) => (
+                  <li key={p.sheet} className="px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-200 font-medium">
+                        {p.sheet} <span className="text-slate-500">→ org &quot;{p.organization}&quot;</span>
+                      </span>
+                      <span className="text-slate-300">
+                        {p.imported}/{p.rows} imported
+                      </span>
+                    </div>
+                    {p.skippedNoRole > 0 && (
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {p.skippedNoRole} row{p.skippedNoRole !== 1 ? "s" : ""} skipped (no role)
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            {result.errors.length > 0 && (
+              <section>
+                <h4 className="text-amber-300 font-medium mb-1.5">
+                  {result.errors.length} skipped row{result.errors.length !== 1 ? "s" : ""}
+                </h4>
+                <ul className="rounded-md border border-amber-500/20 bg-amber-500/5 divide-y divide-amber-500/10 max-h-32 overflow-auto">
+                  {result.errors.map((er, i) => (
+                    <li key={i} className="px-3 py-1 text-amber-200">
+                      <span className="font-mono">{er.sheet}</span> row {er.row}: {er.reason}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        )}
 
         <DialogFooter>
           <Button
@@ -167,19 +227,6 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
             className="text-slate-400"
           >
             {result ? "Close" : "Cancel"}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleImport}
-            disabled={busy || !data.trim()}
-            className="bg-[#E31837] hover:bg-[#c01530] text-white"
-          >
-            {busy ? (
-              <Loader2 className="size-4 animate-spin mr-1.5" />
-            ) : (
-              <Download className="size-4 mr-1.5" />
-            )}
-            Import
           </Button>
         </DialogFooter>
       </DialogContent>
