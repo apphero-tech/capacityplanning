@@ -20,6 +20,7 @@ export default async function TimeOffPage() {
     firstName: m.firstName,
     lastName: m.lastName,
     location: m.location,
+    organization: m.organization,
     isActive: m.isActive,
   }));
 

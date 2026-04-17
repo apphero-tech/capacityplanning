@@ -453,7 +453,10 @@ interface AllocationsViewProps {
 export function AllocationsView({ capacities }: AllocationsViewProps) {
   const router = useRouter();
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [orgFilter, setOrgFilter] = useState<string>("all");
+  // Capacity conversations center on Deloitte first — the York side is
+  // reviewed separately. Default the org filter to Deloitte so the matrix
+  // opens on the most-asked slice.
+  const [orgFilter, setOrgFilter] = useState<string>("Deloitte");
   const [streamFilter, setStreamFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);

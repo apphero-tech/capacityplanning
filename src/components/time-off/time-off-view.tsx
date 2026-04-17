@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useTransition } from "react";
+import React, { useState, useMemo, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { differenceInBusinessDays } from "date-fns";
 import type { Sprint, PublicHoliday, ProjectHoliday, PtoEntry } from "@/types";
@@ -138,6 +138,7 @@ interface TeamMemberMinimal {
   firstName: string;
   lastName: string;
   location: string;
+  organization: string;
   isActive: boolean;
 }
 
@@ -161,6 +162,9 @@ export function TimeOffView({
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("public");
   const [countryFilter, setCountryFilter] = useState<string>("all");
+  // Default to Deloitte — capacity conversations start there; the user
+  // flips to York or All when needed.
+  const [orgFilter, setOrgFilter] = useState<string>("Deloitte");
   const [isPending, startTransition] = useTransition();
   const { sprints, selectedSprint } = useSprint();
 
@@ -215,6 +219,42 @@ export function TimeOffView({
   // When no sprint is selected the lists collapse to empty so the user isn't
   // shown a pile of entries that belong to other sprints. Selecting any sprint
   // in the top-bar immediately scopes everything to that window.
+  // Build per-org helpers:
+  //   - countries relevant to the selected org (for public holidays)
+  //   - set of normalised names belonging to the selected org (for PTO)
+  const orgCountries = useMemo(() => {
+    if (orgFilter === "all") return null; // null = no country restriction
+    const set = new Set<string>();
+    teamMembers.forEach((m) => {
+      if (m.organization === orgFilter && m.location) set.add(m.location);
+    });
+    return set;
+  }, [orgFilter, teamMembers]);
+
+  const orgMemberNames = useMemo(() => {
+    if (orgFilter === "all") return null;
+    const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const set = new Set<string>();
+    teamMembers.forEach((m) => {
+      if (m.organization === orgFilter) {
+        // Store several likely name shapes to match Planner's "Last, First"
+        // or "First Last" conventions without a rigid parser.
+        set.add(norm(`${m.lastName}, ${m.firstName}`));
+        set.add(norm(`${m.firstName} ${m.lastName}`));
+      }
+    });
+    return set;
+  }, [orgFilter, teamMembers]);
+
+  const matchesOrg = useCallback(
+    (who: string) => {
+      if (!orgMemberNames) return true;
+      const norm = who.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      return orgMemberNames.has(norm);
+    },
+    [orgMemberNames],
+  );
+
   const filteredPublicHolidays = useMemo(() => {
     if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
     let list = publicHolidays.filter((h) =>
@@ -222,12 +262,15 @@ export function TimeOffView({
     );
     if (countryFilter !== "all") {
       list = list.filter((h) => h.country === countryFilter);
+    } else if (orgCountries && orgCountries.size > 0) {
+      list = list.filter((h) => orgCountries.has(h.country));
     }
     return list;
-  }, [publicHolidays, countryFilter, selectedSprint]);
+  }, [publicHolidays, countryFilter, selectedSprint, orgCountries]);
 
   const filteredProjectHolidays = useMemo(() => {
     if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
+    // Project closures apply to the whole engagement, no org filter needed.
     return projectHolidays.filter((h) =>
       h.date && isDateInRange(h.date, selectedSprint.startDate!, selectedSprint.endDate!),
     );
@@ -235,10 +278,12 @@ export function TimeOffView({
 
   const filteredPtoEntries = useMemo(() => {
     if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
-    return ptoEntries.filter((e) =>
-      isOverlapping(e.startDate, e.endDate, selectedSprint.startDate!, selectedSprint.endDate!),
-    );
-  }, [ptoEntries, selectedSprint]);
+    return ptoEntries
+      .filter((e) =>
+        isOverlapping(e.startDate, e.endDate, selectedSprint.startDate!, selectedSprint.endDate!),
+      )
+      .filter((e) => matchesOrg(e.who));
+  }, [ptoEntries, selectedSprint, matchesOrg]);
 
   const totalPublicDays = filteredPublicHolidays.reduce((sum, h) => sum + h.days, 0);
   const totalProjectDays = filteredProjectHolidays.reduce((sum, h) => sum + h.days, 0);
@@ -421,6 +466,15 @@ export function TimeOffView({
       />
 
       <div className="flex items-center flex-wrap gap-3">
+        <SegmentedControl
+          options={[
+            { value: "all",      label: "All" },
+            { value: "Deloitte", label: "Deloitte" },
+            { value: "York",     label: "York" },
+          ]}
+          value={orgFilter}
+          onChange={setOrgFilter}
+        />
         <SegmentedControl
           options={[
             { value: "public",   label: "Public holidays" },
