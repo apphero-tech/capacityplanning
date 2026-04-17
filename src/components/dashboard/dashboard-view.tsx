@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useSprint } from "@/contexts/sprint-context";
 import {
   computeDevCapacityFromIC,
@@ -17,7 +17,19 @@ import {
   CalendarOff,
   ListTodo,
   ArrowRight,
+  Info,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  ReferenceLine,
+} from "recharts";
 
 function fmt(n: number | null | undefined, decimals = 0): string {
   if (n === null || n === undefined) return "—";
@@ -42,12 +54,18 @@ interface Props {
 export function DashboardView({ storiesBySprint }: Props) {
   const {
     selectedSprint: sprint,
+    allSprints,
     initialCapacities,
     publicHolidays,
     projectHolidays,
     ptoEntries,
     selectedForecast,
   } = useSprint();
+
+  const deloitteCapacities = useMemo(
+    () => initialCapacities.filter((c) => c.organization === "Deloitte" && c.isActive),
+    [initialCapacities],
+  );
 
   const verdict = useMemo(() => {
     if (!sprint) return null;
@@ -56,7 +74,7 @@ export function DashboardView({ storiesBySprint }: Props) {
       .filter((s) => !s.isExcluded)
       .reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
     const devCaps = computeDevCapacityFromIC(
-      initialCapacities.filter((c) => c.organization === "Deloitte"),
+      deloitteCapacities,
       sprint,
       publicHolidays,
       projectHolidays,
@@ -73,16 +91,48 @@ export function DashboardView({ storiesBySprint }: Props) {
       scopeSP,
       delta: dp.projectedSPProven - scopeSP,
       hasVelocity: dp.velocityProven > 0,
+      hours: dp.netDevCapacity,
+      velocity: dp.velocityProven,
+      members: deloitteCapacities.length,
     };
   }, [
     sprint,
     storiesBySprint,
-    initialCapacities,
+    deloitteCapacities,
     publicHolidays,
     projectHolidays,
     ptoEntries,
     selectedForecast,
   ]);
+
+  // Bar chart data — last 8 sprints with completed data + the upcoming one
+  // (current scope + projected delivery for "what we plan to do").
+  const chartData = useMemo(() => {
+    const past = allSprints
+      .filter((s) => s.completedSP != null && s.completedSP > 0)
+      .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""))
+      .slice(-8)
+      .map((s) => ({
+        name: s.name.replace("| Product Demo ", "PD"),
+        committed: s.commitmentSP ?? null,
+        delivered: s.completedSP ?? null,
+        scope: null as number | null,
+        projected: null as number | null,
+        kind: "past" as const,
+      }));
+
+    if (sprint && verdict) {
+      past.push({
+        name: sprint.name.replace("| Product Demo ", "PD"),
+        committed: null,
+        delivered: null,
+        scope: verdict.scopeSP,
+        projected: verdict.teamCanDeliver,
+        kind: "next",
+      });
+    }
+    return past;
+  }, [allSprints, sprint, verdict]);
 
   if (!sprint || !verdict) {
     return (
@@ -123,9 +173,45 @@ export function DashboardView({ storiesBySprint }: Props) {
                   ? `Fits — ${fmt(verdict.delta)} SP of room`
                   : `Overflow — ${fmt(Math.abs(verdict.delta))} SP to cut`}
               </p>
-              <p className="mt-1 text-[12px] text-slate-500">
+              <p className="mt-1 text-[12px] text-slate-500 flex items-center gap-1.5">
                 team can deliver{" "}
-                <span className="text-slate-300">{fmt(verdict.teamCanDeliver)} SP</span>
+                <ExplainTooltip
+                  content={
+                    <>
+                      <p className="font-medium text-slate-200 mb-1.5">
+                        How {fmt(verdict.teamCanDeliver)} SP is computed
+                      </p>
+                      <ul className="space-y-1 text-slate-400">
+                        <li>
+                          <span className="text-slate-200">{verdict.members}</span>{" "}
+                          active Deloitte members in {sprint.name}
+                        </li>
+                        <li>
+                          <span className="text-slate-200">{fmt(verdict.hours)} hrs</span>{" "}
+                          of net DEV time available (after PTO + holidays)
+                        </li>
+                        <li>
+                          ×{" "}
+                          <span className="text-slate-200">
+                            {verdict.velocity.toFixed(2)} SP/hr
+                          </span>{" "}
+                          historical velocity (last 3 closed sprints)
+                        </li>
+                        <li className="border-t border-white/10 pt-1 mt-1 text-slate-200">
+                          ={" "}
+                          <span className="font-semibold">
+                            {fmt(verdict.teamCanDeliver)} SP
+                          </span>
+                        </li>
+                      </ul>
+                    </>
+                  }
+                >
+                  <span className="text-slate-300 underline decoration-dotted underline-offset-2 cursor-help inline-flex items-center gap-1">
+                    {fmt(verdict.teamCanDeliver)} SP
+                    <Info className="size-3 text-slate-500" />
+                  </span>
+                </ExplainTooltip>
                 {" · "}scope{" "}
                 <span className="text-slate-300">{fmt(verdict.scopeSP)} SP</span>
               </p>
@@ -141,6 +227,68 @@ export function DashboardView({ storiesBySprint }: Props) {
           </p>
         )}
       </Link>
+
+      {/* Interactive history + planning chart */}
+      {chartData.length > 0 && (
+        <section>
+          <h3 className="text-[13px] font-medium text-slate-300 mb-3">
+            Delivery history & next sprint
+          </h3>
+          <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-4">
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 10, right: 10, left: -8, bottom: 0 }}
+                >
+                  <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: "rgba(255,255,255,0.04)" }}
+                  />
+                  <YAxis
+                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={36}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                    contentStyle={{
+                      background: "rgb(15 23 42)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ color: "#cbd5e1", marginBottom: 4 }}
+                    formatter={(v: number, key: string) => [
+                      v == null ? "—" : `${v} SP`,
+                      key,
+                    ]}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: 11, color: "#94a3b8", paddingTop: 8 }}
+                  />
+                  <Bar dataKey="committed"  name="Committed"  fill="#475569" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="delivered"  name="Delivered"  fill="#34d399" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="scope"      name="Scope"      fill="#f59e0b" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="projected"  name="Can deliver" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+                  {verdict.hasVelocity && (
+                    <ReferenceLine
+                      y={verdict.teamCanDeliver}
+                      stroke="#60a5fa"
+                      strokeDasharray="3 3"
+                      strokeOpacity={0.4}
+                    />
+                  )}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Input quick-tiles */}
       <section>
@@ -173,6 +321,38 @@ export function DashboardView({ storiesBySprint }: Props) {
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * Lightweight hover-explain. Anchors a popover under the trigger child;
+ * stays open while hovering either child or popover so the user can read
+ * multi-line explanations without it disappearing.
+ */
+function ExplainTooltip({
+  children,
+  content,
+}: {
+  children: ReactNode;
+  content: ReactNode;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <span
+      className="relative inline-flex"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show && (
+        <span
+          role="tooltip"
+          className="absolute z-50 left-0 top-full mt-1.5 w-72 rounded-lg border border-white/10 bg-slate-950/95 backdrop-blur p-3 text-[12px] text-slate-300 shadow-2xl pointer-events-none"
+        >
+          {content}
+        </span>
+      )}
+    </span>
   );
 }
 
