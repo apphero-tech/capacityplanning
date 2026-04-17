@@ -55,6 +55,7 @@ interface SprintRow {
   velocityProven: number | null;
   velocityTarget: number | null;
   isCurrent: number; // SQLite stores booleans as 0/1
+  isDemo: number;
   storyCount: number | null;
   storyPoints: number | null;
   commitmentSP: number | null;
@@ -215,6 +216,7 @@ function mapSprint(
     velocityProven: row.velocityProven,
     velocityTarget: row.velocityTarget,
     isCurrent: row.isCurrent === 1,
+    isDemo: row.isDemo === 1,
     status,
     isActive,
     storyCount: row.storyCount,
@@ -430,6 +432,7 @@ export function insertSprint(input: {
   endDate?: string | null;
   durationWeeks?: number;
   focusFactor?: number;
+  isDemo?: boolean;
 }): string {
   const db = getDb();
   const id = crypto.randomUUID();
@@ -456,8 +459,8 @@ export function insertSprint(input: {
   }
 
   db.prepare(
-    `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, isDemo, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     input.name,
@@ -467,6 +470,7 @@ export function insertSprint(input: {
     workingDays,
     input.focusFactor ?? 0.9,
     isCurrent ? 1 : 0,
+    input.isDemo ? 1 : 0,
     now,
     now,
   );
@@ -492,6 +496,7 @@ export function updateSprint(
     startDate?: string | null;
     endDate?: string | null;
     focusFactor?: number;
+    isDemo?: boolean;
   },
 ): boolean {
   const db = getDb();
@@ -541,6 +546,10 @@ export function updateSprint(
   if (updates.focusFactor !== undefined) {
     sets.push("focusFactor = ?");
     values.push(updates.focusFactor);
+  }
+  if (updates.isDemo !== undefined) {
+    sets.push("isDemo = ?");
+    values.push(updates.isDemo ? 1 : 0);
   }
   sets.push("workingDays = ?", "durationWeeks = ?", "isCurrent = ?", "updatedAt = ?");
   values.push(workingDays, durationWeeks, isCurrent, now, id);

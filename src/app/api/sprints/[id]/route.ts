@@ -56,6 +56,7 @@ export async function PATCH(
       }
       edit.focusFactor = body.focusFactor;
     }
+    if (typeof body.isDemo === "boolean") edit.isDemo = body.isDemo;
 
     const hasEdit = Object.keys(edit).length > 0;
     const hasActuals = Object.keys(updates).length > 0;

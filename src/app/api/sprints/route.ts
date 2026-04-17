@@ -20,9 +20,8 @@ export async function POST(request: NextRequest) {
       startDate: typeof body.startDate === "string" && body.startDate ? body.startDate : null,
       endDate: typeof body.endDate === "string" && body.endDate ? body.endDate : null,
       durationWeeks: typeof body.durationWeeks === "number" ? body.durationWeeks : undefined,
-      workingDays: typeof body.workingDays === "number" ? body.workingDays : undefined,
       focusFactor: typeof body.focusFactor === "number" ? body.focusFactor : undefined,
-      isCurrent: body.isCurrent === true,
+      isDemo: body.isDemo === true,
     });
 
     return NextResponse.json({ ok: true, id, name }, { status: 201 });

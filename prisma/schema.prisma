@@ -18,6 +18,7 @@ model Sprint {
   velocityProven Float?
   velocityTarget Float?
   isCurrent      Boolean  @default(false)
+  isDemo         Boolean  @default(false)
   storyCount     Int?
   storyPoints    Float?
   createdAt      DateTime @default(now())

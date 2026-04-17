@@ -12,18 +12,19 @@ import { differenceInBusinessDays } from "date-fns";
 
 const DB_PATH = path.join(process.cwd(), "prisma/dev.db");
 
-type SprintDef = { name: string; startDate: string; endDate: string };
+type SprintDef = { name: string; startDate: string; endDate: string; isDemo?: boolean };
 
 const YORK_SPRINTS: SprintDef[] = [
+  { name: "Sprint 6",                    startDate: "2026-03-02", endDate: "2026-03-27" },
   { name: "Sprint 7",                    startDate: "2026-03-30", endDate: "2026-04-24" },
   { name: "Sprint 8",                    startDate: "2026-04-27", endDate: "2026-05-22" },
   { name: "Sprint 9",                    startDate: "2026-05-25", endDate: "2026-06-19" },
-  { name: "Sprint 9B | Product Demo 2",  startDate: "2026-06-22", endDate: "2026-07-10" },
+  { name: "Sprint 9B | Product Demo 2",  startDate: "2026-06-22", endDate: "2026-07-10", isDemo: true },
   { name: "Sprint 10",                   startDate: "2026-07-13", endDate: "2026-08-07" },
   { name: "Sprint 11",                   startDate: "2026-08-10", endDate: "2026-09-04" },
   { name: "Sprint 12",                   startDate: "2026-09-07", endDate: "2026-10-02" },
   { name: "Sprint 13",                   startDate: "2026-10-05", endDate: "2026-10-30" },
-  { name: "Sprint 13B | Product Demo 3", startDate: "2026-11-02", endDate: "2026-11-13" },
+  { name: "Sprint 13B | Product Demo 3", startDate: "2026-11-02", endDate: "2026-11-13", isDemo: true },
 ];
 
 function main() {
@@ -38,17 +39,30 @@ function main() {
   const now = new Date().toISOString();
 
   const insert = db.prepare(
-    `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, isDemo, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const clearCurrent = db.prepare("UPDATE Sprint SET isCurrent = 0 WHERE isCurrent = 1");
+  const setDemoFlag = db.prepare(
+    "UPDATE Sprint SET isDemo = ?, updatedAt = ? WHERE name = ? AND isDemo != ?",
+  );
 
   let inserted = 0;
   let skipped = 0;
+  let demoFixed = 0;
 
   for (const s of YORK_SPRINTS) {
     if (existingNames.has(s.name)) {
-      console.log(`  skip   ${s.name}  (already exists)`);
+      // Existing sprint: still reconcile its demo flag so a previously-seeded
+      // 9B / 13B that pre-dated the isDemo column gets correctly marked.
+      const wantDemo = s.isDemo ? 1 : 0;
+      const result = setDemoFlag.run(wantDemo, now, s.name, wantDemo);
+      if (result.changes > 0) {
+        console.log(`  fix    ${s.name}  (isDemo → ${wantDemo === 1 ? "true" : "false"})`);
+        demoFixed++;
+      } else {
+        console.log(`  skip   ${s.name}  (already exists)`);
+      }
       skipped++;
       continue;
     }
@@ -70,17 +84,20 @@ function main() {
       workingDays,
       0.9,
       isCurrent ? 1 : 0,
+      s.isDemo ? 1 : 0,
       now,
       now,
     );
     console.log(
-      `  add    ${s.name}  ${s.startDate} → ${s.endDate}  (${workingDays} working days${isCurrent ? ", current" : ""})`,
+      `  add    ${s.name}  ${s.startDate} → ${s.endDate}  (${workingDays} working days${isCurrent ? ", current" : ""}${s.isDemo ? ", demo" : ""})`,
     );
     inserted++;
   }
 
   db.close();
-  console.log(`\nDone. ${inserted} sprint(s) added, ${skipped} already present.`);
+  console.log(
+    `\nDone. ${inserted} sprint(s) added, ${skipped} already present${demoFixed > 0 ? `, ${demoFixed} demo flag(s) updated` : ""}.`,
+  );
 }
 
 main();

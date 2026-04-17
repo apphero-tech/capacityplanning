@@ -59,10 +59,18 @@ export function SprintsView() {
     if (ok) router.refresh();
   }
 
-  // Total projected SP across future sprints (current + next + future)
+  // Total projected SP across future sprints (current + next + future). Demo
+  // sprints are excluded — they aren't planned for delivery.
   const futureProjectedSP = useMemo(() => {
     return sprints
-      .filter((s) => s.status === "current" || s.status === "next" || s.status === "planning" || s.status === "future")
+      .filter(
+        (s) =>
+          !s.isDemo &&
+          (s.status === "current" ||
+            s.status === "next" ||
+            s.status === "planning" ||
+            s.status === "future"),
+      )
       .reduce((sum, s) => {
         const f = forecastMap.get(s.id);
         return sum + (f?.projectedSPProven ?? 0);
@@ -414,9 +422,6 @@ export function SprintsView() {
                 <TableHead className="text-center text-slate-400">
                   Weeks
                 </TableHead>
-                <TableHead className="text-center text-slate-400">
-                  Focus
-                </TableHead>
                 <TableHead className="text-right text-slate-400">
                   DEV hrs
                 </TableHead>
@@ -485,24 +490,22 @@ export function SprintsView() {
                         {s.durationWeeks}w
                       </TableCell>
 
-                      {/* Focus */}
-                      <TableCell className="text-center text-slate-300">
-                        <EditablePercent
-                          value={s.focusFactor}
-                          onSave={(next) => patchSprint(s.id, { focusFactor: next })}
-                        />
-                      </TableCell>
-
-                      {/* DEV hrs */}
+                      {/* DEV hrs (suppressed for demo sprints — not planned) */}
                       <TableCell className="text-right text-slate-300">
-                        {forecast ? fmt(forecast.netDevHrs) : (
+                        {s.isDemo ? (
+                          <span className="text-slate-600">&mdash;</span>
+                        ) : forecast ? (
+                          fmt(forecast.netDevHrs)
+                        ) : (
                           <span className="text-slate-600">&mdash;</span>
                         )}
                       </TableCell>
 
-                      {/* Projected SP */}
+                      {/* Projected SP (suppressed for demo sprints) */}
                       <TableCell className="text-right">
-                        {forecast && forecast.projectedSPProven > 0 ? (
+                        {s.isDemo ? (
+                          <span className="text-slate-600">&mdash;</span>
+                        ) : forecast && forecast.projectedSPProven > 0 ? (
                           <span className="font-semibold text-emerald-400">
                             {fmt(forecast.projectedSPProven, 0)}
                           </span>
@@ -513,15 +516,24 @@ export function SprintsView() {
 
                       {/* Status */}
                       <TableCell className="text-center">
-                        <Badge
-                          variant="colored"
-                          className={`text-[10px] ${SPRINT_STATUS_BADGE[s.status]?.className ?? ""}`}
-                        >
-                          {s.isActive && (
-                            <Play className="size-2.5 mr-1 fill-current" />
-                          )}
-                          {SPRINT_STATUS_BADGE[s.status]?.label ?? s.status}
-                        </Badge>
+                        {s.isDemo ? (
+                          <Badge
+                            variant="colored"
+                            className="text-[10px] bg-purple-500/15 text-purple-300 border-purple-500/30"
+                          >
+                            Demo
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="colored"
+                            className={`text-[10px] ${SPRINT_STATUS_BADGE[s.status]?.className ?? ""}`}
+                          >
+                            {s.isActive && (
+                              <Play className="size-2.5 mr-1 fill-current" />
+                            )}
+                            {SPRINT_STATUS_BADGE[s.status]?.label ?? s.status}
+                          </Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

@@ -19,6 +19,8 @@ export interface Sprint {
   velocityProven: number | null;
   velocityTarget: number | null;
   isCurrent: boolean;
+  /** Product Demo sprint — excluded from capacity projections and backlog planning. */
+  isDemo: boolean;
   /** Derived sprint status: past | previous | current | next | future */
   status: SprintStatus;
   /** Whether this sprint is in the active 4-sprint window (previous + current + next + planning) */

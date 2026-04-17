@@ -25,15 +25,19 @@ import {
 } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
 
+// Ordered so the user follows the natural data-entry flow from top to
+// bottom: define the sprint calendar first, then the people and how their
+// time is split, then their days off, then the backlog, and finally consult
+// the derived views (Capacity, Velocity).
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/backlog", label: "Backlog", icon: ListTodo },
-  { href: "/capacity", label: "Capacity", icon: BarChart3 },
   { href: "/sprints", label: "Sprints", icon: Calendar },
-  { href: "/velocity", label: "Velocity", icon: Activity },
-  { href: "/time-off", label: "Time Off", icon: CalendarOff },
   { href: "/team", label: "Team", icon: Users },
   { href: "/allocations", label: "Allocations", icon: PieChart },
+  { href: "/time-off", label: "Time Off", icon: CalendarOff },
+  { href: "/backlog", label: "Backlog", icon: ListTodo },
+  { href: "/capacity", label: "Capacity", icon: BarChart3 },
+  { href: "/velocity", label: "Velocity", icon: Activity },
 ] as const
 
 const bottomNavItems = [

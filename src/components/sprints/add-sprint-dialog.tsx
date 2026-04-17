@@ -24,10 +24,11 @@ export function AddSprintDialog() {
     name: "",
     startDate: "",
     endDate: "",
+    isDemo: false,
   });
 
   function reset() {
-    setForm({ name: "", startDate: "", endDate: "" });
+    setForm({ name: "", startDate: "", endDate: "", isDemo: false });
     setError(null);
   }
 
@@ -48,6 +49,7 @@ export function AddSprintDialog() {
           name: form.name.trim(),
           startDate: form.startDate || null,
           endDate: form.endDate || null,
+          isDemo: form.isDemo,
         }),
       });
       const json = await res.json();
@@ -123,6 +125,16 @@ export function AddSprintDialog() {
               />
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.isDemo}
+              onChange={(e) => setForm((f) => ({ ...f, isDemo: e.target.checked }))}
+              className="size-4 accent-[#E31837]"
+            />
+            Demo sprint (excluded from planning and projections)
+          </label>
 
           <p className="text-[11px] text-slate-500 leading-relaxed">
             Working days are counted automatically from the date range (Mon–Fri).
