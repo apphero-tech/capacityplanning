@@ -37,8 +37,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Users, PieChart, Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import { ImportAllocationsDialog } from "@/components/allocations/import-allocations-dialog";
+import { SegmentedControl, ChipFilter } from "@/components/ui/segmented-control";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -67,12 +68,14 @@ const LOCATIONS: Country[] = ["Quebec", "Canada", "India", "USA", "Venezuela", "
 // ---------------------------------------------------------------------------
 
 function getCellColor(pct: number): string {
-  if (pct === 0) return "bg-transparent text-slate-600";
-  if (pct <= 10) return "bg-[#E31837]/10 text-[#f4707f]";
-  if (pct <= 25) return "bg-[#E31837]/20 text-[#f4707f]";
-  if (pct <= 50) return "bg-[#E31837]/30 text-[#f8a0aa]";
-  if (pct <= 75) return "bg-[#E31837]/40 text-[#fcd0d5]";
-  return "bg-[#E31837]/50 text-white";
+  // Monochrome intensity ramp — a percentage is just a number, no need to
+  // scream in red. Stronger allocation = more contrasty text, zero stays
+  // invisible.
+  if (pct === 0) return "text-slate-700";
+  if (pct <= 25) return "text-slate-400";
+  if (pct <= 50) return "text-slate-300";
+  if (pct <= 75) return "text-slate-200";
+  return "text-slate-50 font-semibold";
 }
 
 function getTotalAllocation(cap: InitialCapacity): number {
@@ -151,7 +154,7 @@ function EditablePercentCell({
     <button
       onClick={handleStart}
       disabled={saving}
-      className={`w-full text-center text-xs font-mono rounded-sm cursor-pointer hover:ring-1 hover:ring-white/20 transition-all px-1 py-0.5 ${getCellColor(pct)}`}
+      className={`w-full text-center text-[12px] tabular-nums rounded cursor-pointer hover:bg-white/[0.03] transition-colors px-1 py-1 ${getCellColor(pct)}`}
     >
       {pct > 0 ? `${pct}%` : <span className="text-slate-700">&mdash;</span>}
     </button>
@@ -565,178 +568,111 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
     router.refresh();
   }, [router]);
 
+  // Org + stream toolbar options
+  const orgOptions = useMemo(() => {
+    const base: { value: string; label: string }[] = [
+      { value: "all", label: "All" },
+      { value: "Deloitte", label: "Deloitte" },
+      { value: "York", label: "York" },
+    ];
+    const known = new Set(base.map((b) => b.value));
+    const extras = organizations
+      .filter((o) => !known.has(o))
+      .map((o) => ({ value: o, label: o }));
+    return [...base, ...extras];
+  }, [organizations]);
+
+  const streamOptions = useMemo(
+    () => [
+      { value: "all", label: "All streams" },
+      ...availableStreams.map((s) => ({ value: s, label: s })),
+    ],
+    [availableStreams],
+  );
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#E31837]/15">
-              <Users className="size-5 text-[#E31837]" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Team Members
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {totalMembers}
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                with allocation data
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/[0.06] bg-slate-900/50">
-          <CardContent className="flex items-start gap-4 pt-6">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
-              <PieChart className="size-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Avg Hrs / Week
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {avgHrsPerWeek.toFixed(1)}
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                across filtered members
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/[0.06] bg-slate-900/50 sm:col-span-2 lg:col-span-1">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                Organization
-              </p>
-              <ImportAllocationsDialog onImported={handleAdd} />
-            </div>
-            {/* Org toggle pills — always show All + known orgs */}
-            <div className="flex items-center gap-1 rounded-lg border border-white/[0.06] bg-slate-800/50 p-1 mb-2">
-              {(() => {
-                const base = ["all", "Deloitte", "York"];
-                const extras = organizations.filter((o) => !base.includes(o));
-                const options = [...base, ...extras];
-                return options.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setOrgFilter(opt)}
-                    className={`flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-                      orgFilter === opt
-                        ? "bg-[#E31837] text-white"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    {opt === "all" ? "All" : opt}
-                  </button>
-                ));
-              })()}
-            </div>
-
-            {/* Stream pills — only streams present in the current org slice */}
-            {availableStreams.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1 rounded-lg border border-white/[0.06] bg-slate-800/50 p-1 mb-2">
-                <button
-                  onClick={() => setStreamFilter("all")}
-                  className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-                    streamFilter === "all"
-                      ? "bg-[#E31837] text-white"
-                      : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  All streams
-                </button>
-                {availableStreams.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStreamFilter(s)}
-                    className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-                      streamFilter === s
-                        ? "bg-[#E31837] text-white"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full border-white/[0.06] bg-slate-800/50 text-slate-300">
-                <SelectValue placeholder="All roles" />
-              </SelectTrigger>
-              <SelectContent className="border-white/[0.06] bg-slate-900">
-                <SelectItem value="all">All roles</SelectItem>
-                {roles.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+      {/* Row 1: primary org toggle + live stats + import */}
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-3">
+        <SegmentedControl
+          options={orgOptions}
+          value={orgFilter}
+          onChange={setOrgFilter}
+        />
+        <p className="text-[12px] text-slate-500 tabular-nums">
+          <span className="text-slate-300 font-medium">{totalMembers}</span>
+          {" "}{totalMembers === 1 ? "person" : "people"}
+          <span className="text-slate-700 mx-1.5">·</span>
+          avg{" "}
+          <span className="text-slate-300 font-medium">{avgHrsPerWeek.toFixed(1)}</span>
+          {" "}hrs/wk
+        </p>
+        <div className="ml-auto flex items-center gap-2">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="h-8 w-[150px] border-white/10 bg-slate-900/60 text-[13px] text-slate-300">
+              <SelectValue placeholder="All roles" />
+            </SelectTrigger>
+            <SelectContent className="border-white/[0.06] bg-slate-900">
+              <SelectItem value="all">All roles</SelectItem>
+              {roles.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <ImportAllocationsDialog onImported={handleAdd} />
+        </div>
       </div>
 
-      {/* Allocation grid table */}
-      <Card className="border-white/[0.06] bg-slate-900/50">
-        <CardHeader>
-          <CardTitle className="text-slate-100">
-            Allocation Matrix
-          </CardTitle>
-          <CardDescription className="text-slate-400">
-            Click any cell to edit. Changes are saved automatically.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Row 2: stream pills — only when the org slice has more than one */}
+      {streamOptions.length > 1 && (
+        <ChipFilter
+          options={streamOptions}
+          value={streamFilter}
+          onChange={setStreamFilter}
+        />
+      )}
+
+      {/* Allocation grid — no wrapper card, lets the table breathe edge-to-edge */}
+      <div>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/[0.06] hover:bg-transparent">
-                <TableHead className="text-slate-400 min-w-[160px]">
+              <TableRow className="border-white/[0.04] hover:bg-transparent">
+                <TableHead className="text-[11px] font-medium text-slate-500 min-w-[200px]">
                   Name
                 </TableHead>
-                <TableHead className="text-slate-400 min-w-[80px]">
+                <TableHead className="text-[11px] font-medium text-slate-500 min-w-[80px]">
                   Org
                 </TableHead>
-                <TableHead className="text-slate-400">Role</TableHead>
-                <TableHead className="text-slate-400 min-w-[80px]">
-                  Location
+                <TableHead className="text-[11px] font-medium text-slate-500">
+                  Role
                 </TableHead>
-                <TableHead className="text-center text-slate-400">
-                  FT/PT
+                <TableHead className="text-[11px] font-medium text-slate-500 text-center w-12">
+                  FT
                 </TableHead>
-                <TableHead className="text-right text-slate-400">
-                  Hrs/Wk
-                </TableHead>
-                <TableHead className="text-center text-slate-400 w-16">
-                  Active
+                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-16">
+                  Hrs
                 </TableHead>
                 {visibleAllocationColumns.map((col) => (
                   <TableHead
                     key={col.key}
-                    className="text-center text-slate-400 min-w-[70px]"
+                    className="text-[11px] font-medium text-slate-500 text-center min-w-[60px]"
                   >
                     {col.short}
                   </TableHead>
                 ))}
-                <TableHead className="text-center text-slate-400">
+                <TableHead className="text-[11px] font-medium text-slate-500 text-center w-14">
                   Total
                 </TableHead>
-                <TableHead className="text-center text-slate-400 w-10">
-
-                </TableHead>
+                <TableHead className="text-center w-8"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow className="border-white/[0.06]">
                   <TableCell
-                    colSpan={5 + ALLOCATION_COLUMNS.length + 2}
+                    colSpan={4 + ALLOCATION_COLUMNS.length + 2}
                     className="text-center text-slate-500 py-8"
                   >
                     No allocation data found.
@@ -754,21 +690,33 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                       key={cap.id}
                       className={`border-white/[0.06] hover:bg-white/[0.02] ${isDeleting ? "opacity-50" : ""}`}
                     >
-                      <TableCell className="font-medium text-slate-200">
-                        <div className="flex gap-1">
-                          <EditableTextCell
-                            value={cap.lastName}
-                            onSave={(v) => saveField(cap.id, "lastName", v)}
-                            saving={isSaving}
-                            className="font-medium text-slate-200"
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => saveField(cap.id, "isActive", !cap.isActive)}
+                            disabled={isSaving}
+                            title={cap.isActive ? "Active — click to mark inactive" : "Inactive — click to activate"}
+                            className={`size-1.5 rounded-full shrink-0 transition-colors ${
+                              cap.isActive
+                                ? "bg-emerald-400 hover:bg-emerald-300"
+                                : "bg-slate-700 hover:bg-slate-500"
+                            }`}
                           />
-                          <span className="text-slate-500">,</span>
-                          <EditableTextCell
-                            value={cap.firstName}
-                            onSave={(v) => saveField(cap.id, "firstName", v)}
-                            saving={isSaving}
-                            className="font-medium text-slate-200"
-                          />
+                          <div className={`flex gap-1 ${cap.isActive ? "" : "opacity-50"}`}>
+                            <EditableTextCell
+                              value={cap.firstName}
+                              onSave={(v) => saveField(cap.id, "firstName", v)}
+                              saving={isSaving}
+                              className="font-medium text-slate-100"
+                            />
+                            <EditableTextCell
+                              value={cap.lastName}
+                              onSave={(v) => saveField(cap.id, "lastName", v)}
+                              saving={isSaving}
+                              className="font-medium text-slate-100"
+                            />
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -787,28 +735,16 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                           className="text-slate-400 text-xs"
                         />
                       </TableCell>
-                      <TableCell>
-                        <EditableTextCell
-                          value={cap.location}
-                          onSave={(v) => saveField(cap.id, "location", v)}
-                          saving={isSaving}
-                          className="text-slate-400 text-xs"
-                        />
-                      </TableCell>
                       <TableCell className="text-center">
-                        <Badge
-                          variant="colored"
-                          interactive
+                        <button
+                          type="button"
                           onClick={() => saveField(cap.id, "ftPt", cap.ftPt === "FT" ? "PT" : "FT")}
-                          aria-disabled={isSaving}
-                          className={
-                            cap.ftPt === "FT"
-                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                              : "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                          }
+                          disabled={isSaving}
+                          className="text-[12px] text-slate-400 hover:text-slate-200 transition-colors"
+                          title="Click to toggle FT/PT"
                         >
                           {cap.ftPt}
-                        </Badge>
+                        </button>
                       </TableCell>
                       <TableCell className="text-right">
                         <EditableNumberCell
@@ -816,21 +752,6 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                           onSave={(v) => saveField(cap.id, "hrsPerWeek", v)}
                           saving={isSaving}
                         />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <button
-                          type="button"
-                          onClick={() => saveField(cap.id, "isActive", !cap.isActive)}
-                          disabled={isSaving}
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                            cap.isActive
-                              ? "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
-                              : "bg-slate-700/50 text-slate-400 hover:bg-slate-600/50"
-                          }`}
-                          title="Click to toggle"
-                        >
-                          {cap.isActive ? "Active" : "Inactive"}
-                        </button>
                       </TableCell>
                       {visibleAllocationColumns.map((col) => {
                         const val = cap[col.key as AllocKey] as number;
@@ -873,8 +794,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
