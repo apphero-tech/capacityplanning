@@ -20,36 +20,70 @@ function stripInvisible(s: string): string {
   return s.replace(/[\u200B\u200C\u200D\uFEFF\u00AD\u200E\u200F\u2028\u2029]/g, "").trim();
 }
 
-/** Normalise a date string to YYYY-MM-DD. Accepts YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY. */
-function normaliseDate(raw: string): string | null {
-  const s = raw.trim();
-  if (!s) return null;
+type DateFormat = "DD/MM" | "MM/DD";
 
-  // Already ISO
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
-  // DD/MM/YYYY or MM/DD/YYYY
-  const slashParts = s.split(/[/.-]/);
-  if (slashParts.length === 3) {
-    const [a, b, c] = slashParts.map(Number);
-    // If c looks like a 4-digit year
-    if (c > 1000) {
-      // If a > 12 it must be DD/MM/YYYY
-      if (a > 12) {
-        return `${c}-${String(b).padStart(2, "0")}-${String(a).padStart(2, "0")}`;
-      }
-      // Otherwise treat as MM/DD/YYYY (US) if b <= 31
-      if (b <= 31) {
-        return `${c}-${String(a).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
-      }
-    }
-    // If a is a 4-digit year (YYYY/MM/DD)
-    if (a > 1000) {
-      return `${a}-${String(b).padStart(2, "0")}-${String(c).padStart(2, "0")}`;
+/**
+ * Scan every date-looking cell in the rows and pick the format best supported
+ * by the evidence. A cell like "31/05/2026" forces DD/MM (day > 12), "05/31/
+ * 2026" forces MM/DD. In the ambiguous case (both components ≤ 12) we count
+ * nothing and fall back to the configured default. The default is DD/MM since
+ * most of our sources (Microsoft Planner in Canada/EU locale) emit that.
+ */
+function detectDateFormat(
+  rows: string[][],
+  dateColumns: number[],
+  defaultFormat: DateFormat = "DD/MM",
+): DateFormat {
+  let ddmm = 0;
+  let mmdd = 0;
+  for (const row of rows) {
+    for (const c of dateColumns) {
+      const s = (row[c] ?? "").trim();
+      const m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+      if (!m) continue;
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      if (a > 12 && b <= 12) ddmm++;
+      else if (b > 12 && a <= 12) mmdd++;
     }
   }
+  if (ddmm === 0 && mmdd === 0) return defaultFormat;
+  return ddmm >= mmdd ? "DD/MM" : "MM/DD";
+}
 
-  return null;
+/**
+ * Normalise a date string to YYYY-MM-DD using the detected format for the
+ * slash/dash/period cases. ISO (YYYY-MM-DD) and YYYY/MM/DD are always parsed
+ * unambiguously regardless of the hint.
+ */
+function normaliseDate(raw: string, format: DateFormat): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  const parts = s.split(/[/.-]/);
+  if (parts.length !== 3) return null;
+  const [a, b, c] = parts.map(Number);
+
+  // YYYY/MM/DD
+  if (a > 1000) {
+    return `${a}-${String(b).padStart(2, "0")}-${String(c).padStart(2, "0")}`;
+  }
+
+  // DD/MM/YYYY or MM/DD/YYYY — disambiguate with hard constraints first, then
+  // fall back to the detected format.
+  if (c <= 1000) return null;
+  if (a > 12 && b <= 12) {
+    return `${c}-${String(b).padStart(2, "0")}-${String(a).padStart(2, "0")}`;
+  }
+  if (b > 12 && a <= 12) {
+    return `${c}-${String(a).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
+  }
+  // Both ≤ 12 — ambiguous, trust the detected format.
+  if (format === "DD/MM") {
+    return `${c}-${String(b).padStart(2, "0")}-${String(a).padStart(2, "0")}`;
+  }
+  return `${c}-${String(a).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +149,12 @@ export async function POST(request: NextRequest) {
     if (locationCol !== null) detectedColumns.push("Location");
     if (teamCol !== null) detectedColumns.push("Team");
 
+    // Figure out whether the date columns are DD/MM or MM/DD before parsing
+    // any row — a single global answer avoids inconsistencies across a file.
+    const dataRows = rows.slice(1);
+    const dateFormat = detectDateFormat(dataRows, [startCol, endCol]);
+    detectedColumns.push(`Dates: ${dateFormat}/YYYY`);
+
     // Process data rows
     const errors: string[] = [];
     let imported = 0;
@@ -129,8 +169,8 @@ export async function POST(request: NextRequest) {
       const startRaw = stripInvisible(row[startCol] ?? "");
       const endRaw = stripInvisible(row[endCol] ?? "");
 
-      let startDate = normaliseDate(startRaw);
-      let endDate = normaliseDate(endRaw);
+      let startDate = normaliseDate(startRaw, dateFormat);
+      let endDate = normaliseDate(endRaw, dateFormat);
 
       // One-date rows mean a single-day PTO. Fall back to the other date so
       // we still capture the entry instead of dropping it. If neither is
