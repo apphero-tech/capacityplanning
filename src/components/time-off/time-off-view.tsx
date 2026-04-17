@@ -212,30 +212,29 @@ export function TimeOffView({
   }, [publicHolidays]);
 
   // Filter public holidays to selected sprint (or all if no sprint)
+  // When no sprint is selected the lists collapse to empty so the user isn't
+  // shown a pile of entries that belong to other sprints. Selecting any sprint
+  // in the top-bar immediately scopes everything to that window.
   const filteredPublicHolidays = useMemo(() => {
-    let list = publicHolidays;
+    if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
+    let list = publicHolidays.filter((h) =>
+      isDateInRange(h.date, selectedSprint.startDate!, selectedSprint.endDate!),
+    );
     if (countryFilter !== "all") {
       list = list.filter((h) => h.country === countryFilter);
-    }
-    if (selectedSprint?.startDate && selectedSprint?.endDate) {
-      list = list.filter((h) =>
-        isDateInRange(h.date, selectedSprint.startDate!, selectedSprint.endDate!),
-      );
     }
     return list;
   }, [publicHolidays, countryFilter, selectedSprint]);
 
-  // Filter project holidays to selected sprint
   const filteredProjectHolidays = useMemo(() => {
-    if (!selectedSprint?.startDate || !selectedSprint?.endDate) return projectHolidays;
+    if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
     return projectHolidays.filter((h) =>
       h.date && isDateInRange(h.date, selectedSprint.startDate!, selectedSprint.endDate!),
     );
   }, [projectHolidays, selectedSprint]);
 
-  // Filter PTO entries to selected sprint
   const filteredPtoEntries = useMemo(() => {
-    if (!selectedSprint?.startDate || !selectedSprint?.endDate) return ptoEntries;
+    if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
     return ptoEntries.filter((e) =>
       isOverlapping(e.startDate, e.endDate, selectedSprint.startDate!, selectedSprint.endDate!),
     );
@@ -390,8 +389,24 @@ export function TimeOffView({
     }
   }
 
+  const scopeLabel = selectedSprint
+    ? `in ${selectedSprint.name}`
+    : "(select a sprint in the top bar)";
+
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-2 text-[12px] text-slate-500">
+        <span>Showing time off</span>
+        <span className="text-slate-200 font-medium">{scopeLabel}</span>
+        {selectedSprint && (
+          <span className="text-slate-600">
+            · {selectedSprint.startDate && selectedSprint.endDate
+              ? `${formatDate(selectedSprint.startDate)} → ${formatDate(selectedSprint.endDate)}`
+              : ""}
+          </span>
+        )}
+      </div>
+
       <StatStrip
         stats={[
           { label: "Public holidays", value: `${totalPublicDays} days`, hint: `${filteredPublicHolidays.length} entries` },
