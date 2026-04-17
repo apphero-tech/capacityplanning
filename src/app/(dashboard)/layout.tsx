@@ -26,9 +26,13 @@ export default async function DashboardLayout({
 
   const activeSprints = allSprints.filter((s) => s.isActive);
 
-  // Default to the current sprint within the active window
+  // Default to the sprint we are actively *planning for* — which is the
+  // upcoming one, not the one already in flight. At any given moment the
+  // current sprint's scope is frozen; the interesting capacity question is
+  // always about the next non-demo sprint that hasn't started yet.
+  const nextIndex = activeSprints.findIndex((s) => s.status === "next");
   const currentIndex = activeSprints.findIndex((s) => s.isCurrent);
-  const initialIndex = currentIndex >= 0 ? currentIndex : 0;
+  const initialIndex = nextIndex >= 0 ? nextIndex : currentIndex >= 0 ? currentIndex : 0;
 
   // Compute forecasts ONCE for the entire app
   const forecasts = computeAllSprintForecasts(
