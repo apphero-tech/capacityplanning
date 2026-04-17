@@ -411,6 +411,44 @@ export async function getAllSprints(): Promise<Sprint[]> {
  * Update commitment/completed SP for a sprint.
  * Returns true if a row was updated.
  */
+/** Create a new sprint with the given params. Returns the generated id. */
+export function insertSprint(input: {
+  name: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  durationWeeks?: number;
+  workingDays?: number;
+  focusFactor?: number;
+  isCurrent?: boolean;
+}): string {
+  const db = getDb();
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    input.name,
+    input.startDate ?? null,
+    input.endDate ?? null,
+    input.durationWeeks ?? 4,
+    input.workingDays ?? 20,
+    input.focusFactor ?? 0.9,
+    input.isCurrent ? 1 : 0,
+    now,
+    now,
+  );
+  return id;
+}
+
+/** Delete a sprint by id. Returns true when a row was removed. */
+export function deleteSprint(id: string): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM Sprint WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
 export function updateSprintActuals(
   id: string,
   updates: { commitmentSP?: number | null; completedSP?: number | null }

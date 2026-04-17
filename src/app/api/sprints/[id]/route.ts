@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateSprintActuals } from "@/lib/data";
+import { deleteSprint, updateSprintActuals } from "@/lib/data";
 
 /**
  * PATCH /api/sprints/:id
@@ -59,5 +59,23 @@ export async function PATCH(
       { error: "Internal server error" },
       { status: 500 }
     );
+  }
+}
+
+/** DELETE /api/sprints/:id — remove a sprint (does not touch stories by design). */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+    const removed = deleteSprint(id);
+    if (!removed) {
+      return NextResponse.json({ error: `Sprint "${id}" not found` }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /api/sprints/[id] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
