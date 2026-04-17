@@ -21,6 +21,7 @@ interface ColumnMap {
   pod: number | null;
   dependency: number | null;
   group: number | null;
+  sprint: number | null;
 }
 
 /** A parsed story row before DB insertion. */
@@ -33,6 +34,8 @@ export interface ParsedStory {
   dependency: string | null;
   groupName: string | null;
   stream: BacklogStream;
+  /** Raw Sprint cell value, e.g. "Sprint 5" or "Sprint 4;Sprint 5" — null when empty. */
+  sprintRaw: string | null;
 }
 
 export interface ParseResult {
@@ -52,6 +55,7 @@ const SP_PATTERNS = [/^story\s*point/i, /^sp$/i, /^points?$/i, /point.*histoire/
 const POD_PATTERNS = [/^pod$/i, /pod.?name/i, /^custom\s*field.*pod_?name/i];
 const DEP_PATTERNS = [/depend/i, /d[eé]pendance/i, /^delivery\s*depend/i, /^blocker$/i];
 const GROUP_PATTERNS = [/^group$/i, /^groupe$/i, /\(group\)/i, /^custom\s*field.*\bgroup\b/i];
+const SPRINT_PATTERNS = [/^sprint$/i, /^sprints$/i, /^custom\s*field.*sprint$/i];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,6 +98,7 @@ function detectColumnsFromArray(headers: string[]): ColumnMap | null {
     else if (map.pod === undefined && matchesAny(val, POD_PATTERNS)) map.pod = i;
     else if (map.dependency === undefined && matchesAny(val, DEP_PATTERNS)) map.dependency = i;
     else if (map.group === undefined && matchesAny(val, GROUP_PATTERNS)) map.group = i;
+    else if (map.sprint === undefined && matchesAny(val, SPRINT_PATTERNS)) map.sprint = i;
   }
 
   // Key, summary, and status are required
@@ -107,6 +112,7 @@ function detectColumnsFromArray(headers: string[]): ColumnMap | null {
     pod: map.pod ?? null,
     dependency: map.dependency ?? null,
     group: map.group ?? null,
+    sprint: map.sprint ?? null,
   };
 }
 
@@ -117,6 +123,7 @@ function buildDetectedList(cm: ColumnMap): string[] {
   if (cm.pod !== null) detected.push("Pod");
   if (cm.dependency !== null) detected.push("Dependency");
   if (cm.group !== null) detected.push("Group");
+  if (cm.sprint !== null) detected.push("Sprint");
   return detected;
 }
 
@@ -172,6 +179,9 @@ function processRows(
     const groupName =
       columnMap.group !== null ? stripInvisible(row[columnMap.group] ?? "") || null : null;
 
+    const sprintRaw =
+      columnMap.sprint !== null ? stripInvisible(row[columnMap.sprint] ?? "") || null : null;
+
     const stream = deriveStream(status);
 
     stories.push({
@@ -183,6 +193,7 @@ function processRows(
       dependency,
       groupName,
       stream,
+      sprintRaw,
     });
   }
 

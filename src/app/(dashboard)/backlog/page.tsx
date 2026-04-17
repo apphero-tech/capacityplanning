@@ -1,6 +1,7 @@
 import { getStoriesBySprint, getAllSprints } from "@/lib/data";
 import { isExcludedStory } from "@/lib/capacity-engine";
 import { BacklogTable } from "@/components/backlog/backlog-table";
+import { BacklogAutoImportButton } from "@/components/backlog/auto-import-button";
 import type { SprintStory } from "@/types";
 
 export default async function BacklogPage() {
@@ -28,13 +29,18 @@ export default async function BacklogPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-          Backlog
-        </h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Sprint backlog imported from Jira. Upload an Excel export per sprint.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-100">
+            Backlog
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Sprint backlog imported from Jira. Use Import All Sprints to dispatch
+            every story to its sprint by reading the &quot;Sprint&quot; column,
+            or upload per sprint below.
+          </p>
+        </div>
+        <BacklogAutoImportButton />
       </div>
 
       <BacklogTable storiesBySprint={storiesBySprint} />
