@@ -39,7 +39,7 @@ export default async function CapacityPage() {
             Capacity Planning
           </h2>
           <p className="text-sm text-slate-400 mt-1">
-            Capacity vs. scope analysis for the selected sprint.
+            Available hours vs. required story points per cycle.
           </p>
         </div>
         <FocusFactorInput initial={focus} />

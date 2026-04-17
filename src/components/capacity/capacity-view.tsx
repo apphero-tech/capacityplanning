@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { SegmentedControl, ChipFilter } from "@/components/ui/segmented-control";
 import type { CapacityRow, SprintStory } from "@/types";
 import { useSprint } from "@/contexts/sprint-context";
 import { formatDateRange } from "@/lib/date-utils";
@@ -98,6 +99,20 @@ export function CapacityView({
     ptoEntries,
   } = useSprint();
 
+  // Capacity conversations center on Deloitte first — York is a separate
+  // review pass, All shows the combined available pool.
+  const [orgFilter, setOrgFilter] = useState<string>("Deloitte");
+  // Stream filter only covers the four workflow cycles (Refining, Design,
+  // Development, QA). Lead/PMO/Retro/OCM stay out because they aren't
+  // delivery streams — they don't convert hours into story points.
+  const [streamFilter, setStreamFilter] = useState<string>("all");
+
+  // Scope org filter to the capacity engine.
+  const scopedCapacities = useMemo(() => {
+    if (orgFilter === "all") return initialCapacities;
+    return initialCapacities.filter((c) => c.organization === orgFilter);
+  }, [initialCapacities, orgFilter]);
+
   const { capacityRows, devProjection, cycleInfo } = useMemo(() => {
     const emptyProjection = {
       netDevCapacity: 0,
@@ -144,8 +159,8 @@ export function CapacityView({
       "4-QA": qaScope,
     } as const;
 
-    const devCapacities = computeDevCapacityFromIC(initialCapacities, sprint, publicHolidays, projectHolidays, ptoEntries);
-    const streamHrs = computeStreamCapacityFromIC(initialCapacities, sprint, publicHolidays, projectHolidays, ptoEntries);
+    const devCapacities = computeDevCapacityFromIC(scopedCapacities, sprint, publicHolidays, projectHolidays, ptoEntries);
+    const streamHrs = computeStreamCapacityFromIC(scopedCapacities, sprint, publicHolidays, projectHolidays, ptoEntries);
 
     // DEV projection is driven by the current sprint's own scope.
     const totalBacklogSP = devScope
@@ -161,16 +176,62 @@ export function CapacityView({
 
     const rows = computeCapacityRows(storiesByStream, [], dp, streamHrs);
     return { capacityRows: rows, devProjection: dp, cycleInfo: { prev, next } };
-  }, [initialCapacities, storiesBySprint, sprint, allSprints, publicHolidays, projectHolidays, ptoEntries, selectedForecast]);
+  }, [scopedCapacities, storiesBySprint, sprint, allSprints, publicHolidays, projectHolidays, ptoEntries, selectedForecast]);
+
+  // Optional per-cycle filter on the rows displayed in the Capacity table.
+  const visibleRows = useMemo(() => {
+    if (streamFilter === "all") return capacityRows;
+    return capacityRows.filter((r) => r.stream === streamFilter);
+  }, [capacityRows, streamFilter]);
 
   if (!sprint) {
     return <p className="text-sm text-slate-400">No sprint selected.</p>;
   }
 
-  const totalScopeSP = capacityRows.reduce((s, r) => s + r.scopeSP, 0);
+  const totalScopeSP = visibleRows.reduce((s, r) => s + r.scopeSP, 0);
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Filter toolbar — same pattern as Team page */}
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-3">
+        <SegmentedControl
+          options={[
+            { value: "all",      label: "All" },
+            { value: "Deloitte", label: "Deloitte" },
+            { value: "York",     label: "York" },
+          ]}
+          value={orgFilter}
+          onChange={setOrgFilter}
+        />
+        <ChipFilter
+          options={[
+            { value: "all",    label: "All streams" },
+            { value: "1-REF",  label: "Refining" },
+            { value: "2-DES",  label: "Design" },
+            { value: "3-DEV",  label: "Development" },
+            { value: "4-QA",   label: "QA" },
+          ]}
+          value={streamFilter}
+          onChange={setStreamFilter}
+        />
+      </div>
+
+      {/* Cycle scope provenance — reminds the user which sprint feeds each cycle */}
+      <p className="text-[12px] text-slate-500">
+        Team available at <span className="text-slate-300">{sprint.name}</span>
+        {cycleInfo.next && (
+          <>
+            {" · "}refining &amp; design from{" "}
+            <span className="text-slate-300">{cycleInfo.next.name}</span>
+          </>
+        )}
+        {cycleInfo.prev && (
+          <>
+            {" · "}QA from <span className="text-slate-300">{cycleInfo.prev.name}</span>
+          </>
+        )}
+      </p>
+
       <StatStrip
         stats={[
           {
@@ -191,31 +252,14 @@ export function CapacityView({
           {
             label: "Scope",
             value: `${fmt(totalScopeSP, 0)} USP`,
-            hint: `${capacityRows.reduce((s, r) => s + r.stories, 0)} stories`,
+            hint: `${visibleRows.reduce((s, r) => s + r.stories, 0)} stories`,
           },
         ]}
       />
 
       {/* Capacity vs Scope table */}
       <div>
-        <div className="mb-3">
-          <h3 className="text-[13px] font-medium text-slate-300">Capacity vs. scope</h3>
-          <p className="text-[12px] text-slate-500 mt-0.5">
-            Team available at <span className="text-slate-300">{sprint.name}</span>
-            {cycleInfo.next && (
-              <>
-                {" "}· refining & design scope from{" "}
-                <span className="text-slate-300">{cycleInfo.next.name}</span>
-              </>
-            )}
-            {cycleInfo.prev && (
-              <>
-                {" "}· QA scope from{" "}
-                <span className="text-slate-300">{cycleInfo.prev.name}</span>
-              </>
-            )}
-          </p>
-        </div>
+        <h3 className="text-[13px] font-medium text-slate-300 mb-3">Capacity vs. scope</h3>
         <div>
           <Table>
             <TableHeader>
@@ -248,7 +292,7 @@ export function CapacityView({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {capacityRows.map((row) => (
+              {visibleRows.map((row) => (
                   <TableRow
                     key={row.stream}
                     className="border-white/[0.06] hover:bg-white/[0.02]"
@@ -341,13 +385,13 @@ export function CapacityView({
                   Total
                 </TableCell>
                 <TableCell className="text-right font-semibold text-slate-200">
-                  {capacityRows.reduce((s, r) => s + r.stories, 0)}
+                  {visibleRows.reduce((s, r) => s + r.stories, 0)}
                 </TableCell>
                 <TableCell className="text-right font-semibold text-slate-200">
                   {fmt(totalScopeSP, 0)}
                 </TableCell>
                 <TableCell className="text-right font-semibold text-slate-200">
-                  {fmt(capacityRows.reduce((s, r) => s + r.totalHrs, 0))}
+                  {fmt(visibleRows.reduce((s, r) => s + r.totalHrs, 0))}
                 </TableCell>
                 <TableCell />
                 <TableCell />
