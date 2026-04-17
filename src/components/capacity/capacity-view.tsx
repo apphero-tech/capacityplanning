@@ -90,6 +90,7 @@ export function CapacityView({
 }: CapacityViewProps) {
   const {
     selectedSprint: sprint,
+    allSprints,
     selectedForecast,
     initialCapacities,
     publicHolidays,
@@ -97,20 +98,57 @@ export function CapacityView({
     ptoEntries,
   } = useSprint();
 
-  const { capacityRows, devProjection } = useMemo(() => {
+  const { capacityRows, devProjection, cycleInfo } = useMemo(() => {
+    const emptyProjection = {
+      netDevCapacity: 0,
+      velocityProven: 0,
+      velocityTarget: 0,
+      projectedSPProven: 0,
+      projectedSPTarget: 0,
+      backlogDevSP: 0,
+      gapProven: 0,
+      gapTarget: 0,
+      coverageProven: 0,
+      coverageTarget: 0,
+    };
     if (!sprint) {
-      return { capacityRows: [] as CapacityRow[], devProjection: { netDevCapacity: 0, velocityProven: 0, velocityTarget: 0, projectedSPProven: 0, projectedSPTarget: 0, backlogDevSP: 0, gapProven: 0, gapTarget: 0, coverageProven: 0, coverageTarget: 0 } };
+      return {
+        capacityRows: [] as CapacityRow[],
+        devProjection: emptyProjection,
+        cycleInfo: { prev: null, next: null },
+      };
     }
 
-    // Stories already have isExcluded computed from server
-    const stories = storiesBySprint[sprint.id] ?? [];
+    // Find the previous/next delivery sprints (demo sprints are skipped so a
+    // Product Demo sprint doesn't shift the scope by one slot).
+    const orderedSprints = [...allSprints]
+      .filter((s) => !s.isDemo)
+      .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
+    const idx = orderedSprints.findIndex((s) => s.id === sprint.id);
+    const prev = idx > 0 ? orderedSprints[idx - 1] : null;
+    const next = idx >= 0 && idx < orderedSprints.length - 1 ? orderedSprints[idx + 1] : null;
 
-    // IC-based capacity computation
+    // Apply the 3-cycle rule:
+    //   refining (cycle 1) at sprint N = stories that will be dev-ed at N+1
+    //   design   (cycle 1) at sprint N = same pool as refining
+    //   dev      (cycle 2) at sprint N = stories planned for sprint N
+    //   qa       (cycle 3) at sprint N = stories dev-ed at N-1
+    const refineScope = next ? (storiesBySprint[next.id] ?? []) : [];
+    const devScope = storiesBySprint[sprint.id] ?? [];
+    const qaScope = prev ? (storiesBySprint[prev.id] ?? []) : [];
+
+    const storiesByStream = {
+      "1-REF": refineScope,
+      "2-DES": refineScope,
+      "3-DEV": devScope,
+      "4-QA": qaScope,
+    } as const;
+
     const devCapacities = computeDevCapacityFromIC(initialCapacities, sprint, publicHolidays, projectHolidays, ptoEntries);
     const streamHrs = computeStreamCapacityFromIC(initialCapacities, sprint, publicHolidays, projectHolidays, ptoEntries);
 
-    // DEV must deliver ALL active stories in the sprint (full scope, not just 3-DEV status)
-    const totalBacklogSP = stories
+    // DEV projection is driven by the current sprint's own scope.
+    const totalBacklogSP = devScope
       .filter((s) => !s.isExcluded)
       .reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
 
@@ -121,9 +159,9 @@ export function CapacityView({
       totalBacklogSP
     );
 
-    const rows = computeCapacityRows(stories, [], dp, streamHrs);
-    return { capacityRows: rows, devProjection: dp };
-  }, [initialCapacities, storiesBySprint, sprint, publicHolidays, projectHolidays, ptoEntries, selectedForecast]);
+    const rows = computeCapacityRows(storiesByStream, [], dp, streamHrs);
+    return { capacityRows: rows, devProjection: dp, cycleInfo: { prev, next } };
+  }, [initialCapacities, storiesBySprint, sprint, allSprints, publicHolidays, projectHolidays, ptoEntries, selectedForecast]);
 
   if (!sprint) {
     return <p className="text-sm text-slate-400">No sprint selected.</p>;
@@ -163,7 +201,19 @@ export function CapacityView({
         <div className="mb-3">
           <h3 className="text-[13px] font-medium text-slate-300">Capacity vs. scope</h3>
           <p className="text-[12px] text-slate-500 mt-0.5">
-            Breakdown by stream with projected capacity and coverage
+            Team available at <span className="text-slate-300">{sprint.name}</span>
+            {cycleInfo.next && (
+              <>
+                {" "}· refining & design scope from{" "}
+                <span className="text-slate-300">{cycleInfo.next.name}</span>
+              </>
+            )}
+            {cycleInfo.prev && (
+              <>
+                {" "}· QA scope from{" "}
+                <span className="text-slate-300">{cycleInfo.prev.name}</span>
+              </>
+            )}
           </p>
         </div>
         <div>

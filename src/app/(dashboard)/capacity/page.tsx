@@ -9,11 +9,13 @@ import type { SprintStory } from "@/types";
 
 export default async function CapacityPage() {
   const sprints = await getAllSprints();
-  const activeSprints = sprints.filter((s) => s.isActive);
   const focus = sprints[0]?.focusFactor ?? 0.9;
 
+  // Fetch stories for every sprint (not just the active window) so the capacity
+  // view can pull the previous sprint's QA scope and the next sprint's
+  // refining scope when computing the 3-cycle capacity of the selected sprint.
   const allSprintStories = await Promise.all(
-    activeSprints.map(async (sprint) => {
+    sprints.map(async (sprint) => {
       const stories = await getStoriesBySprint(sprint.id);
       return stories.map(
         (s): SprintStory => ({
@@ -24,10 +26,9 @@ export default async function CapacityPage() {
     }),
   );
 
-  // Build map: sprintId -> stories[]
   const storiesBySprint: Record<string, SprintStory[]> = {};
-  for (let i = 0; i < activeSprints.length; i++) {
-    storiesBySprint[activeSprints[i].id] = allSprintStories[i];
+  for (let i = 0; i < sprints.length; i++) {
+    storiesBySprint[sprints[i].id] = allSprintStories[i];
   }
 
   return (

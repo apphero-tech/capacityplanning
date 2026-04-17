@@ -207,14 +207,27 @@ export function computeDevCapacityFromIC(
 // Capacity rows (supports both TeamMember and IC-based stream capacity)
 // ---------------------------------------------------------------------------
 
+/**
+ * Per-stream story pool for capacity rows.
+ *
+ * 3-cycle framework: at sprint N, refining and design work on the stories
+ * planned for DEV at sprint N+1; DEV works on stories planned for sprint N;
+ * QA tests stories that were dev-ed at sprint N-1. Pass the right pool for
+ * each stream here — capacity-view builds them from the adjacent sprints.
+ */
+export type StreamScopeStories = {
+  "1-REF": Story[];
+  "2-DES": Story[];
+  "3-DEV": Story[];
+  "4-QA":  Story[];
+};
+
 export function computeCapacityRows(
-  stories: Story[],
+  storiesByStream: StreamScopeStories,
   teamMembers: TeamMember[],
   devProjection: DevProjection,
   streamCapacityOverride?: Record<string, number>,
 ): CapacityRow[] {
-  const activeStories = stories.filter(s => !s.isExcluded);
-
   const streamMapping: Record<string, string> = {
     "1-REF": "REF",
     "2-DES": "DES",
@@ -222,11 +235,13 @@ export function computeCapacityRows(
     "4-QA": "QA",
   };
 
-  const streams = ["1-REF", "2-DES", "3-DEV", "4-QA"];
+  const streams: (keyof StreamScopeStories)[] = ["1-REF", "2-DES", "3-DEV", "4-QA"];
 
   return streams.map(backlogStream => {
     const teamStream = streamMapping[backlogStream];
-    const streamStories = activeStories.filter(s => s.stream === backlogStream);
+    // Scope = all active stories in the pool that belongs to this cycle,
+    // regardless of each story's individual workflow status.
+    const streamStories = (storiesByStream[backlogStream] ?? []).filter(s => !s.isExcluded);
     const scopeSP = streamStories.reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
     const storyCount = streamStories.length;
 
