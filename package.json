@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate:local": "tsx scripts/migrate-local-db.ts"
+    "migrate:local": "tsx scripts/migrate-local-db.ts",
+    "sync": "git pull && npm install && npm run migrate:local && npx prisma generate",
+    "up": "npm run sync && npm run dev"
   },
   "dependencies": {
     "@prisma/client": "^7.4.2",
