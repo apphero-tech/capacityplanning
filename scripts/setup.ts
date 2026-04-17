@@ -70,7 +70,7 @@ function main() {
     console.log(
       "\nLocal DB is missing or incomplete — running prisma db push to create/sync tables.",
     );
-    run("npx prisma db push --skip-generate", "prisma db push (create schema)");
+    run("npx prisma db push --accept-data-loss", "prisma db push (create schema)");
   } else {
     console.log("\nLocal DB has all expected tables — applying additive column migrations.");
     run("npm run migrate:local", "npm run migrate:local");
