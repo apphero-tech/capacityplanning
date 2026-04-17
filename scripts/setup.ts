@@ -11,10 +11,27 @@
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
+import Database from "better-sqlite3";
 
 const ENV_PATH = path.join(process.cwd(), ".env");
 const ENV_CONTENT = 'DATABASE_URL="file:./prisma/dev.db"\n';
 const DB_PATH = path.join(process.cwd(), "prisma/dev.db");
+
+/** Return true when the DB file exists AND contains all the tables the app needs. */
+function hasExpectedSchema(): boolean {
+  if (!fs.existsSync(DB_PATH)) return false;
+  const required = ["Sprint", "TeamMember", "InitialCapacity", "PtoEntry"];
+  const db = new Database(DB_PATH, { readonly: true });
+  try {
+    const rows = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all() as { name: string }[];
+    const names = new Set(rows.map((r) => r.name));
+    return required.every((t) => names.has(t));
+  } finally {
+    db.close();
+  }
+}
 
 function ensureEnv() {
   if (!fs.existsSync(ENV_PATH)) {
@@ -49,12 +66,13 @@ function main() {
   console.log("Running setup...");
   ensureEnv();
 
-  const dbExists = fs.existsSync(DB_PATH);
-  if (!dbExists) {
-    console.log(`\nDatabase not found at prisma/dev.db — creating it.`);
+  if (!hasExpectedSchema()) {
+    console.log(
+      "\nLocal DB is missing or incomplete — running prisma db push to create/sync tables.",
+    );
     run("npx prisma db push --skip-generate", "prisma db push (create schema)");
   } else {
-    console.log("\nDatabase found — applying additive migrations only.");
+    console.log("\nLocal DB has all expected tables — applying additive column migrations.");
     run("npm run migrate:local", "npm run migrate:local");
   }
 
