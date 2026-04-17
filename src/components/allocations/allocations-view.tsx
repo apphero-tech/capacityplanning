@@ -484,7 +484,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
       ? filtered.reduce((sum, c) => sum + c.hrsPerWeek, 0) / totalMembers
       : 0;
 
-  const saveField = useCallback(async (id: string, field: string, value: string | number) => {
+  const saveField = useCallback(async (id: string, field: string, value: string | number | boolean) => {
     setSavingId(id);
     try {
       await fetch(`/api/allocations/${id}`, {
@@ -634,6 +634,9 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                 <TableHead className="text-right text-slate-400">
                   Hrs/Wk
                 </TableHead>
+                <TableHead className="text-center text-slate-400 w-16">
+                  Active
+                </TableHead>
                 {ALLOCATION_COLUMNS.map((col) => (
                   <TableHead
                     key={col.key}
@@ -734,6 +737,21 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                           onSave={(v) => saveField(cap.id, "hrsPerWeek", v)}
                           saving={isSaving}
                         />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => saveField(cap.id, "isActive", !cap.isActive)}
+                          disabled={isSaving}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                            cap.isActive
+                              ? "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
+                              : "bg-slate-700/50 text-slate-400 hover:bg-slate-600/50"
+                          }`}
+                          title="Click to toggle"
+                        >
+                          {cap.isActive ? "Active" : "Inactive"}
+                        </button>
                       </TableCell>
                       {ALLOCATION_COLUMNS.map((col) => {
                         const val = cap[col.key as AllocKey] as number;
