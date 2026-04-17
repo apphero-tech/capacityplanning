@@ -56,6 +56,7 @@ interface SprintRow {
   velocityTarget: number | null;
   isCurrent: number; // SQLite stores booleans as 0/1
   isDemo: number;
+  progressFactor: number;
   storyCount: number | null;
   storyPoints: number | null;
   commitmentSP: number | null;
@@ -217,6 +218,7 @@ function mapSprint(
     velocityTarget: row.velocityTarget,
     isCurrent: row.isCurrent === 1,
     isDemo: row.isDemo === 1,
+    progressFactor: row.progressFactor ?? 0,
     status,
     isActive,
     storyCount: row.storyCount,

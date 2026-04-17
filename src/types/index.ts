@@ -21,6 +21,8 @@ export interface Sprint {
   isCurrent: boolean;
   /** Product Demo sprint — excluded from capacity projections and backlog planning. */
   isDemo: boolean;
+  /** Growth rate applied to moving-average velocity for next-sprint targets (0.10 = +10%). */
+  progressFactor: number;
   /** Derived sprint status: past | previous | current | next | future */
   status: SprintStatus;
   /** Whether this sprint is in the active 4-sprint window (previous + current + next + planning) */

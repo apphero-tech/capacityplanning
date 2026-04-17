@@ -29,6 +29,7 @@ const EXPECTED: ColumnSpec[] = [
   { table: "InitialCapacity", column: "ocmComms",     type: "REAL",    notNull: true, default: "0" },
   { table: "InitialCapacity", column: "ocmTraining",  type: "REAL",    notNull: true, default: "0" },
   { table: "Sprint",          column: "isDemo",       type: "BOOLEAN", notNull: true, default: "0" },
+  { table: "Sprint",          column: "progressFactor", type: "REAL",  notNull: true, default: "0" },
 ];
 
 function columnExists(db: Database.Database, table: string, column: string): boolean {

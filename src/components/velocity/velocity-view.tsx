@@ -62,6 +62,27 @@ export function VelocityView() {
     );
   }, [sprints, forecastMap]);
 
+  // Moving average of completed SP per sprint (in SP, not SP/hr). This is
+  // what the user wants to reason about day-to-day: "we deliver ~499 SP
+  // per sprint on average".
+  const avgCompletedSP = useMemo(() => {
+    const withDone = sprints
+      .map((s) => forecastMap.get(s.id))
+      .filter(
+        (f): f is NonNullable<typeof f> =>
+          !!f && f.completedSP !== null && (f.completedSP ?? 0) > 0,
+      );
+    if (withDone.length === 0) return null;
+    const sum = withDone.reduce((s, f) => s + (f.completedSP ?? 0), 0);
+    return sum / withDone.length;
+  }, [sprints, forecastMap]);
+
+  // Progress factor lives on the first sprint (pattern shared with focus
+  // factor — same value replicated across every row).
+  const progressFactor = sprints[0]?.progressFactor ?? 0;
+  const targetSP =
+    avgCompletedSP != null ? avgCompletedSP * (1 + progressFactor) : null;
+
   const velocityTrendData = useMemo(() => {
     return sprints
       .map((s) => {
@@ -80,24 +101,21 @@ export function VelocityView() {
       <StatStrip
         stats={[
           {
-            label: "Current velocity",
-            value: selectedForecast
-              ? `${fmt(selectedForecast.velocityProven, 2)}`
-              : "—",
-            hint: selectedForecast
-              ? (
-                  <span className={SOURCE_LABEL[selectedForecast.velocitySource]?.className}>
-                    {SOURCE_LABEL[selectedForecast.velocitySource]?.label ?? "—"}
-                  </span>
-                )
-              : undefined,
-            muted: !selectedForecast,
+            label: "Average delivery",
+            value: avgCompletedSP != null ? `${fmt(avgCompletedSP, 0)} SP` : "—",
+            hint: "per sprint",
+            muted: avgCompletedSP == null,
           },
           {
-            label: "Rolling avg (last 3)",
-            value: rollingAvg != null ? fmt(rollingAvg, 2) : "—",
-            hint: "SP/hr",
-            muted: rollingAvg == null,
+            label: "Progress factor",
+            value: `${progressFactor >= 0 ? "+" : ""}${fmt(progressFactor * 100, 0)}%`,
+            hint: "applied to next sprints",
+          },
+          {
+            label: "Target next sprint",
+            value: targetSP != null ? `${fmt(targetSP, 0)} SP` : "—",
+            hint: "= avg × (1 + progress)",
+            muted: targetSP == null,
           },
           {
             label: "Confidence",
@@ -107,14 +125,6 @@ export function VelocityView() {
                 : "—",
             hint: "done / committed",
             muted: selectedForecast?.confidencePercent == null,
-          },
-          {
-            label: "Projected SP",
-            value: selectedForecast ? `${fmt(selectedForecast.projectedSPProven, 0)}` : "—",
-            hint: selectedForecast
-              ? `${fmt(selectedForecast.netDevHrs)} hrs × ${fmt(selectedForecast.velocityProven, 2)}`
-              : undefined,
-            muted: !selectedForecast,
           },
         ]}
       />
