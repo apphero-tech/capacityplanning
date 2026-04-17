@@ -46,6 +46,21 @@ export function DashboardView({ storiesBySprint }: Props) {
   const sprint = selectedSprint;
   const currentSprint = allSprints.find((s) => s.isCurrent) ?? null;
 
+  // Moving-average completed SP across every sprint with data. This is the
+  // same calculation Velocity and Capacity use so all three pages tell the
+  // user the same "we deliver about N SP per sprint" number.
+  const avgCompletedSP = useMemo(() => {
+    const done = allSprints
+      .map((s) => s.completedSP)
+      .filter((v): v is number => v != null && v > 0);
+    if (done.length === 0) return null;
+    return done.reduce((sum, v) => sum + v, 0) / done.length;
+  }, [allSprints]);
+
+  const progressFactor = sprint?.progressFactor ?? 0;
+  const targetSP =
+    avgCompletedSP != null ? avgCompletedSP * (1 + progressFactor) : null;
+
   const devStats = useMemo(() => {
     if (!sprint) return null;
     const stories = storiesBySprint[sprint.id] ?? [];
@@ -66,14 +81,27 @@ export function DashboardView({ storiesBySprint }: Props) {
       selectedForecast?.velocityTarget ?? sprint.velocityTarget ?? 0,
       scope,
     );
+
+    // Match the Capacity page: prefer target SP (avg × progress) when we
+    // have history; fall back to velocity × hours when we don't.
+    const useTarget = targetSP != null;
+    const projectedSP = useTarget ? targetSP : dp.projectedSPProven;
+    const gap = useTarget ? targetSP - scope : dp.gapProven;
+    const coverage = useTarget
+      ? scope > 0
+        ? (targetSP / scope) * 100
+        : 0
+      : dp.coverageProven * 100;
+
     return {
       hours: dp.netDevCapacity,
       scopeSP: scope,
-      projectedSP: dp.projectedSPProven,
-      gap: dp.gapProven,
-      coverage: dp.coverageProven * 100,
+      projectedSP,
+      gap,
+      coverage,
       velocity: dp.velocityProven,
       stories: stories.length,
+      useTarget,
     };
   }, [
     sprint,
@@ -83,6 +111,7 @@ export function DashboardView({ storiesBySprint }: Props) {
     projectHolidays,
     ptoEntries,
     selectedForecast,
+    targetSP,
   ]);
 
   // Next few sprints with projected SP, for a compact "what's coming" view.
@@ -124,13 +153,26 @@ export function DashboardView({ storiesBySprint }: Props) {
 
           <div className="mt-5 grid gap-8 sm:grid-cols-3">
             <div>
-              <p className="text-[11px] font-medium text-slate-500">DEV capacity</p>
+              <p className="text-[11px] font-medium text-slate-500">
+                {devStats.useTarget ? "Expected delivery" : "DEV capacity"}
+              </p>
               <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-100">
-                {fmt(devStats.hours)}{" "}
-                <span className="text-sm font-normal text-slate-500">hrs</span>
+                {devStats.useTarget ? (
+                  <>
+                    {fmt(devStats.projectedSP)}{" "}
+                    <span className="text-sm font-normal text-slate-500">SP</span>
+                  </>
+                ) : (
+                  <>
+                    {fmt(devStats.hours)}{" "}
+                    <span className="text-sm font-normal text-slate-500">hrs</span>
+                  </>
+                )}
               </p>
               <p className="mt-1 text-[12px] text-slate-500">
-                proj. {fmt(devStats.projectedSP)} SP · vel {devStats.velocity.toFixed(2)}
+                {devStats.useTarget
+                  ? `avg ${fmt(avgCompletedSP!)} SP × ${progressFactor >= 0 ? "+" : ""}${fmt(progressFactor * 100)}% progress`
+                  : `proj. ${fmt(devStats.projectedSP)} SP · vel ${devStats.velocity.toFixed(2)}`}
               </p>
             </div>
             <div>
