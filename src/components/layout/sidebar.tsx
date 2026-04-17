@@ -26,16 +26,16 @@ import {
 import { Separator } from "@/components/ui/separator"
 
 // Ordered so the user follows the natural data-entry flow from top to
-// bottom: define the sprint calendar first, then the people and how their
-// time is split, then their days off, then the backlog, and finally consult
-// the derived views (Capacity, Velocity).
+// bottom: sprint calendar first, then what goes in each sprint (backlog),
+// then the people and how their time is split, then their days off, and
+// finally the derived views (Capacity, Velocity).
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/sprints", label: "Sprints", icon: Calendar },
+  { href: "/backlog", label: "Backlog", icon: ListTodo },
   { href: "/team", label: "Team", icon: Users },
   { href: "/allocations", label: "Allocations", icon: PieChart },
   { href: "/time-off", label: "Time Off", icon: CalendarOff },
-  { href: "/backlog", label: "Backlog", icon: ListTodo },
   { href: "/capacity", label: "Capacity", icon: BarChart3 },
   { href: "/velocity", label: "Velocity", icon: Activity },
 ] as const
