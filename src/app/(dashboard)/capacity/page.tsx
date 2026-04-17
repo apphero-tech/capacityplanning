@@ -4,11 +4,13 @@ import {
 } from "@/lib/data";
 import { isExcludedStory } from "@/lib/capacity-engine";
 import { CapacityView } from "@/components/capacity/capacity-view";
+import { FocusFactorInput } from "@/components/sprints/focus-factor-input";
 import type { SprintStory } from "@/types";
 
 export default async function CapacityPage() {
   const sprints = await getAllSprints();
   const activeSprints = sprints.filter((s) => s.isActive);
+  const focus = sprints[0]?.focusFactor ?? 0.9;
 
   const allSprintStories = await Promise.all(
     activeSprints.map(async (sprint) => {
@@ -30,13 +32,16 @@ export default async function CapacityPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-          Capacity Planning
-        </h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Capacity vs. scope analysis for the selected sprint.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-100">
+            Capacity Planning
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Capacity vs. scope analysis for the selected sprint.
+          </p>
+        </div>
+        <FocusFactorInput initial={focus} />
       </div>
 
       <CapacityView storiesBySprint={storiesBySprint} />
