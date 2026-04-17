@@ -44,7 +44,7 @@ import {
   Plus,
   Trash2,
   Loader2,
-  Upload,
+  Download,
   CheckCircle2,
   AlertCircle,
   X,
@@ -767,7 +767,7 @@ export function TimeOffView({
                       </>
                     ) : (
                       <>
-                        <Upload className="size-3.5" />
+                        <Download className="size-3.5" />
                         Import CSV
                       </>
                     )}

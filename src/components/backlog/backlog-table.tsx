@@ -271,102 +271,24 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Import bar */}
-      <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-slate-900/50 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <FileSpreadsheet className="size-4 text-slate-400" />
-          <span className="text-sm text-slate-300">
-            Jira backlog for{" "}
-            <span className="font-medium text-slate-100">
-              {selectedSprint?.name ?? "—"}
-            </span>
+      {/* Sprint context bar (no import button — that lives in the page header) */}
+      <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-slate-900/50 px-4 py-3">
+        <FileSpreadsheet className="size-4 text-slate-400" />
+        <span className="text-sm text-slate-300">
+          Jira backlog for{" "}
+          <span className="font-medium text-slate-100">
+            {selectedSprint?.name ?? "—"}
           </span>
-          {stories.length > 0 && (
-            <Badge
-              variant="outline"
-              className="border-transparent bg-slate-800 text-xs text-slate-400"
-            >
-              {stories.length} stories imported
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Import result feedback */}
-          {importResult && (
-            <div className="flex items-center gap-2">
-              {importResult.success ? (
-                <span className="flex items-center gap-1.5 text-xs text-emerald-400">
-                  <CheckCircle2 className="size-3.5" />
-                  {importResult.imported} stories imported
-                  {importResult.detectedColumns && (
-                    <span className="text-slate-500">
-                      ({importResult.detectedColumns.join(", ")})
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5 text-xs text-red-400">
-                  <AlertCircle className="size-3.5" />
-                  {importResult.error}
-                </span>
-              )}
-              <button
-                onClick={() => setImportResult(null)}
-                className="text-slate-500 hover:text-slate-300"
-              >
-                <X className="size-3" />
-              </button>
-            </div>
-          )}
-
-          {/* Hidden file input */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={handleImport}
-          />
-
-          {/* Import button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 border border-white/[0.06] bg-slate-800/50 text-xs text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-            onClick={() => fileRef.current?.click()}
-            disabled={importing || !selectedSprint}
+        </span>
+        {stories.length > 0 && (
+          <Badge
+            variant="outline"
+            className="border-transparent bg-slate-800 text-xs text-slate-400"
           >
-            {importing ? (
-              <>
-                <Loader2 className="size-3.5 animate-spin" />
-                Importing…
-              </>
-            ) : (
-              <>
-                <Upload className="size-3.5" />
-                {stories.length > 0 ? "Re-import" : "Import"}
-              </>
-            )}
-          </Button>
-        </div>
+            {stories.length} stories
+          </Badge>
+        )}
       </div>
-
-      {/* Import warnings */}
-      {importResult?.success && importResult.warnings && importResult.warnings.length > 0 && (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-2.5">
-          <p className="text-xs font-medium text-amber-400 mb-1">
-            {importResult.warnings.length} warning(s)
-          </p>
-          <ul className="text-xs text-amber-400/70 space-y-0.5">
-            {importResult.warnings.slice(0, 5).map((w, i) => (
-              <li key={i}>• {w}</li>
-            ))}
-            {importResult.warnings.length > 5 && (
-              <li>… and {importResult.warnings.length - 5} more</li>
-            )}
-          </ul>
-        </div>
-      )}
 
       {/* Summary stats cards */}
       {stories.length > 0 && (
@@ -494,28 +416,9 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
           <h3 className="text-base font-medium text-slate-300 mb-1">
             No backlog for {selectedSprint?.name ?? "this sprint"}
           </h3>
-          <p className="text-sm text-slate-500 mb-4">
-            Upload a Jira CSV export to populate the backlog.
+          <p className="text-sm text-slate-500">
+            Use <span className="text-slate-300 font-medium">Import All Sprints</span> at the top of the page to load your Jira CSV.
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 border border-white/[0.08] bg-slate-800/50 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100"
-            onClick={() => fileRef.current?.click()}
-            disabled={importing || !selectedSprint}
-          >
-            {importing ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Importing…
-              </>
-            ) : (
-              <>
-                <Upload className="size-4" />
-                Import CSV
-              </>
-            )}
-          </Button>
         </div>
       )}
 

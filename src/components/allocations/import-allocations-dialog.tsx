@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Download, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -76,7 +76,7 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
           size="sm"
           className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
         >
-          <Upload className="size-4 mr-1.5" />
+          <Download className="size-4 mr-1.5" />
           Import
         </Button>
       </DialogTrigger>
@@ -177,7 +177,7 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
             {busy ? (
               <Loader2 className="size-4 animate-spin mr-1.5" />
             ) : (
-              <Upload className="size-4 mr-1.5" />
+              <Download className="size-4 mr-1.5" />
             )}
             Import
           </Button>

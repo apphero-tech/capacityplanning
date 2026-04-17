@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Loader2, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { Download, Loader2, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +35,7 @@ type AutoImportResult = {
 export function BacklogAutoImportButton() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<AutoImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +69,11 @@ export function BacklogAutoImportButton() {
     }
   }
 
+  function reset() {
+    setResult(null);
+    setError(null);
+  }
+
   const noSprintTotal = result
     ? Object.values(result.noSprintByStatus).reduce((s, n) => s + n, 0)
     : 0;
@@ -93,18 +99,27 @@ export function BacklogAutoImportButton() {
         variant="outline"
         size="sm"
         className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
-        onClick={() => fileRef.current?.click()}
+        onClick={() => {
+          reset();
+          setOpen(true);
+        }}
         disabled={busy}
       >
         {busy ? (
           <Loader2 className="size-4 animate-spin mr-1.5" />
         ) : (
-          <Upload className="size-4 mr-1.5" />
+          <Download className="size-4 mr-1.5" />
         )}
         Import All Sprints
       </Button>
 
-      <Dialog open={!!result || !!error} onOpenChange={(open) => { if (!open) { setResult(null); setError(null); }}}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) reset();
+        }}
+      >
         <DialogContent className="border-white/[0.06] bg-slate-900 text-slate-100 max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -113,10 +128,15 @@ export function BacklogAutoImportButton() {
                   <AlertTriangle className="size-5 text-red-400" />
                   Import failed
                 </>
-              ) : (
+              ) : result ? (
                 <>
                   <CheckCircle2 className="size-5 text-emerald-400" />
                   Import complete
+                </>
+              ) : (
+                <>
+                  <Download className="size-5 text-slate-300" />
+                  Import Jira backlog
                 </>
               )}
             </DialogTitle>
@@ -127,6 +147,39 @@ export function BacklogAutoImportButton() {
               </DialogDescription>
             )}
           </DialogHeader>
+
+          {!result && !error && (
+            <div className="grid gap-3 text-xs">
+              <section className="rounded-md border border-white/[0.06] bg-slate-800/40 p-3 space-y-2 text-slate-300">
+                <p className="font-medium text-slate-200">
+                  Which file to bring from Jira
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-400">
+                  <li>Open the Jira project, go to <span className="text-slate-200">Filters → Advanced issue search</span> (or any saved filter listing every user story of the project).</li>
+                  <li>Add the filter <span className="font-mono text-slate-200">issuetype = Story</span> (bugs, tasks and subtasks must be excluded — they are not part of the capacity backlog).</li>
+                  <li>Include <strong>every sprint</strong> you care about (past, current, future — no sprint filter).</li>
+                  <li>From the result list, click <span className="text-slate-200">Export → Export CSV (all fields)</span>. The file must contain the columns <span className="font-mono text-slate-200">Issue key</span>, <span className="font-mono text-slate-200">Summary</span>, <span className="font-mono text-slate-200">Status</span>, <span className="font-mono text-slate-200">Sprint</span>, <span className="font-mono text-slate-200">Story Points</span>.</li>
+                  <li>Upload the CSV below.</li>
+                </ol>
+                <p className="text-[11px] text-slate-500">
+                  The dispatcher uses the <strong>last</strong> value of the Sprint column (Jira keeps the carry-over history). Stories in &quot;New&quot; status are reported for correction. Stories past DEV (order ≥ 40) on non-active sprints are skipped to match the Jira board counts.
+                </p>
+              </section>
+
+              <Button
+                onClick={() => fileRef.current?.click()}
+                disabled={busy}
+                className="bg-[#E31837] hover:bg-[#c01530] text-white"
+              >
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin mr-1.5" />
+                ) : (
+                  <Download className="size-4 mr-1.5" />
+                )}
+                Select CSV file
+              </Button>
+            </div>
+          )}
 
           {error && <p className="text-sm text-red-300">{error}</p>}
 
@@ -232,16 +285,18 @@ export function BacklogAutoImportButton() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => { setResult(null); setError(null); }}
-              className="text-slate-400"
-            >
-              <X className="size-4 mr-1.5" />
-              Close
-            </Button>
-          </DialogFooter>
+          {(result || error) && (
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => { setOpen(false); reset(); }}
+                className="text-slate-400"
+              >
+                <X className="size-4 mr-1.5" />
+                Close
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </>
