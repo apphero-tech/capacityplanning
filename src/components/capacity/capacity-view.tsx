@@ -197,6 +197,79 @@ export function CapacityView({ storiesBySprint }: Props) {
             </p>
           </div>
         </div>
+
+        {/* Inline projection knobs — basis + growth side-by-side right under
+            the verdict so the user can tweak and see the number move without
+            scrolling. */}
+        <div className="mt-5 border-t border-white/[0.06] pt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] uppercase tracking-wide text-slate-500">
+              Velocity
+            </span>
+            <div className="flex rounded-lg border border-white/[0.06] bg-slate-950/40 p-0.5">
+              {(
+                [
+                  { value: "last1" as VelocityBasis, label: "Last" },
+                  { value: "last2" as VelocityBasis, label: "2" },
+                  { value: "last3" as VelocityBasis, label: "3" },
+                  { value: "last6" as VelocityBasis, label: "6" },
+                  { value: "all" as VelocityBasis, label: "All" },
+                ]
+              ).map((o) => {
+                const active = o.value === basis;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setBasis(o.value)}
+                    className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors ${
+                      active
+                        ? "bg-slate-100 text-slate-900"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] uppercase tracking-wide text-slate-500">
+              Growth
+            </span>
+            <div className="flex rounded-lg border border-white/[0.06] bg-slate-950/40 p-0.5">
+              {[0, 3, 5, 10, 20].map((p) => {
+                const active = p === growthPct;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setGrowthPct(p)}
+                    className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors tabular-nums ${
+                      active
+                        ? "bg-slate-100 text-slate-900"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {p === 0 ? "0%" : `+${p}%`}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-1 text-[12px] text-slate-500">
+              <input
+                type="number"
+                value={growthPct}
+                onChange={(e) => setGrowthPct(Number(e.target.value) || 0)}
+                step={1}
+                className="w-14 h-7 rounded-md border border-white/[0.06] bg-slate-950/40 px-2 text-[12px] text-slate-200 tabular-nums focus:border-white/20"
+              />
+              <span>%</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Capacity breakdown */}
@@ -225,50 +298,6 @@ export function CapacityView({ storiesBySprint }: Props) {
             value={`${fmt(plan.netDevHrs)} hrs`}
             emphasis
           />
-        </div>
-      </section>
-
-      {/* Growth factor picker */}
-      <section>
-        <h3 className="text-[13px] font-medium text-slate-300 mb-3">
-          Growth factor
-        </h3>
-        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-          <span className="text-[12px] text-slate-400">
-            Applied on top of the selected historical velocity:
-          </span>
-          <div className="flex rounded-lg border border-white/[0.06] bg-slate-900/50 p-0.5">
-            {[0, 3, 5, 10, 20].map((p) => {
-              const active = p === growthPct;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setGrowthPct(p)}
-                  className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors tabular-nums ${
-                    active
-                      ? "bg-slate-100 text-slate-900"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  {p === 0 ? "0%" : `+${p}%`}
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
-            <input
-              type="number"
-              value={growthPct}
-              onChange={(e) => setGrowthPct(Number(e.target.value) || 0)}
-              step={1}
-              className="w-16 h-7 rounded-md border border-white/[0.06] bg-slate-900/50 px-2 text-[12px] text-slate-200 tabular-nums focus:border-white/20"
-            />
-            <span>%</span>
-          </div>
-          <span className="text-[11px] text-slate-600">
-            multiplier ×{effectiveMultiplier.toFixed(2)}
-          </span>
         </div>
       </section>
 
