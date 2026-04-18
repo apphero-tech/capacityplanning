@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useSprint } from "@/contexts/sprint-context";
 import type { SprintStory } from "@/types";
 
@@ -30,7 +31,8 @@ interface Props {
  * drilling into any sprint.
  */
 export function ProjectView({ storiesBySprint }: Props) {
-  const { allSprints } = useSprint();
+  const { allSprints, sprints, setSelectedIndex } = useSprint();
+  const router = useRouter();
 
   const stats = useMemo(() => {
     const nonDemo = allSprints.filter((s) => !s.isDemo);
@@ -199,10 +201,24 @@ export function ProjectView({ storiesBySprint }: Props) {
                   : scope > 0
                     ? "text-blue-300"
                     : "text-slate-600";
+              const activeIdx = sprints.findIndex((a) => a.id === s.id);
+              const clickable = activeIdx >= 0;
+              const handleClick = () => {
+                if (!clickable) return;
+                setSelectedIndex(activeIdx);
+                router.push("/capacity");
+              };
               return (
-                <div
+                <button
                   key={s.id}
-                  className="flex items-baseline justify-between gap-4 px-5 py-3"
+                  type="button"
+                  onClick={handleClick}
+                  disabled={!clickable}
+                  className={`flex w-full items-baseline justify-between gap-4 px-5 py-3 text-left transition-colors ${
+                    clickable
+                      ? "cursor-pointer hover:bg-white/[0.03]"
+                      : "cursor-default opacity-70"
+                  }`}
                 >
                   <div>
                     <p className="text-[13px] text-slate-200 font-medium">{s.name}</p>
@@ -216,7 +232,7 @@ export function ProjectView({ storiesBySprint }: Props) {
                   <p className={`text-[13px] tabular-nums ${toneClass}`}>
                     {valueLabel}
                   </p>
-                </div>
+                </button>
               );
             })}
         </div>
