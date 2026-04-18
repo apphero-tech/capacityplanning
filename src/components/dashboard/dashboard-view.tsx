@@ -148,18 +148,36 @@ export function DashboardView({ storiesBySprint }: Props) {
       };
     });
 
-    // Add the selected (next) sprint if it's not already in the window.
-    if (sprint && verdict && !window.some((s) => s.id === sprint.id)) {
-      const stories = storiesBySprint[sprint.id] ?? [];
+    // Always add the sprint that comes right after current — that's the
+    // planning target regardless of which sprint the user has selected in
+    // the header. Keeps the chart stable when the user clicks back and
+    // forth between columns.
+    const currentIdxInOrdered = currentSprint ? ordered.indexOf(currentSprint) : -1;
+    const nextSprint =
+      currentIdxInOrdered >= 0 && currentIdxInOrdered < ordered.length - 1
+        ? ordered[currentIdxInOrdered + 1]
+        : null;
+    if (nextSprint && !window.some((s) => s.id === nextSprint.id)) {
+      const stories = storiesBySprint[nextSprint.id] ?? [];
+      const scopeSP = stories
+        .filter((s) => !s.isExcluded)
+        .reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
+      // If the user happens to have the next sprint selected, reuse the
+      // verdict's numbers; otherwise show scope alone (no projection on
+      // a sprint we're not currently computing capacity for).
+      const projected =
+        sprint && sprint.id === nextSprint.id && verdict
+          ? verdict.teamCanDeliver
+          : null;
       rows.push({
-        name: sprint.name.replace("| Product Demo ", "PD"),
-        fullName: sprint.name,
-        startDate: sprint.startDate,
-        endDate: sprint.endDate,
+        name: nextSprint.name.replace("| Product Demo ", "PD"),
+        fullName: nextSprint.name,
+        startDate: nextSprint.startDate,
+        endDate: nextSprint.endDate,
         committed: null,
         delivered: null,
-        scope: verdict.scopeSP,
-        projected: verdict.teamCanDeliver,
+        scope: scopeSP,
+        projected,
         storyCount: stories.length,
         kind: "next",
       });
