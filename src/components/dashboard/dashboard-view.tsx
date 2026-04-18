@@ -127,6 +127,13 @@ export function DashboardView({ storiesBySprint }: Props) {
     const rows = window.map((s) => {
       const stories = storiesBySprint[s.id] ?? [];
       const isCurrent = s.isCurrent;
+      // Current sprint rarely has commitment/completed yet — fall back to
+      // the SP currently assigned to it so the column is never empty and
+      // the "In progress" marker has something to sit on.
+      const sprintScope =
+        isCurrent && (s.commitmentSP == null || s.commitmentSP === 0)
+          ? stories.filter((st) => !st.isExcluded).reduce((sum, st) => sum + (st.storyPoints ?? 0), 0)
+          : null;
       return {
         name: s.name.replace("| Product Demo ", "PD"),
         fullName: s.name,
@@ -134,7 +141,7 @@ export function DashboardView({ storiesBySprint }: Props) {
         endDate: s.endDate,
         committed: s.commitmentSP ?? null,
         delivered: s.completedSP ?? null,
-        scope: null as number | null,
+        scope: sprintScope,
         projected: null as number | null,
         storyCount: stories.length,
         kind: (isCurrent ? "current" : "past") as "past" | "current" | "next",
