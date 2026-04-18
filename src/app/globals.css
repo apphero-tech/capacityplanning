@@ -118,22 +118,24 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
   }
 
-  /* Suppress the default focus outline Recharts applies to its surface /
-     wrapper — when a user clicks on a bar the whole chart box used to
-     render a red focus ring. We still keep real focus rings on form
-     controls and tab-navigation via Tailwind's own focus-visible utils. */
-  .recharts-wrapper,
-  .recharts-wrapper:focus,
-  .recharts-wrapper:focus-visible,
-  .recharts-surface,
-  .recharts-surface:focus,
-  .recharts-surface:focus-visible {
-    outline: none !important;
+  /* Kill browser focus outlines on non-form elements. The shadcn default
+     applied `outline-ring/50` globally, which in dark mode draws a red
+     (primary) outline on anything that receives focus — buttons, SVGs,
+     chart containers. We keep focus styling on real form inputs only. */
+  *:focus,
+  *:focus-visible {
+    outline: none;
+  }
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
   }
 }
