@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useSprint } from "@/contexts/sprint-context";
 import { useProjectionSettings } from "@/contexts/projection-settings-context";
 import type { SprintStory } from "@/types";
@@ -12,7 +13,7 @@ import {
   type VelocityBasis,
 } from "@/lib/capacity-engine";
 import { formatDateRangeShort } from "@/lib/date-utils";
-import { Check, AlertTriangle } from "lucide-react";
+import { Check, AlertTriangle, Info, ArrowRight } from "lucide-react";
 
 function fmt(n: number | null | undefined, decimals = 0): string {
   if (n === null || n === undefined) return "—";
@@ -123,6 +124,7 @@ export function CapacityView({ storiesBySprint }: Props) {
       offHours: theoreticalHrs - dp.netDevCapacity,
       defaultProjection,
       defaultVelocity: effectiveVelocity,
+      devCaps,
     };
   }, [
     sprint,
@@ -277,26 +279,127 @@ export function CapacityView({ storiesBySprint }: Props) {
         <h3 className="text-[13px] font-medium text-slate-300 mb-3">
           Hours available
         </h3>
-        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 divide-y divide-white/[0.04]">
+        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 divide-y divide-white/[0.04] overflow-hidden">
           <BreakdownRow
             label="Developers"
             value={plan.developers.toString()}
             hint="active Deloitte members with DEV allocation"
+            href="/team"
+            explain={
+              <>
+                <p className="font-medium text-slate-200 mb-1.5">
+                  {plan.developers} active Deloitte developer
+                  {plan.developers === 1 ? "" : "s"}
+                </p>
+                <ul className="space-y-1 text-slate-400">
+                  {plan.devCaps.map((d) => (
+                    <li key={d.name} className="flex justify-between gap-4">
+                      <span className="text-slate-200">{d.name}</span>
+                      <span className="text-slate-500 tabular-nums">
+                        {Math.round(d.devPercent * 100)}% DEV
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[11px] text-slate-600">
+                  Click to open the Team page →
+                </p>
+              </>
+            }
           />
           <BreakdownRow
             label="Theoretical hours"
             value={`${fmt(plan.theoreticalHrs)} hrs`}
             hint={`${plan.developers} devs × hrs/week × DEV % × ${sprint.durationWeeks} weeks`}
+            href="/team"
+            explain={
+              <>
+                <p className="font-medium text-slate-200 mb-1.5">
+                  Theoretical hours by developer
+                </p>
+                <ul className="space-y-1 text-slate-400">
+                  {plan.devCaps.map((d) => (
+                    <li key={d.name} className="flex justify-between gap-4">
+                      <span className="text-slate-200">
+                        {d.name}
+                        <span className="text-slate-500 ml-1.5">
+                          {d.hrsPerWeek}h/w · {Math.round(d.devPercent * 100)}%
+                        </span>
+                      </span>
+                      <span className="text-slate-200 tabular-nums">
+                        {fmt(d.grossHrs)} hrs
+                      </span>
+                    </li>
+                  ))}
+                  <li className="flex justify-between gap-4 border-t border-white/10 pt-1 mt-1 text-slate-200">
+                    <span className="font-medium">Total</span>
+                    <span className="font-semibold tabular-nums">
+                      {fmt(plan.theoreticalHrs)} hrs
+                    </span>
+                  </li>
+                </ul>
+                <p className="mt-2 text-[11px] text-slate-600">
+                  No PTO, no holidays, no focus factor applied yet.
+                </p>
+              </>
+            }
           />
           <BreakdownRow
             label="Days off deducted"
             value={`−${fmt(plan.offHours)} hrs`}
             hint="PTO + public holidays + project closures"
+            href="/time-off"
+            explain={
+              <>
+                <p className="font-medium text-slate-200 mb-1.5">
+                  Days off per developer
+                </p>
+                <ul className="space-y-1 text-slate-400">
+                  {plan.devCaps.map((d) => (
+                    <li key={d.name} className="flex justify-between gap-4">
+                      <span className="text-slate-200">{d.name}</span>
+                      <span className="tabular-nums text-slate-300">
+                        {d.holidays} day{d.holidays === 1 ? "" : "s"}{" "}
+                        <span className="text-slate-500">
+                          (−{fmt(d.holidayHrs)} hrs)
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[11px] text-slate-600">
+                  Click to open Time Off →
+                </p>
+              </>
+            }
           />
           <BreakdownRow
             label="Net DEV hours"
             value={`${fmt(plan.netDevHrs)} hrs`}
             emphasis
+            explain={
+              <>
+                <p className="font-medium text-slate-200 mb-1.5">
+                  Net DEV hours per developer
+                </p>
+                <ul className="space-y-1 text-slate-400">
+                  {plan.devCaps.map((d) => (
+                    <li key={d.name} className="flex justify-between gap-4">
+                      <span className="text-slate-200">{d.name}</span>
+                      <span className="text-slate-200 tabular-nums">
+                        {fmt(d.netDevHrs)} hrs
+                      </span>
+                    </li>
+                  ))}
+                  <li className="flex justify-between gap-4 border-t border-white/10 pt-1 mt-1 text-slate-200">
+                    <span className="font-medium">Total</span>
+                    <span className="font-semibold tabular-nums">
+                      {fmt(plan.netDevHrs)} hrs
+                    </span>
+                  </li>
+                </ul>
+              </>
+            }
           />
         </div>
       </section>
@@ -395,17 +498,38 @@ function BreakdownRow({
   value,
   hint,
   emphasis,
+  href,
+  explain,
 }: {
   label: string;
   value: string;
   hint?: string;
   emphasis?: boolean;
+  /** If set, the whole row acts as a link to this route. */
+  href?: string;
+  /** If set, a popover opens on hover revealing the given content. */
+  explain?: React.ReactNode;
 }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 px-5 py-3">
+  const [showExplain, setShowExplain] = useState(false);
+  const interactive = Boolean(href);
+
+  const content = (
+    <div
+      className={`relative flex items-baseline justify-between gap-4 px-5 py-3 transition-colors ${
+        interactive ? "hover:bg-white/[0.03] cursor-pointer" : ""
+      }`}
+      onMouseEnter={() => explain && setShowExplain(true)}
+      onMouseLeave={() => setShowExplain(false)}
+    >
       <div>
-        <p className={`text-[13px] ${emphasis ? "font-medium text-slate-100" : "text-slate-400"}`}>
+        <p
+          className={`text-[13px] flex items-center gap-1.5 ${
+            emphasis ? "font-medium text-slate-100" : "text-slate-300"
+          }`}
+        >
           {label}
+          {explain && <Info className="size-3 text-slate-600" />}
+          {href && <ArrowRight className="size-3 text-slate-600" />}
         </p>
         {hint && <p className="text-[11px] text-slate-500 mt-0.5">{hint}</p>}
       </div>
@@ -418,6 +542,20 @@ function BreakdownRow({
       >
         {value}
       </p>
+
+      {explain && showExplain && (
+        <span
+          role="tooltip"
+          className="absolute z-50 left-5 top-full mt-1 w-80 rounded-lg border border-white/10 bg-slate-950/95 backdrop-blur p-3 text-[12px] text-slate-300 shadow-2xl pointer-events-none"
+        >
+          {explain}
+        </span>
+      )}
     </div>
   );
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+  return content;
 }
