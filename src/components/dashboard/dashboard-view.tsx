@@ -166,21 +166,36 @@ export function DashboardView({ storiesBySprint }: Props) {
     const rows = window.map((s) => {
       const stories = storiesBySprint[s.id] ?? [];
       const isCurrent = s.isCurrent;
-      // Current sprint rarely has commitment/completed yet — fall back to
-      // the SP currently assigned to it so the column is never empty and
-      // the "In progress" marker has something to sit on.
-      const sprintScope =
-        isCurrent && (s.commitmentSP == null || s.commitmentSP === 0)
-          ? stories.filter((st) => !st.isExcluded).reduce((sum, st) => sum + (st.storyPoints ?? 0), 0)
-          : null;
+      const storyScope = stories
+        .filter((st) => !st.isExcluded)
+        .reduce((sum, st) => sum + (st.storyPoints ?? 0), 0);
+
+      // Closed sprints: delivered shows the final number, remaining is 0.
+      // Current sprint: split the column into delivered-so-far (green) +
+      // remaining (amber) using the live completedSP snapshot. Scope is
+      // only emitted for forward-looking sprints (next column).
+      let delivered: number | null = s.completedSP ?? null;
+      let remaining: number | null = null;
+      const scope: number | null = null as number | null;
+      if (isCurrent) {
+        const totalScope =
+          s.commitmentSP != null && s.commitmentSP > 0
+            ? s.commitmentSP
+            : storyScope;
+        const done = s.completedSP ?? 0;
+        delivered = done;
+        remaining = Math.max(0, totalScope - done);
+      }
+
       return {
         name: s.name.replace("| Product Demo ", "PD"),
         fullName: s.name,
         startDate: s.startDate,
         endDate: s.endDate,
         committed: s.commitmentSP ?? null,
-        delivered: s.completedSP ?? null,
-        scope: sprintScope,
+        delivered,
+        remaining,
+        scope,
         projected: null as number | null,
         storyCount: stories.length,
         kind: (isCurrent ? "current" : "past") as "past" | "current" | "next",
@@ -215,6 +230,7 @@ export function DashboardView({ storiesBySprint }: Props) {
         endDate: nextSprint.endDate,
         committed: null,
         delivered: null,
+        remaining: null,
         scope: scopeSP,
         projected,
         storyCount: stories.length,
@@ -227,6 +243,7 @@ export function DashboardView({ storiesBySprint }: Props) {
       (r) =>
         (r.committed ?? 0) > 0 ||
         (r.delivered ?? 0) > 0 ||
+        (r.remaining ?? 0) > 0 ||
         (r.scope ?? 0) > 0 ||
         (r.projected ?? 0) > 0,
     );
@@ -434,8 +451,9 @@ export function DashboardView({ storiesBySprint }: Props) {
                     wrapperStyle={{ fontSize: 11, color: "#94a3b8", paddingTop: 8 }}
                   />
                   <Bar dataKey="committed"  name="Committed"   fill="#475569" radius={[3, 3, 0, 0]} cursor="pointer" />
-                  <Bar dataKey="delivered"  name="Delivered"   fill="#34d399" radius={[3, 3, 0, 0]} cursor="pointer" />
-                  <Bar dataKey="scope"      name="Scope"       fill="#f59e0b" radius={[3, 3, 0, 0]} cursor="pointer" />
+                  <Bar dataKey="delivered"  name="Delivered"   fill="#34d399" stackId="total" cursor="pointer" />
+                  <Bar dataKey="remaining"  name="Remaining"   fill="#f59e0b" fillOpacity={0.45} stackId="total" radius={[3, 3, 0, 0]} cursor="pointer" />
+                  <Bar dataKey="scope"      name="Scope"       fill="#f59e0b" stackId="total" radius={[3, 3, 0, 0]} cursor="pointer" />
                   <Bar dataKey="projected"  name="Can deliver" fill="#60a5fa" radius={[3, 3, 0, 0]} cursor="pointer" />
                   {verdict.hasVelocity && (
                     <ReferenceLine
@@ -503,6 +521,7 @@ type TooltipPayload = {
     kind: "past" | "current" | "next";
     committed: number | null;
     delivered: number | null;
+    remaining: number | null;
     scope: number | null;
     projected: number | null;
   };
@@ -520,6 +539,7 @@ function SprintBarTooltip({
   const rows: { label: string; value: number | null; color: string }[] = [
     { label: "Committed", value: p.committed, color: "#475569" },
     { label: "Delivered", value: p.delivered, color: "#34d399" },
+    { label: "Remaining", value: p.remaining, color: "#f59e0b" },
     { label: "Scope",     value: p.scope,     color: "#f59e0b" },
     { label: "Can deliver", value: p.projected, color: "#60a5fa" },
   ].filter((r) => r.value != null && r.value > 0);

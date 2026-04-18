@@ -523,13 +523,14 @@ export function computeHistoricalVelocity(
   ptoEntries: Parameters<typeof computeDevCapacityFromIC>[4],
   basis: VelocityBasis,
 ): HistoricalVelocityResult {
-  // The current sprint is mid-flight: its completedSP is a partial
-  // snapshot, not a final delivery number — excluding it keeps the
-  // historical averages honest.
+  // We keep the current (in-flight) sprint out of the averages — its
+  // completedSP is a partial snapshot, not a final number. Demo sprints
+  // ARE included when they closed with a real completedSP: we never
+  // commit new work to a demo, but any SP that got delivered during it
+  // is real output and should inform the average.
   const closed = [...allSprints]
     .filter(
       (s) =>
-        !s.isDemo &&
         !s.isCurrent &&
         s.completedSP != null &&
         s.completedSP > 0,
