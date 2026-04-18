@@ -112,27 +112,39 @@ export function DashboardView({ storiesBySprint }: Props) {
       .filter((s) => s.completedSP != null && s.completedSP > 0)
       .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""))
       .slice(-8)
-      .map((s) => ({
-        name: s.name.replace("| Product Demo ", "PD"),
-        committed: s.commitmentSP ?? null,
-        delivered: s.completedSP ?? null,
-        scope: null as number | null,
-        projected: null as number | null,
-        kind: "past" as const,
-      }));
+      .map((s) => {
+        const stories = storiesBySprint[s.id] ?? [];
+        return {
+          name: s.name.replace("| Product Demo ", "PD"),
+          fullName: s.name,
+          startDate: s.startDate,
+          endDate: s.endDate,
+          committed: s.commitmentSP ?? null,
+          delivered: s.completedSP ?? null,
+          scope: null as number | null,
+          projected: null as number | null,
+          storyCount: stories.length,
+          kind: "past" as const,
+        };
+      });
 
     if (sprint && verdict) {
+      const stories = storiesBySprint[sprint.id] ?? [];
       past.push({
         name: sprint.name.replace("| Product Demo ", "PD"),
+        fullName: sprint.name,
+        startDate: sprint.startDate,
+        endDate: sprint.endDate,
         committed: null,
         delivered: null,
         scope: verdict.scopeSP,
         projected: verdict.teamCanDeliver,
+        storyCount: stories.length,
         kind: "next",
       });
     }
     return past;
-  }, [allSprints, sprint, verdict]);
+  }, [allSprints, sprint, verdict, storiesBySprint]);
 
   if (!sprint || !verdict) {
     return (
@@ -256,17 +268,7 @@ export function DashboardView({ storiesBySprint }: Props) {
                   />
                   <Tooltip
                     cursor={{ fill: "rgba(255,255,255,0.03)" }}
-                    contentStyle={{
-                      background: "rgb(15 23 42)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                    labelStyle={{ color: "#cbd5e1", marginBottom: 4 }}
-                    formatter={(v: number, key: string) => [
-                      v == null ? "—" : `${v} SP`,
-                      key,
-                    ]}
+                    content={<SprintBarTooltip />}
                   />
                   <Legend
                     wrapperStyle={{ fontSize: 11, color: "#94a3b8", paddingTop: 8 }}
@@ -320,6 +322,76 @@ export function DashboardView({ storiesBySprint }: Props) {
           />
         </div>
       </section>
+    </div>
+  );
+}
+
+/**
+ * Custom Recharts tooltip for the history + next-sprint chart. Shows sprint
+ * name, dates, story count and each metric in a Linear-style card.
+ */
+type TooltipPayload = {
+  name: string;
+  dataKey: string;
+  value: number | null | undefined;
+  color: string;
+  payload: {
+    fullName: string;
+    startDate: string | null;
+    endDate: string | null;
+    storyCount: number;
+    kind: "past" | "next";
+    committed: number | null;
+    delivered: number | null;
+    scope: number | null;
+    projected: number | null;
+  };
+};
+
+function SprintBarTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const p = payload[0].payload;
+  const rows: { label: string; value: number | null; color: string }[] = [
+    { label: "Committed", value: p.committed, color: "#475569" },
+    { label: "Delivered", value: p.delivered, color: "#34d399" },
+    { label: "Scope",     value: p.scope,     color: "#f59e0b" },
+    { label: "Can deliver", value: p.projected, color: "#60a5fa" },
+  ].filter((r) => r.value != null && r.value > 0);
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-slate-950/95 backdrop-blur p-3 text-[12px] shadow-2xl min-w-[200px]">
+      <p className="font-medium text-slate-100">{p.fullName}</p>
+      {p.startDate && p.endDate && (
+        <p className="text-[11px] text-slate-500 mt-0.5">
+          {p.startDate} → {p.endDate}
+        </p>
+      )}
+      <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
+        {p.storyCount} stor{p.storyCount === 1 ? "y" : "ies"}
+        {p.kind === "next" && <span className="text-slate-600"> · upcoming</span>}
+      </p>
+      <div className="mt-2 space-y-1">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <span
+                className="size-2 rounded-sm"
+                style={{ backgroundColor: r.color }}
+              />
+              {r.label}
+            </span>
+            <span className="tabular-nums text-slate-200 font-medium">
+              {r.value} <span className="text-slate-500 font-normal">SP</span>
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
