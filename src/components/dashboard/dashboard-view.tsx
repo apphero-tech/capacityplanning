@@ -29,6 +29,7 @@ import {
   Legend,
   CartesianGrid,
   ReferenceLine,
+  ReferenceArea,
 } from "recharts";
 
 function fmt(n: number | null | undefined, decimals = 0): string {
@@ -55,11 +56,13 @@ export function DashboardView({ storiesBySprint }: Props) {
   const {
     selectedSprint: sprint,
     allSprints,
+    sprints: activeSprints,
     initialCapacities,
     publicHolidays,
     projectHolidays,
     ptoEntries,
     selectedForecast,
+    setSelectedIndex,
   } = useSprint();
 
   const deloitteCapacities = useMemo(
@@ -262,20 +265,70 @@ export function DashboardView({ storiesBySprint }: Props) {
       {/* Interactive history + planning chart */}
       {chartData.length > 0 && (
         <section>
-          <h3 className="text-[13px] font-medium text-slate-300 mb-3">
-            Delivery history & next sprint
-          </h3>
+          <div className="flex items-baseline justify-between mb-3">
+            <h3 className="text-[13px] font-medium text-slate-300">
+              Delivery history &amp; next sprint
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              Click a bar to jump to that sprint
+            </p>
+          </div>
           <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-4">
-            <div className="h-[240px]">
+            <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={chartData}
-                  margin={{ top: 10, right: 10, left: -8, bottom: 0 }}
+                  margin={{ top: 24, right: 10, left: -8, bottom: 0 }}
+                  onClick={(e: unknown) => {
+                    const evt = e as { activeLabel?: string } | null;
+                    const label = evt?.activeLabel;
+                    if (!label) return;
+                    const row = chartData.find((d) => d.name === label);
+                    if (!row) return;
+                    const idx = activeSprints.findIndex((s) => s.name === row.fullName);
+                    if (idx >= 0) setSelectedIndex(idx);
+                  }}
                 >
                   <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  {/* Visual marker on the current-sprint column */}
+                  {chartData.some((d) => d.kind === "current") && (
+                    <ReferenceArea
+                      x1={chartData.find((d) => d.kind === "current")!.name}
+                      x2={chartData.find((d) => d.kind === "current")!.name}
+                      fill="#34d399"
+                      fillOpacity={0.06}
+                      stroke="#34d399"
+                      strokeOpacity={0.25}
+                      strokeDasharray="3 3"
+                      ifOverflow="extendDomain"
+                      label={{
+                        value: "In progress",
+                        position: "top",
+                        fill: "#34d399",
+                        fontSize: 10,
+                        fontWeight: 500,
+                      }}
+                    />
+                  )}
                   <XAxis
                     dataKey="name"
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={(props: { x: number; y: number; payload: { value: string } }) => {
+                      const { x, y, payload } = props;
+                      const row = chartData.find((d) => d.name === payload.value);
+                      const isCurrent = row?.kind === "current";
+                      return (
+                        <text
+                          x={x}
+                          y={y + 14}
+                          textAnchor="middle"
+                          fill={isCurrent ? "#34d399" : "#64748b"}
+                          fontSize={11}
+                          fontWeight={isCurrent ? 600 : 400}
+                        >
+                          {payload.value}
+                        </text>
+                      );
+                    }}
                     tickLine={false}
                     axisLine={{ stroke: "rgba(255,255,255,0.04)" }}
                   />
@@ -292,10 +345,10 @@ export function DashboardView({ storiesBySprint }: Props) {
                   <Legend
                     wrapperStyle={{ fontSize: 11, color: "#94a3b8", paddingTop: 8 }}
                   />
-                  <Bar dataKey="committed"  name="Committed"  fill="#475569" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="delivered"  name="Delivered"  fill="#34d399" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="scope"      name="Scope"      fill="#f59e0b" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="projected"  name="Can deliver" fill="#60a5fa" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="committed"  name="Committed"   fill="#475569" radius={[3, 3, 0, 0]} cursor="pointer" />
+                  <Bar dataKey="delivered"  name="Delivered"   fill="#34d399" radius={[3, 3, 0, 0]} cursor="pointer" />
+                  <Bar dataKey="scope"      name="Scope"       fill="#f59e0b" radius={[3, 3, 0, 0]} cursor="pointer" />
+                  <Bar dataKey="projected"  name="Can deliver" fill="#60a5fa" radius={[3, 3, 0, 0]} cursor="pointer" />
                   {verdict.hasVelocity && (
                     <ReferenceLine
                       y={verdict.teamCanDeliver}
