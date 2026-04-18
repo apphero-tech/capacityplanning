@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSprint } from "@/contexts/sprint-context";
 import { useProjectionSettings } from "@/contexts/projection-settings-context";
 import {
@@ -109,43 +109,88 @@ export function DashboardView({ storiesBySprint }: Props) {
     [allSprints, initialCapacities, publicHolidays, projectHolidays, ptoEntries, basis],
   );
 
-  const verdict = useMemo(() => {
-    if (!sprint) return null;
-    const stories = storiesBySprint[sprint.id] ?? [];
-    const scopeSP = stories
-      .filter((s) => !s.isExcluded)
-      .reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
-    const devCaps = computeDevCapacityFromIC(
+  // Per-sprint verdict factory — same formula on every sprint so the hero,
+  // the look-ahead grid, and the chart all agree.
+  const computeVerdictFor = useCallback(
+    (s: { id: string } & Parameters<typeof computeDevCapacityFromIC>[1]) => {
+      const stories = storiesBySprint[s.id] ?? [];
+      const scopeSP = stories
+        .filter((st) => !st.isExcluded)
+        .reduce((sum, st) => sum + (st.storyPoints ?? 0), 0);
+      const devCaps = computeDevCapacityFromIC(
+        deloitteCapacities,
+        s,
+        publicHolidays,
+        projectHolidays,
+        ptoEntries,
+      );
+      const hours = devCaps.reduce((sum, d) => sum + d.netDevHrs, 0);
+      const baseVelocity = historical.velocity;
+      const effectiveVelocity = baseVelocity * effectiveMultiplier;
+      const teamCanDeliver = hours * effectiveVelocity;
+      return {
+        teamCanDeliver,
+        scopeSP,
+        stories: stories.length,
+        delta: teamCanDeliver - scopeSP,
+        hasVelocity: baseVelocity > 0,
+        hours,
+        baseVelocity,
+        effectiveVelocity,
+        members: deloitteCapacities.length,
+      };
+    },
+    [
+      storiesBySprint,
       deloitteCapacities,
-      sprint,
       publicHolidays,
       projectHolidays,
       ptoEntries,
-    );
-    const hours = devCaps.reduce((sum, d) => sum + d.netDevHrs, 0);
-    const baseVelocity = historical.velocity;
-    const effectiveVelocity = baseVelocity * effectiveMultiplier;
-    const teamCanDeliver = hours * effectiveVelocity;
-    return {
-      teamCanDeliver,
-      scopeSP,
-      delta: teamCanDeliver - scopeSP,
-      hasVelocity: baseVelocity > 0,
-      hours,
-      baseVelocity,
-      effectiveVelocity,
-      members: deloitteCapacities.length,
-    };
-  }, [
-    sprint,
-    storiesBySprint,
-    deloitteCapacities,
-    publicHolidays,
-    projectHolidays,
-    ptoEntries,
-    historical,
-    effectiveMultiplier,
-  ]);
+      historical,
+      effectiveMultiplier,
+    ],
+  );
+
+  const verdict = useMemo(
+    () => (sprint ? computeVerdictFor(sprint) : null),
+    [sprint, computeVerdictFor],
+  );
+
+  // Upcoming non-demo sprints after the one in progress — candidates for
+  // the look-ahead multi-select.
+  const upcomingSprints = useMemo(() => {
+    const ordered = [...allSprints]
+      .filter((s) => !s.isDemo)
+      .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
+    const currentIdx = ordered.findIndex((s) => s.isCurrent);
+    if (currentIdx < 0) return [];
+    return ordered.slice(currentIdx + 1);
+  }, [allSprints]);
+
+  // Look-ahead selection: by default the 3 next non-demo sprints are
+  // ticked. User can toggle to include more / fewer.
+  const [lookaheadIds, setLookaheadIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setLookaheadIds((prev) => {
+      // Keep any user-selected IDs that are still valid, ensure the first
+      // three upcoming sprints are in by default on first render.
+      if (prev.size > 0) {
+        const valid = new Set(
+          [...prev].filter((id) => upcomingSprints.some((s) => s.id === id)),
+        );
+        if (valid.size > 0) return valid;
+      }
+      return new Set(upcomingSprints.slice(0, 3).map((s) => s.id));
+    });
+  }, [upcomingSprints]);
+
+  const lookaheadVerdicts = useMemo(
+    () =>
+      upcomingSprints
+        .filter((s) => lookaheadIds.has(s.id))
+        .map((s) => ({ sprint: s, v: computeVerdictFor(s) })),
+    [upcomingSprints, lookaheadIds, computeVerdictFor],
+  );
 
   // Bar chart data — closed sprints + current + upcoming, in calendar order.
   // A row is included when it has something to show (committed, delivered,
@@ -366,6 +411,101 @@ export function DashboardView({ storiesBySprint }: Props) {
         velocity={historical.velocity}
         sprintNames={historical.sprintNames}
       />
+
+      {/* Look-ahead — verdict for multiple upcoming sprints at once */}
+      {upcomingSprints.length > 0 && verdict?.hasVelocity && (
+        <section>
+          <div className="flex items-baseline justify-between mb-3">
+            <h3 className="text-[13px] font-medium text-slate-300">
+              Look ahead
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              Toggle sprints to project the current velocity forward
+            </p>
+          </div>
+
+          {/* Sprint toggles */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {upcomingSprints.map((s) => {
+              const active = lookaheadIds.has(s.id);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() =>
+                    setLookaheadIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(s.id)) next.delete(s.id);
+                      else next.add(s.id);
+                      return next;
+                    })
+                  }
+                  className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
+                    active
+                      ? "bg-slate-100 text-slate-900"
+                      : "bg-slate-900/50 text-slate-400 border border-white/[0.06] hover:text-slate-200"
+                  }`}
+                >
+                  {s.name.replace("| Product Demo ", "PD ")}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mini-verdicts */}
+          {lookaheadVerdicts.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {lookaheadVerdicts.map(({ sprint: s, v }) => {
+                const fits = v.delta >= 0;
+                const Icon = fits ? Check : AlertTriangle;
+                return (
+                  <div
+                    key={s.id}
+                    className="rounded-xl border border-white/[0.04] bg-slate-900/30 p-4"
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-[13px] font-medium text-slate-200">
+                        {s.name.replace("| Product Demo ", "PD ")}
+                      </p>
+                      <p className="text-[11px] text-slate-500 tabular-nums">
+                        {formatDateRangeShort(s.startDate, s.endDate)}
+                      </p>
+                    </div>
+                    <p
+                      className={`mt-2 text-sm font-semibold flex items-center gap-1.5 ${
+                        fits ? "text-emerald-300" : "text-red-300"
+                      }`}
+                    >
+                      <Icon className="size-3.5" />
+                      {fits
+                        ? `Fits — ${fmt(v.delta)} SP of room`
+                        : `Overflow — ${fmt(Math.abs(v.delta))} SP to cut`}
+                    </p>
+                    <div className="mt-2 flex items-baseline justify-between text-[11px] text-slate-500">
+                      <span>
+                        can deliver{" "}
+                        <span className="text-slate-300 tabular-nums">
+                          {fmt(v.teamCanDeliver)} SP
+                        </span>
+                      </span>
+                      <span>
+                        scope{" "}
+                        <span className="text-slate-300 tabular-nums">
+                          {fmt(v.scopeSP)} SP
+                        </span>
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-600 tabular-nums">
+                      {fmt(v.hours)} net DEV hrs · {v.stories} stor
+                      {v.stories === 1 ? "y" : "ies"}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Interactive history + planning chart */}
       {chartData.length > 0 && (
