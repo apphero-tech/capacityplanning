@@ -398,8 +398,8 @@ export function SprintsView() {
                 <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
                   DEV hrs
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
-                  Delivery SP
+                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-28">
+                  Projected SP
                 </TableHead>
                 <TableHead className="text-[11px] font-medium text-slate-500 text-center w-28">
                   Status
@@ -474,21 +474,38 @@ export function SprintsView() {
                         )}
                       </TableCell>
 
-                      {/* Expected SP — actual for closed sprints, target for upcoming */}
+                      {/* Projected SP — delivered (closed) / in-progress scope
+                          (current) / forecast (upcoming). Badges tell the user
+                          which kind of number they're looking at. */}
                       <TableCell className="text-right">
                         {(() => {
-                          const expected = sprintExpectedSP(s, forecast?.projectedSPProven);
-                          if (expected == null) {
-                            return <span className="text-slate-600">&mdash;</span>;
-                          }
                           const isActual =
                             s.completedSP != null && s.completedSP > 0;
+                          const isInProgress = s.isCurrent && !isActual;
+                          const value = isActual
+                            ? s.completedSP
+                            : forecast?.projectedSPProven ?? null;
+                          if (s.isDemo || value == null) {
+                            return <span className="text-slate-600">&mdash;</span>;
+                          }
+                          const toneClass = isActual
+                            ? "text-slate-100"
+                            : isInProgress
+                              ? "text-slate-400"
+                              : "text-emerald-400";
+                          const badgeLabel = isActual
+                            ? "delivered"
+                            : isInProgress
+                              ? "in progress"
+                              : "forecast";
                           return (
-                            <span
-                              className={`font-semibold ${isActual ? "text-slate-100" : "text-emerald-400"}`}
-                              title={isActual ? "Actual completedSP" : "Historical target"}
-                            >
-                              {fmt(expected, 0)}
+                            <span className="inline-flex items-center gap-1.5 justify-end">
+                              <span className={`font-semibold ${toneClass}`}>
+                                {fmt(value, 0)}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-wide text-slate-600">
+                                {badgeLabel}
+                              </span>
                             </span>
                           );
                         })()}

@@ -28,7 +28,7 @@ export function OnboardingProgress({
   timeOffCount: number;
 }) {
   const steps: Step[] = [
-    { label: "Sprints",  count: sprintsCount, unit: "sprint",  href: "/sprints",  done: sprintsCount > 0,  hint: "Define the calendar" },
+    { label: "Sprint Plan", count: sprintsCount, unit: "sprint", href: "/sprints",  done: sprintsCount > 0,  hint: "Define the calendar" },
     { label: "Backlog",  count: storiesCount, unit: "story",   href: "/backlog",  done: storiesCount > 0,  hint: "Import the Jira export" },
     { label: "Team",     count: teamCount,    unit: "member",  href: "/team",     done: teamCount > 0,     hint: "Import the allocation xlsx" },
     { label: "Time Off", count: timeOffCount, unit: "entry",   href: "/time-off", done: timeOffCount > 0,  hint: "Import the PTO CSV" },

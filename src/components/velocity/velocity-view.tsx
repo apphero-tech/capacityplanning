@@ -153,10 +153,10 @@ export function VelocityView() {
                 DEV hrs
               </TableHead>
               <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
-                Commit
+                Committed
               </TableHead>
               <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
-                Done
+                Delivered
               </TableHead>
               <TableHead className="text-[11px] font-medium text-slate-500 text-right w-20">
                 Conf
@@ -176,7 +176,7 @@ export function VelocityView() {
             {sprints.length === 0 ? (
               <TableRow className="border-white/[0.04]">
                 <TableCell colSpan={8} className="text-center text-slate-500 py-8">
-                  No sprints yet — define them in the Sprints page.
+                  No sprints yet — define them in the Sprint Plan page.
                 </TableCell>
               </TableRow>
             ) : (
@@ -200,7 +200,7 @@ export function VelocityView() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {s.isCurrent && (
-                          <span className="size-1.5 rounded-full bg-emerald-400" />
+                          <span className="size-1.5 rounded-full bg-[#E31837]" />
                         )}
                         <span className="text-slate-100">{s.name}</span>
                       </div>

@@ -164,8 +164,8 @@ export function CapacityView({ storiesBySprint }: Props) {
   const verdictColor = fits ? "text-emerald-300" : "text-red-300";
   const VerdictIcon = fits ? Check : AlertTriangle;
   const verdictText = fits
-    ? `Fits · ${fmt(plan.defaultProjection - plan.scopeSP)} SP of room`
-    : `Overflow · ${fmt(Math.abs(plan.defaultProjection - plan.scopeSP))} SP to cut`;
+    ? `Fits — ${fmt(plan.defaultProjection - plan.scopeSP)} SP of room`
+    : `Overflow — ${fmt(Math.abs(plan.defaultProjection - plan.scopeSP))} SP to cut`;
 
   const projections = basisResults.map(({ basis: b, result }) => {
     const effectiveVelocity = result.velocity * effectiveMultiplier;
@@ -320,7 +320,7 @@ export function CapacityView({ storiesBySprint }: Props) {
           <BreakdownRow
             label="Theoretical hours"
             value={`${fmt(plan.theoreticalHrs)} hrs`}
-            hint={`${plan.developers} devs × hrs/week × DEV % × ${sprint.durationWeeks} weeks`}
+            hint={`${plan.developers} devs × hrs/wk × DEV % × ${sprint.durationWeeks} weeks`}
             explain={
               <>
                 <p className="font-medium text-slate-200 mb-1.5">
@@ -332,7 +332,7 @@ export function CapacityView({ storiesBySprint }: Props) {
                       <span className="text-slate-200">
                         {d.name}
                         <span className="text-slate-500 ml-1.5">
-                          {d.hrsPerWeek}h/w · {Math.round(d.devPercent * 100)}%
+                          {d.hrsPerWeek} hrs/wk · {Math.round(d.devPercent * 100)}%
                         </span>
                       </span>
                       <span className="text-slate-200 tabular-nums">
@@ -436,7 +436,7 @@ export function CapacityView({ storiesBySprint }: Props) {
                 <p className="text-[13px] flex items-center gap-2 text-slate-200">
                   {currentVelocity.sprintName} so far
                   <span className="text-[10px] font-medium uppercase tracking-wide text-amber-300">
-                    in flight
+                    in progress
                   </span>
                 </p>
                 <p className="text-[11px] text-slate-500">

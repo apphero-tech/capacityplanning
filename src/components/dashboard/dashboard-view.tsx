@@ -233,7 +233,7 @@ export function DashboardView({ storiesBySprint }: Props) {
       }
 
       return {
-        name: s.name.replace("| Product Demo ", "PD"),
+        name: s.name.replace("| Product Demo ", "PD "),
         fullName: s.name,
         startDate: s.startDate,
         endDate: s.endDate,
@@ -269,7 +269,7 @@ export function DashboardView({ storiesBySprint }: Props) {
           ? verdict.teamCanDeliver
           : null;
       rows.push({
-        name: nextSprint.name.replace("| Product Demo ", "PD"),
+        name: nextSprint.name.replace("| Product Demo ", "PD "),
         fullName: nextSprint.name,
         startDate: nextSprint.startDate,
         endDate: nextSprint.endDate,
@@ -391,13 +391,13 @@ export function DashboardView({ storiesBySprint }: Props) {
               </p>
             </div>
             <span className="text-[12px] text-slate-400 group-hover:text-slate-200 flex items-center gap-1">
-              Open Plan
+              Open Capacity Planning
               <ArrowRight className="size-3.5" />
             </span>
           </div>
         ) : (
           <p className="mt-5 text-[13px] text-amber-300">
-            No velocity data yet — enter past sprints&apos; completed SP on the Plan page.
+            No velocity data yet — enter past sprints&apos; completed SP on the Capacity Planning page.
           </p>
         )}
       </Link>
@@ -540,16 +540,16 @@ export function DashboardView({ storiesBySprint }: Props) {
                     <ReferenceArea
                       x1={chartData.find((d) => d.kind === "current")!.name}
                       x2={chartData.find((d) => d.kind === "current")!.name}
-                      fill="#34d399"
-                      fillOpacity={0.06}
-                      stroke="#34d399"
-                      strokeOpacity={0.25}
+                      fill="#E31837"
+                      fillOpacity={0.08}
+                      stroke="#E31837"
+                      strokeOpacity={0.3}
                       strokeDasharray="3 3"
                       ifOverflow="extendDomain"
                       label={{
                         value: "In progress",
                         position: "top",
-                        fill: "#34d399",
+                        fill: "#E31837",
                         fontSize: 10,
                         fontWeight: 500,
                       }}
@@ -566,7 +566,7 @@ export function DashboardView({ storiesBySprint }: Props) {
                           x={x}
                           y={y + 14}
                           textAnchor="middle"
-                          fill={isCurrent ? "#34d399" : "#64748b"}
+                          fill={isCurrent ? "#E31837" : "#64748b"}
                           fontSize={11}
                           fontWeight={isCurrent ? 600 : 400}
                         >
@@ -592,7 +592,7 @@ export function DashboardView({ storiesBySprint }: Props) {
                   />
                   <Bar dataKey="committed"  name="Committed"   fill="#475569" radius={[3, 3, 0, 0]} cursor="pointer" />
                   <Bar dataKey="delivered"  name="Delivered"   fill="#34d399" stackId="total" cursor="pointer" />
-                  <Bar dataKey="remaining"  name="Remaining"   fill="#f59e0b" fillOpacity={0.45} stackId="total" radius={[3, 3, 0, 0]} cursor="pointer" />
+                  <Bar dataKey="remaining"  name="Remaining"   fill="#94a3b8" fillOpacity={0.5} stackId="total" radius={[3, 3, 0, 0]} cursor="pointer" />
                   <Bar dataKey="scope"      name="Scope"       fill="#f59e0b" stackId="total" radius={[3, 3, 0, 0]} cursor="pointer" />
                   <Bar dataKey="projected"  name="Can deliver" fill="#60a5fa" radius={[3, 3, 0, 0]} cursor="pointer" />
                   {verdict.hasVelocity && (
@@ -679,7 +679,7 @@ function SprintBarTooltip({
   const rows: { label: string; value: number | null; color: string }[] = [
     { label: "Committed", value: p.committed, color: "#475569" },
     { label: "Delivered", value: p.delivered, color: "#34d399" },
-    { label: "Remaining", value: p.remaining, color: "#f59e0b" },
+    { label: "Remaining", value: p.remaining, color: "#94a3b8" },
     { label: "Scope",     value: p.scope,     color: "#f59e0b" },
     { label: "Can deliver", value: p.projected, color: "#60a5fa" },
   ].filter((r) => r.value != null && r.value > 0);
@@ -689,7 +689,7 @@ function SprintBarTooltip({
       <p className="font-medium text-slate-100">{p.fullName}</p>
       {p.startDate && p.endDate && (
         <p className="text-[11px] text-slate-500 mt-0.5">
-          {p.startDate} → {p.endDate}
+          {formatDateRangeShort(p.startDate, p.endDate)}
         </p>
       )}
       <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">

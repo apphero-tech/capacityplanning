@@ -427,7 +427,7 @@ export function TimeOffView({
         {selectedSprint && (
           <span className="text-slate-600">
             · {selectedSprint.startDate && selectedSprint.endDate
-              ? `${formatDate(selectedSprint.startDate)} → ${formatDate(selectedSprint.endDate)}`
+              ? `${formatDate(selectedSprint.startDate)} – ${formatDate(selectedSprint.endDate)}`
               : ""}
           </span>
         )}
@@ -451,7 +451,7 @@ export function TimeOffView({
                 ? `${filteredProjectHolidays.length} entries`
                 : `${filteredProjectHolidays.length} entries · ${filteredProjectHolidays.length - uniqueProjectCalendarDays} overlap`,
           },
-          { label: "Personal time off", value: `${totalPtoDays} p-days`, hint: `${sprintPtoStats.people} ${sprintPtoStats.people === 1 ? "person" : "people"}` },
+          { label: "Personal time off", value: `${totalPtoDays} PTO days`, hint: `${sprintPtoStats.people} ${sprintPtoStats.people === 1 ? "person" : "people"}` },
           {
             label: "Total days off",
             value: `${uniquePublicCalendarDays + uniqueProjectCalendarDays + totalPtoDays}`,

@@ -93,13 +93,23 @@ export const STREAM_BADGE_STYLES: Record<string, string> = {
   "X-OUT":  "bg-[#686260]/10 text-[#686260] border-[#686260]/20",
 };
 
-/** Sprint status — business labels used across the app. */
+/** Sprint status — short labels used across the app (badges, tables). */
 export const SPRINT_MODE_LABELS: Record<string, string> = {
   past:     "Past",
-  previous: "Previous Sprint — Testing",
-  current:  "Current Sprint — Development",
-  next:     "Next Sprint — Refining & Design",
-  planning: "Future Sprint — Planning",
+  previous: "Previous",
+  current:  "In Progress",
+  next:     "Next",
+  planning: "Planning",
+  future:   "Future",
+};
+
+/** Sprint status — long descriptions (tooltip / detail views). */
+export const SPRINT_MODE_DESCRIPTIONS: Record<string, string> = {
+  past:     "Closed sprint",
+  previous: "Closed · still being tested",
+  current:  "In progress · development cycle",
+  next:     "Upcoming · refining & design",
+  planning: "Planning ahead",
   future:   "Future",
 };
 
