@@ -18,7 +18,7 @@ export default async function SprintsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-            Sprints
+            Sprint Plan
           </h2>
           <p className="text-sm text-slate-400 mt-1">{subtitle}</p>
         </div>

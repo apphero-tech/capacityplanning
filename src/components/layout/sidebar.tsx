@@ -31,11 +31,11 @@ import { Separator } from "@/components/ui/separator"
 // Plan's historical footer in the v2 simplification.
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/sprints", label: "Sprints", icon: Calendar },
+  { href: "/sprints", label: "Sprint Plan", icon: Calendar },
   { href: "/backlog", label: "Backlog", icon: ListTodo },
   { href: "/team", label: "Team", icon: Users },
   { href: "/time-off", label: "Time Off", icon: CalendarOff },
-  { href: "/capacity", label: "Plan", icon: BarChart3 },
+  { href: "/capacity", label: "Capacity Planning", icon: BarChart3 },
   { href: "/project", label: "Project", icon: Target },
 ] as const
 

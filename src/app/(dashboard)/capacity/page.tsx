@@ -33,7 +33,7 @@ export default async function CapacityPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-          Plan
+          Capacity Planning
         </h2>
         <p className="text-sm text-slate-400 mt-1">
           Can the Deloitte team fit the upcoming sprint&apos;s scope?
