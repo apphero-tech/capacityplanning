@@ -281,6 +281,34 @@ export function TimeOffView({
 
   const totalPublicDays = filteredPublicHolidays.reduce((sum, h) => sum + h.days, 0);
   const totalProjectDays = filteredProjectHolidays.reduce((sum, h) => sum + h.days, 0);
+  // Two holidays that fall on the same calendar day (e.g. Victoria Day +
+  // Journée des patriotes on May 18) only cost one day of capacity per
+  // developer. Expand each entry to the ISO dates it covers, dedupe, and
+  // count — that's what actually gets deducted from the team's net hours.
+  const uniquePublicCalendarDays = useMemo(() => {
+    const dates = new Set<string>();
+    for (const h of filteredPublicHolidays) {
+      const start = new Date(h.date);
+      for (let i = 0; i < (h.days || 1); i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        dates.add(d.toISOString().slice(0, 10));
+      }
+    }
+    return dates.size;
+  }, [filteredPublicHolidays]);
+  const uniqueProjectCalendarDays = useMemo(() => {
+    const dates = new Set<string>();
+    for (const h of filteredProjectHolidays) {
+      const start = new Date(h.date);
+      for (let i = 0; i < (h.days || 1); i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        dates.add(d.toISOString().slice(0, 10));
+      }
+    }
+    return dates.size;
+  }, [filteredProjectHolidays]);
   // Only count active members in PTO totals
   const activePtoEntries = useMemo(
     () => filteredPtoEntries.filter((e) => !isPtoInactive(e.who)),
@@ -407,12 +435,26 @@ export function TimeOffView({
 
       <StatStrip
         stats={[
-          { label: "Public holidays", value: `${totalPublicDays} days`, hint: `${filteredPublicHolidays.length} entries` },
-          { label: "Project closures", value: `${totalProjectDays} days`, hint: `${filteredProjectHolidays.length} entries` },
+          {
+            label: "Public holidays",
+            value: `${uniquePublicCalendarDays} day${uniquePublicCalendarDays === 1 ? "" : "s"}`,
+            hint:
+              filteredPublicHolidays.length === uniquePublicCalendarDays
+                ? `${filteredPublicHolidays.length} entries`
+                : `${filteredPublicHolidays.length} entries · ${filteredPublicHolidays.length - uniquePublicCalendarDays} overlap`,
+          },
+          {
+            label: "Project closures",
+            value: `${uniqueProjectCalendarDays} day${uniqueProjectCalendarDays === 1 ? "" : "s"}`,
+            hint:
+              filteredProjectHolidays.length === uniqueProjectCalendarDays
+                ? `${filteredProjectHolidays.length} entries`
+                : `${filteredProjectHolidays.length} entries · ${filteredProjectHolidays.length - uniqueProjectCalendarDays} overlap`,
+          },
           { label: "Personal time off", value: `${totalPtoDays} p-days`, hint: `${sprintPtoStats.people} ${sprintPtoStats.people === 1 ? "person" : "people"}` },
           {
             label: "Total days off",
-            value: `${totalPublicDays + totalProjectDays + totalPtoDays}`,
+            value: `${uniquePublicCalendarDays + uniqueProjectCalendarDays + totalPtoDays}`,
             hint: `${teamMembers.filter((m) => m.isActive).length} active members`,
           },
         ]}
@@ -476,7 +518,15 @@ export function TimeOffView({
                   <CardDescription className="text-slate-400">
                     {filteredPublicHolidays.length} holidays
                     {countryFilter !== "all" && ` for ${countryFilter}`}
-                    {" "}&mdash; {totalPublicDays} total days
+                    {" "}&mdash; {uniquePublicCalendarDays} calendar day
+                    {uniquePublicCalendarDays === 1 ? "" : "s"}
+                    {filteredPublicHolidays.length > uniquePublicCalendarDays && (
+                      <span className="text-slate-500">
+                        {" "}
+                        ({filteredPublicHolidays.length - uniquePublicCalendarDays}{" "}
+                        overlap{filteredPublicHolidays.length - uniquePublicCalendarDays === 1 ? "" : "s"})
+                      </span>
+                    )}
                     {selectedSprint && (
                       <span className="text-slate-500">
                         {" "}in {selectedSprint.name}
@@ -580,7 +630,8 @@ export function TimeOffView({
               <CardTitle className="text-slate-100">Project Closures</CardTitle>
               <CardDescription className="text-slate-400">
                 {filteredProjectHolidays.length} closures &mdash;{" "}
-                {totalProjectDays} total days
+                {uniqueProjectCalendarDays} calendar day
+                {uniqueProjectCalendarDays === 1 ? "" : "s"}
                 {selectedSprint && (
                   <span className="text-slate-500">
                     {" "}in {selectedSprint.name}
