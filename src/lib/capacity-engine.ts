@@ -470,3 +470,96 @@ export function computeAllSprintForecasts(
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Projection bases — user-tunable historical window + growth factor.
+// ---------------------------------------------------------------------------
+
+/** Which pool of closed sprints the historical velocity is averaged over. */
+export type VelocityBasis = "last1" | "last2" | "last3" | "last6" | "all";
+
+export const VELOCITY_BASIS_LABEL: Record<VelocityBasis, string> = {
+  last1: "Last sprint",
+  last2: "Last 2 sprints",
+  last3: "Last 3 sprints",
+  last6: "Last 6 sprints",
+  all: "All-time",
+};
+
+export interface HistoricalVelocityResult {
+  /** Averaged SP/hr across the selected closed sprints (0 if no history). */
+  velocity: number;
+  /** Number of closed sprints actually included in the average. */
+  sprintCount: number;
+  /** Names of the sprints included, in chronological order. */
+  sprintNames: string[];
+}
+
+/**
+ * Compute the historical velocity (SP/hr) using the chosen basis.
+ *
+ *  • Only non-demo sprints with a positive `completedSP` and positive
+ *    net DEV hours are considered.
+ *  • Capacity hours are computed per sprint with the same engine used
+ *    everywhere else, so PTO and holidays of the period are reflected.
+ *  • The average is a simple mean of per-sprint velocities — not a
+ *    hours-weighted mean — so a single outlier sprint doesn't dominate.
+ */
+export function computeHistoricalVelocity(
+  allSprints: Array<{
+    id: string;
+    name: string;
+    isDemo: boolean;
+    startDate: string | null;
+    endDate: string | null;
+    durationWeeks: number;
+    completedSP: number | null;
+    holidayLocation?: string;
+  }>,
+  deloitteCapacities: Array<Parameters<typeof computeDevCapacityFromIC>[0][number]>,
+  publicHolidays: Parameters<typeof computeDevCapacityFromIC>[2],
+  projectHolidays: Parameters<typeof computeDevCapacityFromIC>[3],
+  ptoEntries: Parameters<typeof computeDevCapacityFromIC>[4],
+  basis: VelocityBasis,
+): HistoricalVelocityResult {
+  const closed = [...allSprints]
+    .filter((s) => !s.isDemo && s.completedSP != null && s.completedSP > 0)
+    .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
+
+  const velocities: { name: string; velocity: number }[] = [];
+  for (const s of closed) {
+    const caps = computeDevCapacityFromIC(
+      deloitteCapacities,
+      // computeDevCapacityFromIC needs the Sprint shape — we pass a minimal
+      // object that matches what the engine reads.
+      s as unknown as Parameters<typeof computeDevCapacityFromIC>[1],
+      publicHolidays,
+      projectHolidays,
+      ptoEntries,
+    );
+    const hrs = caps.reduce((sum, d) => sum + d.netDevHrs, 0);
+    if (hrs > 0 && s.completedSP != null) {
+      velocities.push({ name: s.name, velocity: s.completedSP / hrs });
+    }
+  }
+
+  if (velocities.length === 0) {
+    return { velocity: 0, sprintCount: 0, sprintNames: [] };
+  }
+
+  let slice = velocities;
+  switch (basis) {
+    case "last1": slice = velocities.slice(-1); break;
+    case "last2": slice = velocities.slice(-2); break;
+    case "last3": slice = velocities.slice(-3); break;
+    case "last6": slice = velocities.slice(-6); break;
+    case "all":   slice = velocities; break;
+  }
+
+  const avg = slice.reduce((sum, v) => sum + v.velocity, 0) / slice.length;
+  return {
+    velocity: avg,
+    sprintCount: slice.length,
+    sprintNames: slice.map((v) => v.name),
+  };
+}

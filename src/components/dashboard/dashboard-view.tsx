@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { useSprint } from "@/contexts/sprint-context";
+import { useProjectionSettings } from "@/contexts/projection-settings-context";
 import {
   computeDevCapacityFromIC,
-  computeDevProjection,
+  computeHistoricalVelocity,
+  VELOCITY_BASIS_LABEL,
+  type VelocityBasis,
 } from "@/lib/capacity-engine";
 import type { SprintStory } from "@/types";
 import { formatDateRangeShort } from "@/lib/date-utils";
@@ -60,9 +63,15 @@ export function DashboardView({ storiesBySprint }: Props) {
     publicHolidays,
     projectHolidays,
     ptoEntries,
-    forecastMap,
     setSelectedIndex,
   } = useSprint();
+  const {
+    basis,
+    growthPct,
+    setBasis,
+    setGrowthPct,
+    effectiveMultiplier,
+  } = useProjectionSettings();
 
   // Dashboard verdict is always about THE next sprint (calendar-based),
   // not whatever the user clicked in the header. Computed once from
@@ -80,11 +89,24 @@ export function DashboardView({ storiesBySprint }: Props) {
   }, [allSprints]);
 
   const sprint = nextSprint;
-  const selectedForecast = sprint ? forecastMap.get(sprint.id) ?? null : null;
 
   const deloitteCapacities = useMemo(
     () => initialCapacities.filter((c) => c.organization === "Deloitte" && c.isActive),
     [initialCapacities],
+  );
+
+  // Historical velocity from the user-chosen basis (last, 2, 3, 6, all).
+  const historical = useMemo(
+    () =>
+      computeHistoricalVelocity(
+        allSprints,
+        initialCapacities.filter((c) => c.organization === "Deloitte"),
+        publicHolidays,
+        projectHolidays,
+        ptoEntries,
+        basis,
+      ),
+    [allSprints, initialCapacities, publicHolidays, projectHolidays, ptoEntries, basis],
   );
 
   const verdict = useMemo(() => {
@@ -100,19 +122,18 @@ export function DashboardView({ storiesBySprint }: Props) {
       projectHolidays,
       ptoEntries,
     );
-    const dp = computeDevProjection(
-      devCaps,
-      selectedForecast?.velocityProven ?? sprint.velocityProven ?? 0,
-      selectedForecast?.velocityTarget ?? sprint.velocityTarget ?? 0,
-      scopeSP,
-    );
+    const hours = devCaps.reduce((sum, d) => sum + d.netDevHrs, 0);
+    const baseVelocity = historical.velocity;
+    const effectiveVelocity = baseVelocity * effectiveMultiplier;
+    const teamCanDeliver = hours * effectiveVelocity;
     return {
-      teamCanDeliver: dp.projectedSPProven,
+      teamCanDeliver,
       scopeSP,
-      delta: dp.projectedSPProven - scopeSP,
-      hasVelocity: dp.velocityProven > 0,
-      hours: dp.netDevCapacity,
-      velocity: dp.velocityProven,
+      delta: teamCanDeliver - scopeSP,
+      hasVelocity: baseVelocity > 0,
+      hours,
+      baseVelocity,
+      effectiveVelocity,
       members: deloitteCapacities.length,
     };
   }, [
@@ -122,7 +143,8 @@ export function DashboardView({ storiesBySprint }: Props) {
     publicHolidays,
     projectHolidays,
     ptoEntries,
-    selectedForecast,
+    historical,
+    effectiveMultiplier,
   ]);
 
   // Bar chart data — closed sprints + current + upcoming, in calendar order.
@@ -269,10 +291,24 @@ export function DashboardView({ storiesBySprint }: Props) {
                         <li>
                           ×{" "}
                           <span className="text-slate-200">
-                            {verdict.velocity.toFixed(2)} SP/hr
+                            {verdict.baseVelocity.toFixed(2)} SP/hr
                           </span>{" "}
-                          historical velocity (last 3 closed sprints)
+                          historical velocity ({VELOCITY_BASIS_LABEL[basis].toLowerCase()}
+                          {historical.sprintCount > 0 && (
+                            <> · {historical.sprintCount} sprint{historical.sprintCount === 1 ? "" : "s"}</>
+                          )}
+                          )
                         </li>
+                        {growthPct !== 0 && (
+                          <li>
+                            ×{" "}
+                            <span className="text-slate-200">
+                              {effectiveMultiplier.toFixed(2)}
+                            </span>{" "}
+                            growth factor ({growthPct > 0 ? "+" : ""}
+                            {growthPct}%)
+                          </li>
+                        )}
                         <li className="border-t border-white/10 pt-1 mt-1 text-slate-200">
                           ={" "}
                           <span className="font-semibold">
@@ -303,6 +339,16 @@ export function DashboardView({ storiesBySprint }: Props) {
           </p>
         )}
       </Link>
+
+      {/* Projection controls — user-tunable basis + growth */}
+      <ProjectionControls
+        basis={basis}
+        onBasisChange={setBasis}
+        growthPct={growthPct}
+        onGrowthChange={setGrowthPct}
+        velocity={historical.velocity}
+        sprintNames={historical.sprintNames}
+      />
 
       {/* Interactive history + planning chart */}
       {chartData.length > 0 && (
@@ -540,6 +586,112 @@ function ExplainTooltip({
         </span>
       )}
     </span>
+  );
+}
+
+/**
+ * Compact toolbar for tweaking how "team can deliver" is computed:
+ * choose the historical window (last / 2 / 3 / 6 / all) and add a
+ * growth factor in %. Both live in the shared projection-settings
+ * context so every page reads the same values.
+ */
+function ProjectionControls({
+  basis,
+  onBasisChange,
+  growthPct,
+  onGrowthChange,
+  velocity,
+  sprintNames,
+}: {
+  basis: VelocityBasis;
+  onBasisChange: (b: VelocityBasis) => void;
+  growthPct: number;
+  onGrowthChange: (n: number) => void;
+  velocity: number;
+  sprintNames: string[];
+}) {
+  const basisOptions: { value: VelocityBasis; label: string }[] = [
+    { value: "last1", label: "Last" },
+    { value: "last2", label: "2" },
+    { value: "last3", label: "3" },
+    { value: "last6", label: "6" },
+    { value: "all", label: "All" },
+  ];
+  const growthPresets = [0, 3, 5, 10, 20];
+  return (
+    <section className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-4">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        {/* Basis selector */}
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] uppercase tracking-wide text-slate-500">
+            Velocity basis
+          </span>
+          <div className="flex rounded-lg border border-white/[0.06] bg-slate-900/50 p-0.5">
+            {basisOptions.map((o) => {
+              const active = o.value === basis;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => onBasisChange(o.value)}
+                  className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors ${
+                    active
+                      ? "bg-slate-100 text-slate-900"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-[11px] text-slate-500 tabular-nums">
+            {velocity > 0 ? `${velocity.toFixed(2)} SP/hr` : "no history"}
+          </span>
+        </div>
+
+        {/* Growth factor */}
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] uppercase tracking-wide text-slate-500">
+            Growth
+          </span>
+          <div className="flex rounded-lg border border-white/[0.06] bg-slate-900/50 p-0.5">
+            {growthPresets.map((p) => {
+              const active = p === growthPct;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => onGrowthChange(p)}
+                  className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors tabular-nums ${
+                    active
+                      ? "bg-slate-100 text-slate-900"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {p === 0 ? "0%" : `+${p}%`}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <input
+              type="number"
+              value={growthPct}
+              onChange={(e) => onGrowthChange(Number(e.target.value) || 0)}
+              step={1}
+              className="w-14 h-7 rounded-md border border-white/[0.06] bg-slate-900/50 px-2 text-[12px] text-slate-200 tabular-nums focus:border-white/20"
+            />
+            <span>%</span>
+          </div>
+        </div>
+      </div>
+      {sprintNames.length > 0 && (
+        <p className="mt-2 text-[11px] text-slate-600">
+          Using {sprintNames.join(" · ")}
+        </p>
+      )}
+    </section>
   );
 }
 

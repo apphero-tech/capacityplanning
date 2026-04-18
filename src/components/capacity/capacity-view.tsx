@@ -2,10 +2,14 @@
 
 import { useMemo } from "react";
 import { useSprint } from "@/contexts/sprint-context";
+import { useProjectionSettings } from "@/contexts/projection-settings-context";
 import type { SprintStory } from "@/types";
 import {
   computeDevCapacityFromIC,
   computeDevProjection,
+  computeHistoricalVelocity,
+  VELOCITY_BASIS_LABEL,
+  type VelocityBasis,
 } from "@/lib/capacity-engine";
 import { formatDateRangeShort } from "@/lib/date-utils";
 import { Check, AlertTriangle } from "lucide-react";
@@ -40,8 +44,14 @@ export function CapacityView({ storiesBySprint }: Props) {
     publicHolidays,
     projectHolidays,
     ptoEntries,
-    selectedForecast,
   } = useSprint();
+  const {
+    basis,
+    growthPct,
+    setBasis,
+    setGrowthPct,
+    effectiveMultiplier,
+  } = useProjectionSettings();
 
   const deloitteDevelopers = useMemo(
     () =>
@@ -51,43 +61,26 @@ export function CapacityView({ storiesBySprint }: Props) {
     [initialCapacities],
   );
 
-  // Historical velocity signals derived from closed sprints.
-  const velocityStats = useMemo(() => {
-    const closed = [...allSprints]
-      .filter((s) => s.completedSP != null && s.completedSP > 0)
-      .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
-
-    const velocities: { sprint: string; completed: number; hrs: number; velocity: number }[] = [];
-    for (const s of closed) {
-      const caps = computeDevCapacityFromIC(
-        initialCapacities.filter((c) => c.organization === "Deloitte"),
-        s,
+  // One velocity per basis — evaluated up-front so we can show a projection
+  // for every choice side-by-side and highlight the one currently active.
+  const basisResults = useMemo(() => {
+    const bases: VelocityBasis[] = ["last1", "last2", "last3", "last6", "all"];
+    const deloitteIC = initialCapacities.filter((c) => c.organization === "Deloitte");
+    return bases.map((b) => ({
+      basis: b,
+      result: computeHistoricalVelocity(
+        allSprints,
+        deloitteIC,
         publicHolidays,
         projectHolidays,
         ptoEntries,
-      );
-      const hrs = caps.reduce((sum, d) => sum + d.netDevHrs, 0);
-      if (hrs > 0 && s.completedSP != null) {
-        velocities.push({
-          sprint: s.name,
-          completed: s.completedSP,
-          hrs,
-          velocity: s.completedSP / hrs,
-        });
-      }
-    }
-
-    const last = velocities[velocities.length - 1] ?? null;
-    const last3 = velocities.slice(-3);
-    const allAvg =
-      velocities.length > 0
-        ? velocities.reduce((s, v) => s + v.velocity, 0) / velocities.length
-        : null;
-    const last3Avg =
-      last3.length > 0 ? last3.reduce((s, v) => s + v.velocity, 0) / last3.length : null;
-
-    return { velocities, last, last3Avg, allAvg };
+        b,
+      ),
+    }));
   }, [allSprints, initialCapacities, publicHolidays, projectHolidays, ptoEntries]);
+
+  const activeVelocity =
+    basisResults.find((b) => b.basis === basis)?.result.velocity ?? 0;
 
   const plan = useMemo(() => {
     if (!sprint) return null;
@@ -111,10 +104,13 @@ export function CapacityView({ storiesBySprint }: Props) {
       projectHolidays,
       ptoEntries,
     );
+    const netDevHrs = devCaps.reduce((sum, d) => sum + d.netDevHrs, 0);
+    const effectiveVelocity = activeVelocity * effectiveMultiplier;
+    const defaultProjection = netDevHrs * effectiveVelocity;
     const dp = computeDevProjection(
       devCaps,
-      selectedForecast?.velocityProven ?? sprint.velocityProven ?? 0,
-      selectedForecast?.velocityTarget ?? sprint.velocityTarget ?? 0,
+      effectiveVelocity,
+      effectiveVelocity,
       scopeSP,
     );
 
@@ -125,8 +121,8 @@ export function CapacityView({ storiesBySprint }: Props) {
       theoreticalHrs,
       netDevHrs: dp.netDevCapacity,
       offHours: theoreticalHrs - dp.netDevCapacity,
-      defaultProjection: dp.projectedSPProven,
-      defaultVelocity: dp.velocityProven,
+      defaultProjection,
+      defaultVelocity: effectiveVelocity,
     };
   }, [
     sprint,
@@ -136,7 +132,8 @@ export function CapacityView({ storiesBySprint }: Props) {
     publicHolidays,
     projectHolidays,
     ptoEntries,
-    selectedForecast,
+    activeVelocity,
+    effectiveMultiplier,
   ]);
 
   if (!sprint) {
@@ -154,32 +151,18 @@ export function CapacityView({ storiesBySprint }: Props) {
     ? `Fits · ${fmt(plan.defaultProjection - plan.scopeSP)} SP of room`
     : `Overflow · ${fmt(Math.abs(plan.defaultProjection - plan.scopeSP))} SP to cut`;
 
-  const projections = [
-    {
-      label: "Last sprint velocity",
-      hint:
-        velocityStats.last != null
-          ? `${velocityStats.last.sprint} · ${velocityStats.last.velocity.toFixed(2)} SP/hr`
-          : "no data yet",
-      velocity: velocityStats.last?.velocity ?? null,
-    },
-    {
-      label: "Avg last 3 sprints",
-      hint:
-        velocityStats.last3Avg != null
-          ? `${velocityStats.last3Avg.toFixed(2)} SP/hr`
-          : "need 3 closed sprints",
-      velocity: velocityStats.last3Avg,
-    },
-    {
-      label: "All-time average",
-      hint:
-        velocityStats.allAvg != null
-          ? `${velocityStats.velocities.length} sprints · ${velocityStats.allAvg.toFixed(2)} SP/hr`
-          : "no history",
-      velocity: velocityStats.allAvg,
-    },
-  ];
+  const projections = basisResults.map(({ basis: b, result }) => {
+    const effectiveVelocity = result.velocity * effectiveMultiplier;
+    return {
+      basis: b,
+      label: VELOCITY_BASIS_LABEL[b],
+      baseVelocity: result.velocity,
+      effectiveVelocity,
+      sprintCount: result.sprintCount,
+      sprintNames: result.sprintNames,
+      projected: result.velocity > 0 ? plan.netDevHrs * effectiveVelocity : null,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -245,34 +228,111 @@ export function CapacityView({ storiesBySprint }: Props) {
         </div>
       </section>
 
-      {/* Projection scenarios */}
+      {/* Growth factor picker */}
       <section>
         <h3 className="text-[13px] font-medium text-slate-300 mb-3">
-          What we could deliver in {fmt(plan.netDevHrs)} hours
+          Growth factor
         </h3>
-        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 divide-y divide-white/[0.04]">
+        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <span className="text-[12px] text-slate-400">
+            Applied on top of the selected historical velocity:
+          </span>
+          <div className="flex rounded-lg border border-white/[0.06] bg-slate-900/50 p-0.5">
+            {[0, 3, 5, 10, 20].map((p) => {
+              const active = p === growthPct;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setGrowthPct(p)}
+                  className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors tabular-nums ${
+                    active
+                      ? "bg-slate-100 text-slate-900"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {p === 0 ? "0%" : `+${p}%`}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
+            <input
+              type="number"
+              value={growthPct}
+              onChange={(e) => setGrowthPct(Number(e.target.value) || 0)}
+              step={1}
+              className="w-16 h-7 rounded-md border border-white/[0.06] bg-slate-900/50 px-2 text-[12px] text-slate-200 tabular-nums focus:border-white/20"
+            />
+            <span>%</span>
+          </div>
+          <span className="text-[11px] text-slate-600">
+            multiplier ×{effectiveMultiplier.toFixed(2)}
+          </span>
+        </div>
+      </section>
+
+      {/* Projection scenarios — one per basis, click to make it active. */}
+      <section>
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-[13px] font-medium text-slate-300">
+            What we could deliver in {fmt(plan.netDevHrs)} hours
+          </h3>
+          <p className="text-[11px] text-slate-500">
+            Click a row to change the basis
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 divide-y divide-white/[0.04] overflow-hidden">
           {projections.map((p) => {
-            const projected = p.velocity != null ? plan.netDevHrs * p.velocity : null;
+            const active = p.basis === basis;
+            const hasData = p.baseVelocity > 0;
+            const hint = hasData
+              ? `${p.baseVelocity.toFixed(2)} SP/hr${
+                  growthPct !== 0
+                    ? ` × ${effectiveMultiplier.toFixed(2)} = ${p.effectiveVelocity.toFixed(2)}`
+                    : ""
+                }${p.sprintCount > 0 ? ` · ${p.sprintCount} sprint${p.sprintCount === 1 ? "" : "s"}` : ""}`
+              : "no history";
             return (
-              <div
-                key={p.label}
-                className="flex items-baseline justify-between px-5 py-3"
+              <button
+                key={p.basis}
+                type="button"
+                onClick={() => setBasis(p.basis)}
+                className={`flex w-full items-baseline justify-between px-5 py-3 text-left transition-colors ${
+                  active
+                    ? "bg-white/[0.04]"
+                    : hasData
+                      ? "hover:bg-white/[0.02] cursor-pointer"
+                      : "cursor-default opacity-60"
+                }`}
+                disabled={!hasData}
               >
                 <div>
-                  <p className="text-[13px] text-slate-200">{p.label}</p>
-                  <p className="text-[11px] text-slate-500">{p.hint}</p>
+                  <p
+                    className={`text-[13px] flex items-center gap-2 ${
+                      active ? "text-slate-100 font-medium" : "text-slate-200"
+                    }`}
+                  >
+                    {p.label}
+                    {active && (
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-emerald-300">
+                        active
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-slate-500">{hint}</p>
                 </div>
                 <p className="text-xl font-semibold tabular-nums text-slate-100">
-                  {projected != null ? (
+                  {p.projected != null ? (
                     <>
-                      {fmt(projected)}{" "}
+                      {fmt(p.projected)}{" "}
                       <span className="text-sm font-normal text-slate-500">SP</span>
                     </>
                   ) : (
                     <span className="text-slate-600">—</span>
                   )}
                 </p>
-              </div>
+              </button>
             );
           })}
         </div>

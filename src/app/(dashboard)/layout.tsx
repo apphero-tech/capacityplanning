@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { SprintProvider } from "@/contexts/sprint-context"
+import { ProjectionSettingsProvider } from "@/contexts/projection-settings-context"
 import {
   getAllSprints,
   getInitialCapacities,
@@ -54,15 +55,17 @@ export default async function DashboardLayout({
       projectHolidays={projectHolidays}
       ptoEntries={ptoEntries}
     >
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto p-6">
-            {children}
-          </main>
+      <ProjectionSettingsProvider>
+        <div className="flex h-screen overflow-hidden">
+          <Sidebar />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Header />
+            <main className="flex-1 overflow-y-auto p-6">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </ProjectionSettingsProvider>
     </SprintProvider>
   )
 }
