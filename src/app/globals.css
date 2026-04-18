@@ -123,4 +123,17 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Suppress the default focus outline Recharts applies to its surface /
+     wrapper — when a user clicks on a bar the whole chart box used to
+     render a red focus ring. We still keep real focus rings on form
+     controls and tab-navigation via Tailwind's own focus-visible utils. */
+  .recharts-wrapper,
+  .recharts-wrapper:focus,
+  .recharts-wrapper:focus-visible,
+  .recharts-surface,
+  .recharts-surface:focus,
+  .recharts-surface:focus-visible {
+    outline: none !important;
+  }
 }

@@ -12,6 +12,7 @@ import {
   CalendarOff,
   PieChart,
   Activity,
+  Target,
   Settings,
   PanelLeftClose,
   PanelLeft,
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/team", label: "Team", icon: Users },
   { href: "/time-off", label: "Time Off", icon: CalendarOff },
   { href: "/capacity", label: "Plan", icon: BarChart3 },
+  { href: "/project", label: "Project", icon: Target },
 ] as const
 
 const bottomNavItems = [
