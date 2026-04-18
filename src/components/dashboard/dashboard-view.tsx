@@ -54,16 +54,33 @@ interface Props {
  */
 export function DashboardView({ storiesBySprint }: Props) {
   const {
-    selectedSprint: sprint,
     allSprints,
     sprints: activeSprints,
     initialCapacities,
     publicHolidays,
     projectHolidays,
     ptoEntries,
-    selectedForecast,
+    forecastMap,
     setSelectedIndex,
   } = useSprint();
+
+  // Dashboard verdict is always about THE next sprint (calendar-based),
+  // not whatever the user clicked in the header. Computed once from
+  // today's date so it stays stable while the user navigates around the
+  // chart or the rest of the app.
+  const nextSprint = useMemo(() => {
+    const ordered = [...allSprints]
+      .filter((s) => !s.isDemo)
+      .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
+    const currentIdx = ordered.findIndex((s) => s.isCurrent);
+    if (currentIdx >= 0 && currentIdx < ordered.length - 1) {
+      return ordered[currentIdx + 1];
+    }
+    return ordered.find((s) => s.status === "next") ?? null;
+  }, [allSprints]);
+
+  const sprint = nextSprint;
+  const selectedForecast = sprint ? forecastMap.get(sprint.id) ?? null : null;
 
   const deloitteCapacities = useMemo(
     () => initialCapacities.filter((c) => c.organization === "Deloitte" && c.isActive),
