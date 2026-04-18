@@ -400,14 +400,19 @@ export function CapacityView({ storiesBySprint }: Props) {
 
       {/* Projection scenarios — one per basis, click to make it active. */}
       <section>
-        <div className="flex items-baseline justify-between mb-3">
+        <div className="flex items-baseline justify-between mb-1">
           <h3 className="text-[13px] font-medium text-slate-300">
-            What we could deliver in {fmt(plan.netDevHrs)} hours
+            Compare velocity bases
           </h3>
           <p className="text-[11px] text-slate-500">
             Click a row to change the basis
           </p>
         </div>
+        <p className="text-[11px] text-slate-500 mb-3">
+          Same {fmt(plan.netDevHrs)} net DEV hours, different historical
+          windows. The <span className="text-emerald-300">active</span> row
+          drives the verdict above.
+        </p>
         <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 divide-y divide-white/[0.04] overflow-hidden">
           {projections.map((p) => {
             const active = p.basis === basis;
