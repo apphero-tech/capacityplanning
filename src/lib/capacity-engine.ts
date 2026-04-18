@@ -510,6 +510,7 @@ export function computeHistoricalVelocity(
     id: string;
     name: string;
     isDemo: boolean;
+    isCurrent?: boolean;
     startDate: string | null;
     endDate: string | null;
     durationWeeks: number;
@@ -522,8 +523,17 @@ export function computeHistoricalVelocity(
   ptoEntries: Parameters<typeof computeDevCapacityFromIC>[4],
   basis: VelocityBasis,
 ): HistoricalVelocityResult {
+  // The current sprint is mid-flight: its completedSP is a partial
+  // snapshot, not a final delivery number — excluding it keeps the
+  // historical averages honest.
   const closed = [...allSprints]
-    .filter((s) => !s.isDemo && s.completedSP != null && s.completedSP > 0)
+    .filter(
+      (s) =>
+        !s.isDemo &&
+        !s.isCurrent &&
+        s.completedSP != null &&
+        s.completedSP > 0,
+    )
     .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
 
   const velocities: { name: string; velocity: number }[] = [];
@@ -561,5 +571,111 @@ export function computeHistoricalVelocity(
     velocity: avg,
     sprintCount: slice.length,
     sprintNames: slice.map((v) => v.name),
+  };
+}
+
+export interface CurrentSprintVelocity {
+  sprintName: string;
+  completedSP: number;
+  /** Net DEV hours elapsed from sprint start → today (PTO & holidays removed). */
+  elapsedHrs: number;
+  /** Net DEV hours for the full sprint (same engine as the rest of the app). */
+  fullHrs: number;
+  /** Fraction of the sprint already consumed, 0..1. */
+  elapsedFraction: number;
+  /** \`completedSP / elapsedHrs\` — fair in-flight velocity. */
+  velocity: number;
+}
+
+function countBusinessDaysBetween(startISO: string, endISO: string): number {
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  if (end < start) return 0;
+  let n = 0;
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) n += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return n;
+}
+
+/**
+ * Fair in-flight velocity of the current sprint:
+ *
+ *   velocity = completedSP / elapsedNetHrs
+ *
+ * where elapsedNetHrs is computed the same way as any other sprint's
+ * net hours, but over the [startDate → today] slice only (PTO &
+ * holidays that already occurred are deducted). Extrapolates cleanly
+ * to a projected final number by applying that velocity to the full
+ * sprint's net hours.
+ */
+export function computeCurrentSprintVelocity(
+  allSprints: Array<{
+    id: string;
+    name: string;
+    isDemo: boolean;
+    isCurrent?: boolean;
+    startDate: string | null;
+    endDate: string | null;
+    durationWeeks: number;
+    completedSP: number | null;
+  }>,
+  deloitteCapacities: Array<Parameters<typeof computeDevCapacityFromIC>[0][number]>,
+  publicHolidays: Parameters<typeof computeDevCapacityFromIC>[2],
+  projectHolidays: Parameters<typeof computeDevCapacityFromIC>[3],
+  ptoEntries: Parameters<typeof computeDevCapacityFromIC>[4],
+): CurrentSprintVelocity | null {
+  const current = allSprints.find(
+    (s) => !s.isDemo && s.isCurrent && s.completedSP != null && s.completedSP > 0,
+  );
+  if (!current || !current.startDate || !current.endDate) return null;
+
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const sliceEndISO =
+    todayISO > current.endDate ? current.endDate : todayISO;
+  if (sliceEndISO < current.startDate) return null;
+
+  const totalBd = countBusinessDaysBetween(current.startDate, current.endDate);
+  const elapsedBd = countBusinessDaysBetween(current.startDate, sliceEndISO);
+  if (totalBd <= 0 || elapsedBd <= 0) return null;
+
+  // Full-sprint net hours — same as the Hours Available breakdown uses.
+  const fullCaps = computeDevCapacityFromIC(
+    deloitteCapacities,
+    current as unknown as Parameters<typeof computeDevCapacityFromIC>[1],
+    publicHolidays,
+    projectHolidays,
+    ptoEntries,
+  );
+  const fullHrs = fullCaps.reduce((sum, d) => sum + d.netDevHrs, 0);
+
+  // Elapsed slice: a virtual sprint that ends today, scaled to the number
+  // of business days already consumed.
+  const elapsedWeeks = elapsedBd / 5;
+  const elapsedSprint = {
+    ...current,
+    endDate: sliceEndISO,
+    durationWeeks: elapsedWeeks,
+  };
+  const elapsedCaps = computeDevCapacityFromIC(
+    deloitteCapacities,
+    elapsedSprint as unknown as Parameters<typeof computeDevCapacityFromIC>[1],
+    publicHolidays,
+    projectHolidays,
+    ptoEntries,
+  );
+  const elapsedHrs = elapsedCaps.reduce((sum, d) => sum + d.netDevHrs, 0);
+  if (elapsedHrs <= 0 || current.completedSP == null) return null;
+
+  return {
+    sprintName: current.name,
+    completedSP: current.completedSP,
+    elapsedHrs,
+    fullHrs,
+    elapsedFraction: elapsedBd / totalBd,
+    velocity: current.completedSP / elapsedHrs,
   };
 }

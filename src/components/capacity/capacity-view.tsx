@@ -8,6 +8,7 @@ import {
   computeDevCapacityFromIC,
   computeDevProjection,
   computeHistoricalVelocity,
+  computeCurrentSprintVelocity,
   VELOCITY_BASIS_LABEL,
   type VelocityBasis,
 } from "@/lib/capacity-engine";
@@ -81,6 +82,20 @@ export function CapacityView({ storiesBySprint }: Props) {
 
   const activeVelocity =
     basisResults.find((b) => b.basis === basis)?.result.velocity ?? 0;
+
+  // Live velocity of the sprint currently in flight — shown alongside the
+  // historical bases as context (not selectable as a projection basis).
+  const currentVelocity = useMemo(
+    () =>
+      computeCurrentSprintVelocity(
+        allSprints,
+        initialCapacities.filter((c) => c.organization === "Deloitte"),
+        publicHolidays,
+        projectHolidays,
+        ptoEntries,
+      ),
+    [allSprints, initialCapacities, publicHolidays, projectHolidays, ptoEntries],
+  );
 
   const plan = useMemo(() => {
     if (!sprint) return null;
@@ -414,6 +429,33 @@ export function CapacityView({ storiesBySprint }: Props) {
           drives the verdict above.
         </p>
         <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 divide-y divide-white/[0.04] overflow-hidden">
+          {/* In-flight current sprint — context only, not a selectable basis. */}
+          {currentVelocity && (
+            <div className="flex items-baseline justify-between px-5 py-3 bg-amber-500/[0.04]">
+              <div>
+                <p className="text-[13px] flex items-center gap-2 text-slate-200">
+                  {currentVelocity.sprintName} so far
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-amber-300">
+                    in flight
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {fmt(currentVelocity.completedSP)} SP in{" "}
+                  {fmt(currentVelocity.elapsedHrs)} of{" "}
+                  {fmt(currentVelocity.fullHrs)} hrs (
+                  {Math.round(currentVelocity.elapsedFraction * 100)}% elapsed) ·{" "}
+                  {currentVelocity.velocity.toFixed(2)} SP/hr
+                  {growthPct !== 0 && (
+                    <> × {effectiveMultiplier.toFixed(2)}</>
+                  )}
+                </p>
+              </div>
+              <p className="text-xl font-semibold tabular-nums text-slate-300">
+                {fmt(plan.netDevHrs * currentVelocity.velocity * effectiveMultiplier)}{" "}
+                <span className="text-sm font-normal text-slate-500">SP</span>
+              </p>
+            </div>
+          )}
           {projections.map((p) => {
             const active = p.basis === basis;
             const hasData = p.baseVelocity > 0;
