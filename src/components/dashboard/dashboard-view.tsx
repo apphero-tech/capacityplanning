@@ -105,32 +105,43 @@ export function DashboardView({ storiesBySprint }: Props) {
     selectedForecast,
   ]);
 
-  // Bar chart data — last 8 sprints with completed data + the upcoming one
-  // (current scope + projected delivery for "what we plan to do").
+  // Bar chart data — closed sprints + current + upcoming, in calendar order.
+  // A row is included when it has something to show (committed, delivered,
+  // or the selected-sprint planning metrics). Current sprint is kept even
+  // if it hasn't been closed yet — its commitment is worth seeing.
   const chartData = useMemo(() => {
-    const past = allSprints
-      .filter((s) => s.completedSP != null && s.completedSP > 0)
-      .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""))
-      .slice(-8)
-      .map((s) => {
-        const stories = storiesBySprint[s.id] ?? [];
-        return {
-          name: s.name.replace("| Product Demo ", "PD"),
-          fullName: s.name,
-          startDate: s.startDate,
-          endDate: s.endDate,
-          committed: s.commitmentSP ?? null,
-          delivered: s.completedSP ?? null,
-          scope: null as number | null,
-          projected: null as number | null,
-          storyCount: stories.length,
-          kind: "past" as const,
-        };
-      });
+    const ordered = [...allSprints]
+      .filter((s) => !s.isDemo)
+      .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
 
-    if (sprint && verdict) {
+    const currentSprint = ordered.find((s) => s.isCurrent) ?? null;
+
+    // Take up to 8 sprints ending at (and including) the current sprint.
+    const currentIdx = currentSprint ? ordered.indexOf(currentSprint) : ordered.length - 1;
+    const fromIdx = Math.max(0, currentIdx - 7);
+    const window = ordered.slice(fromIdx, currentIdx + 1);
+
+    const rows = window.map((s) => {
+      const stories = storiesBySprint[s.id] ?? [];
+      const isCurrent = s.isCurrent;
+      return {
+        name: s.name.replace("| Product Demo ", "PD"),
+        fullName: s.name,
+        startDate: s.startDate,
+        endDate: s.endDate,
+        committed: s.commitmentSP ?? null,
+        delivered: s.completedSP ?? null,
+        scope: null as number | null,
+        projected: null as number | null,
+        storyCount: stories.length,
+        kind: (isCurrent ? "current" : "past") as "past" | "current" | "next",
+      };
+    });
+
+    // Add the selected (next) sprint if it's not already in the window.
+    if (sprint && verdict && !window.some((s) => s.id === sprint.id)) {
       const stories = storiesBySprint[sprint.id] ?? [];
-      past.push({
+      rows.push({
         name: sprint.name.replace("| Product Demo ", "PD"),
         fullName: sprint.name,
         startDate: sprint.startDate,
@@ -143,7 +154,15 @@ export function DashboardView({ storiesBySprint }: Props) {
         kind: "next",
       });
     }
-    return past;
+
+    // Drop rows that have absolutely nothing to render (all metrics null).
+    return rows.filter(
+      (r) =>
+        (r.committed ?? 0) > 0 ||
+        (r.delivered ?? 0) > 0 ||
+        (r.scope ?? 0) > 0 ||
+        (r.projected ?? 0) > 0,
+    );
   }, [allSprints, sprint, verdict, storiesBySprint]);
 
   if (!sprint || !verdict) {
@@ -340,7 +359,7 @@ type TooltipPayload = {
     startDate: string | null;
     endDate: string | null;
     storyCount: number;
-    kind: "past" | "next";
+    kind: "past" | "current" | "next";
     committed: number | null;
     delivered: number | null;
     scope: number | null;
@@ -375,6 +394,7 @@ function SprintBarTooltip({
       <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
         {p.storyCount} stor{p.storyCount === 1 ? "y" : "ies"}
         {p.kind === "next" && <span className="text-slate-600"> · upcoming</span>}
+        {p.kind === "current" && <span className="text-emerald-400/80"> · in progress</span>}
       </p>
       <div className="mt-2 space-y-1">
         {rows.map((r) => (
