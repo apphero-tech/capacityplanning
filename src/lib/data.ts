@@ -479,6 +479,34 @@ export function insertSprint(input: {
   return id;
 }
 
+/**
+ * Name of the synthetic sprint that holds stories imported without a
+ * recognised Sprint value (empty cell, or a sprint not registered in the
+ * app yet). Surfaces them on the Dashboard's "Remaining to deliver" bucket
+ * rather than silently dropping them — the CSV must round-trip 1:1.
+ */
+export const BACKLOG_SPRINT_NAME = "Backlog (unassigned)";
+
+/**
+ * Make sure the synthetic "Backlog (unassigned)" sprint exists and return
+ * its id. Idempotent — safe to call at the start of every import.
+ */
+export function ensureBacklogSprint(): string {
+  const db = getDb();
+  const existing = db
+    .prepare("SELECT id FROM Sprint WHERE name = ?")
+    .get(BACKLOG_SPRINT_NAME) as { id: string } | undefined;
+  if (existing) return existing.id;
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, isDemo, createdAt, updatedAt)
+     VALUES (?, ?, NULL, NULL, 0, 0, 0.9, 0, 0, ?, ?)`,
+  ).run(id, BACKLOG_SPRINT_NAME, now, now);
+  return id;
+}
+
 /** Delete a sprint by id. Returns true when a row was removed. */
 export function deleteSprint(id: string): boolean {
   const db = getDb();

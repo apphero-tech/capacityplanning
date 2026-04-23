@@ -3,7 +3,9 @@ import {
   getAllSprints,
 } from "@/lib/data";
 import { isExcludedStory } from "@/lib/capacity-engine";
+import { getProjectOverview } from "@/lib/project-overview";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
+import { ProjectOverviewSection } from "@/components/dashboard/project-overview-section";
 import type { SprintStory } from "@/types";
 
 export default async function DashboardPage() {
@@ -26,6 +28,8 @@ export default async function DashboardPage() {
     storiesBySprint[activeSprints[i].id] = allSprintStories[i];
   }
 
+  const projectOverview = await getProjectOverview();
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -36,6 +40,8 @@ export default async function DashboardPage() {
           One glance: can we deliver the upcoming sprint?
         </p>
       </div>
+
+      <ProjectOverviewSection overview={projectOverview} />
 
       <DashboardView storiesBySprint={storiesBySprint} />
     </div>

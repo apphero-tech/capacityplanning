@@ -17,6 +17,7 @@
     "up": "npm run sync && npm run dev"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@prisma/client": "^7.4.2",
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",

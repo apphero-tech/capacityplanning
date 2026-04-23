@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseJiraFile } from "@/lib/excel-import";
-import { getAllSprints, replaceStoriesForSprint } from "@/lib/data";
+import { getAllSprints, replaceStoriesForSprint, ensureBacklogSprint, BACKLOG_SPRINT_NAME } from "@/lib/data";
 
 /** Extract the two-digit order prefix from a status already stamped by withOrderPrefix(). */
 function orderFromPrefixedStatus(status: string): number {
@@ -15,35 +15,45 @@ function normaliseSprintName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-/**
- * Pick the "latest" sprint name from a multi-valued cell. Jira lists every
- * sprint a story has been planned for, so when a story has been carried over
- * the cell looks like "Sprint 4;Sprint 5" — the rightmost value is the
- * sprint where the story currently lives.
- */
-function pickLatestSprint(raw: string): string | null {
-  const parts = raw.split(/[;,]/).map((s) => s.trim()).filter(Boolean);
-  return parts.length > 0 ? parts[parts.length - 1] : null;
+/** Split a raw Sprint cell (which may contain several sprint names) into trimmed, de-empty values. */
+function splitSprintValues(raw: string): string[] {
+  return raw.split(/[;,]/).map((s) => s.trim()).filter(Boolean);
 }
 
 /**
- * Stories whose workflow has already passed DEV (order >= 40) are not counted
- * in the DEV-cycle backlog of their sprint — Jira itself drops them from the
- * per-sprint count on its board. We skip them at import time and report them
- * back as "post-DEV skipped" so the user sees why counts match the board.
+ * Pick the most-recent sprint from a multi-valued cell.
  *
- * The threshold (statusOrder >= 40) was chosen per user spec: "DEV-Ready to
- * Deploy" is the moment the DEV cycle is considered complete.
+ * Different Jira exports order the Sprint column differently: some list it
+ * chronologically ("Sprint 4;Sprint 5"), others put the current sprint first
+ * ("Sprint 7;Sprint 4;Sprint 5;Sprint 6"). Relying on position was wrong in
+ * both worlds, so we now resolve each candidate against the known sprint
+ * list and pick the one with the most recent `startDate` — that is always
+ * the "where the story lives today" answer Jira's UI shows.
+ *
+ * Falls back to the first value when nothing matches any known sprint, so
+ * the story still lands somewhere (gets routed to "Backlog (unassigned)").
  */
-const POST_DEV_ORDER_THRESHOLD = 40;
+function pickCurrentSprintName(
+  raw: string,
+  sprintByName: Map<string, { id: string; name: string; status: string; startDate: string | null }>,
+): string | null {
+  const parts = splitSprintValues(raw);
+  if (parts.length === 0) return null;
 
-/**
- * Sprints that Jira shows as "started" — their board includes every story
- * ever planned for the sprint, so we don't apply the post-DEV filter. Future
- * and past sprints get the filter because Jira only keeps the "still to do"
- * cycle-2 work on them.
- */
-const SNAPSHOT_SPRINT_STATUSES = new Set(["current", "next"]);
+  let bestName: string | null = null;
+  let bestDate: string = "";
+  for (const part of parts) {
+    const match = sprintByName.get(part.trim().toLowerCase().replace(/\s+/g, " "));
+    if (!match) continue;
+    const d = match.startDate ?? "";
+    if (d > bestDate || (d === "" && bestName === null)) {
+      bestDate = d;
+      bestName = match.name;
+    }
+  }
+
+  return bestName ?? parts[0];
+}
 
 /** Numeric order for the "New" status — not a valid user-story state. */
 const NEW_STATUS_ORDER = 0;
@@ -107,56 +117,69 @@ export async function POST(request: NextRequest) {
     }
 
     // ---- Mode 2: auto-split by Sprint column ------------------------------
+    // Make sure the synthetic "Backlog (unassigned)" sprint exists before we
+    // look up sprints, so stories with no / unknown Sprint value still land
+    // somewhere and keep the total row count 1:1 with the CSV.
+    const backlogSprintId = ensureBacklogSprint();
     const allSprints = await getAllSprints();
-    const sprintByName = new Map<string, { id: string; name: string; status: string }>();
+    const sprintByName = new Map<
+      string,
+      { id: string; name: string; status: string; startDate: string | null }
+    >();
     for (const sp of allSprints) {
       sprintByName.set(normaliseSprintName(sp.name), {
         id: sp.id,
         name: sp.name,
         status: sp.status,
+        startDate: sp.startDate,
       });
     }
 
     const grouped = new Map<string, { sprintName: string; rows: typeof stories }>();
     const noSprintByStatus = new Map<string, number>();
     const unknownSprintCounts = new Map<string, number>();
-    const postDevSkippedByStatus = new Map<string, number>();
     const newStatusStories: { key: string; summary: string; sprint: string }[] = [];
     let storiesWithSprint = 0;
+    let storiesToBacklog = 0;
+
+    function pushToBacklog(s: typeof stories[number]) {
+      storiesToBacklog++;
+      const bucket = grouped.get(backlogSprintId) ?? {
+        sprintName: BACKLOG_SPRINT_NAME,
+        rows: [],
+      };
+      bucket.rows.push(s);
+      grouped.set(backlogSprintId, bucket);
+    }
 
     for (const s of stories) {
       const order = orderFromPrefixedStatus(s.status);
       const raw = s.sprintRaw ?? "";
-      const target = raw ? pickLatestSprint(raw) : null;
+      const target = raw ? pickCurrentSprintName(raw, sprintByName) : null;
 
       // "New" is a placeholder status, not a real story state. Collect these
-      // so the user can fix them in Jira, then skip.
+      // so the user can fix them in Jira — but still store them under the
+      // synthetic Backlog sprint so the CSV total matches the app total.
       if (order === NEW_STATUS_ORDER) {
         newStatusStories.push({
           key: s.key,
           summary: s.summary,
           sprint: target ?? "(no sprint)",
         });
+        pushToBacklog(s);
         continue;
       }
 
       if (!target) {
         noSprintByStatus.set(s.status, (noSprintByStatus.get(s.status) ?? 0) + 1);
+        pushToBacklog(s);
         continue;
       }
 
       const match = sprintByName.get(normaliseSprintName(target));
       if (!match) {
         unknownSprintCounts.set(target, (unknownSprintCounts.get(target) ?? 0) + 1);
-        continue;
-      }
-
-      // For non-active sprints, drop stories whose DEV cycle is already done —
-      // Jira itself omits them from the board count. For current/next sprints,
-      // Jira keeps the full snapshot, so we do too.
-      const sprintIsSnapshot = SNAPSHOT_SPRINT_STATUSES.has(match.status);
-      if (!sprintIsSnapshot && order >= POST_DEV_ORDER_THRESHOLD) {
-        postDevSkippedByStatus.set(s.status, (postDevSkippedByStatus.get(s.status) ?? 0) + 1);
+        pushToBacklog(s);
         continue;
       }
 
@@ -189,12 +212,10 @@ export async function POST(request: NextRequest) {
       mode: "auto-split",
       totalRows: stories.length,
       assigned: storiesWithSprint,
+      routedToBacklog: storiesToBacklog,
       perSprint: perSprint.sort((a, b) => a.sprintName.localeCompare(b.sprintName)),
       noSprintByStatus: Object.fromEntries(
         Array.from(noSprintByStatus.entries()).sort((a, b) => b[1] - a[1]),
-      ),
-      postDevSkippedByStatus: Object.fromEntries(
-        Array.from(postDevSkippedByStatus.entries()).sort((a, b) => b[1] - a[1]),
       ),
       newStatusStories,
       unknownSprintCounts: Object.fromEntries(
