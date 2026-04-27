@@ -204,7 +204,8 @@ function compareSprintNames(a: string, b: string): number {
 function mapSprint(
   row: SprintRow,
   status: SprintStatus = "future",
-  isActive: boolean = false
+  isActive: boolean = false,
+  isCurrentOverride?: boolean,
 ): Sprint {
   return {
     id: row.id,
@@ -216,7 +217,7 @@ function mapSprint(
     focusFactor: row.focusFactor,
     velocityProven: row.velocityProven,
     velocityTarget: row.velocityTarget,
-    isCurrent: row.isCurrent === 1,
+    isCurrent: isCurrentOverride ?? row.isCurrent === 1,
     isDemo: row.isDemo === 1,
     progressFactor: row.progressFactor ?? 0,
     status,
@@ -346,13 +347,43 @@ function mapSprintStory(row: SprintStoryRow): Omit<SprintStory, "isExcluded"> {
 // Public query functions
 // ---------------------------------------------------------------------------
 
-/** Return the sprint marked as current (isCurrent = 1). */
+/**
+ * Pick the "current" sprint relative to today's date.
+ *
+ * - If today falls inside a sprint window, that sprint is current.
+ * - If today falls in a gap (e.g. a weekend between two sprints), the next
+ *   sprint to start is current — that's the one we're actively planning for.
+ * - Demo / PD sprints are eligible too: when a PD cycle is running, that's
+ *   the cycle in flight.
+ *
+ * Returns the chosen SprintRow, or null if no sprint has dates that match.
+ */
+function pickCurrentSprintRow(rows: SprintRow[]): SprintRow | null {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().slice(0, 10);
+
+  const dated = rows
+    .filter((r) => r.startDate && r.endDate)
+    .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
+
+  // Sprint whose window contains today
+  const inFlight = dated.find(
+    (r) => (r.startDate ?? "") <= todayStr && (r.endDate ?? "") >= todayStr,
+  );
+  if (inFlight) return inFlight;
+
+  // Otherwise, the next sprint to start
+  const upcoming = dated.find((r) => (r.startDate ?? "") > todayStr);
+  return upcoming ?? null;
+}
+
+/** Return the current sprint, derived from today's date. */
 export async function getCurrentSprint(): Promise<Sprint | null> {
   const db = getDb();
-  const row = db
-    .prepare("SELECT * FROM Sprint WHERE isCurrent = 1 LIMIT 1")
-    .get() as SprintRow | undefined;
-  return row ? mapSprint(row, "current", true) : null;
+  const rows = db.prepare("SELECT * FROM Sprint").all() as SprintRow[];
+  const row = pickCurrentSprintRow(rows);
+  return row ? mapSprint(row, "current", true, true) : null;
 }
 
 /**
@@ -373,8 +404,9 @@ export async function getAllSprints(): Promise<Sprint[]> {
   // Sort naturally by sprint name
   rows.sort((a, b) => compareSprintNames(a.name, b.name));
 
-  // Find the current sprint's major number
-  const currentRow = rows.find((r) => r.isCurrent === 1);
+  // Derive the current sprint from today's date — the stored isCurrent flag
+  // is ignored so the app stays in sync as time passes without manual updates.
+  const currentRow = pickCurrentSprintRow(rows);
   const currentMajor = currentRow ? sprintSortKey(currentRow.name)[0] : -1;
 
   return rows.map((row) => {
@@ -389,7 +421,7 @@ export async function getAllSprints(): Promise<Sprint[]> {
         status = "previous";
         isActive = true;
       } else if (major === currentMajor) {
-        status = row.isCurrent === 1 ? "current" : "current";
+        status = "current";
         isActive = true;
       } else if (major === currentMajor + 1) {
         status = "next";
@@ -402,13 +434,13 @@ export async function getAllSprints(): Promise<Sprint[]> {
       }
     }
 
-    // Override: the sprint flagged as current gets "current" status
-    if (row.isCurrent === 1) {
+    const isCurrent = currentRow?.id === row.id;
+    if (isCurrent) {
       status = "current";
       isActive = true;
     }
 
-    return mapSprint(row, status, isActive);
+    return mapSprint(row, status, isActive, isCurrent);
   });
 }
 

@@ -97,7 +97,7 @@ export function BacklogReminder({ freshness }: BacklogReminderProps) {
         </div>
 
         <Link
-          href="/backlog"
+          href="/project-backlog"
           className="group flex flex-1 items-center gap-3 min-w-0"
         >
           <div className="flex items-center gap-2 text-[13px]">

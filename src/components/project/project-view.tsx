@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSprint } from "@/contexts/sprint-context";
-import type { SprintStory } from "@/types";
+import type { ProjectOverview } from "@/lib/project-overview";
 
 function fmt(n: number | null | undefined, decimals = 0): string {
   if (n === null || n === undefined) return "—";
@@ -14,87 +13,38 @@ function fmt(n: number | null | undefined, decimals = 0): string {
 }
 
 interface Props {
-  storiesBySprint: Record<string, SprintStory[]>;
+  overview: ProjectOverview;
 }
 
 /**
- * Project — rolled-up end-to-end numbers for the whole engagement:
+ * Project — rolled-up end-to-end numbers for the whole engagement.
  *
- *  • Total SP we need to deliver (scope of every non-demo sprint +
- *    any completedSP from closed sprints the stories of which may
- *    have moved out since)
- *  • Delivered to date (sum of completedSP on closed sprints)
- *  • In progress (scope of the current sprint)
- *  • Remaining in future sprints
- *
- * Percentages and a progress bar give the executive view without
- * drilling into any sprint.
+ * All figures come from `getProjectOverview()` — the same engine the Dashboard
+ * uses. Headline totals, percentages and per-sprint values are pulled from
+ * that single source so every tab agrees down to the SP.
  */
-export function ProjectView({ storiesBySprint }: Props) {
-  const { allSprints, sprints, setSelectedIndex } = useSprint();
+export function ProjectView({ overview }: Props) {
+  const { sprints, setSelectedIndex } = useSprint();
   const router = useRouter();
 
-  const stats = useMemo(() => {
-    const nonDemo = allSprints.filter((s) => !s.isDemo);
+  const {
+    totalStories,
+    totalSP,
+    deliveredPast,
+    deliveredCurrent,
+    inProgress,
+    remaining,
+    excluded,
+  } = overview;
 
-    // Delivered: sum of completed SP on any closed sprint.
-    const deliveredSP = nonDemo
-      .filter((s) => s.completedSP != null && s.completedSP > 0)
-      .reduce((sum, s) => sum + (s.completedSP ?? 0), 0);
+  const deliveredSP = deliveredPast.sp + deliveredCurrent.sp;
+  const deliveredStories = deliveredPast.stories + deliveredCurrent.stories;
 
-    // In progress: SP currently planned in the current sprint.
-    const currentSprint = nonDemo.find((s) => s.isCurrent);
-    const inProgressSP = currentSprint
-      ? (storiesBySprint[currentSprint.id] ?? [])
-          .filter((st) => !st.isExcluded)
-          .reduce((sum, st) => sum + (st.storyPoints ?? 0), 0)
-      : 0;
+  // Same denominator as the Dashboard so percentages match exactly.
+  const bucketsSum =
+    deliveredPast.sp + deliveredCurrent.sp + inProgress.sp + remaining.sp + excluded.sp;
 
-    // Remaining: SP planned in future (next / planning / future) sprints.
-    const remainingSP = nonDemo
-      .filter(
-        (s) =>
-          s.status === "next" ||
-          s.status === "planning" ||
-          s.status === "future",
-      )
-      .reduce((sum, s) => {
-        const ss = storiesBySprint[s.id] ?? [];
-        return (
-          sum +
-          ss.filter((st) => !st.isExcluded).reduce((a, st) => a + (st.storyPoints ?? 0), 0)
-        );
-      }, 0);
-
-    const totalSP = deliveredSP + inProgressSP + remainingSP;
-
-    // Counts for context
-    const closedSprints = nonDemo.filter(
-      (s) => s.completedSP != null && s.completedSP > 0,
-    ).length;
-    const remainingSprints = nonDemo.filter(
-      (s) =>
-        s.status === "next" || s.status === "planning" || s.status === "future",
-    ).length;
-
-    const pct = (v: number) => (totalSP > 0 ? (v / totalSP) * 100 : 0);
-
-    return {
-      totalSP,
-      deliveredSP,
-      inProgressSP,
-      remainingSP,
-      currentSprint,
-      closedSprints,
-      remainingSprints,
-      pctDelivered: pct(deliveredSP),
-      pctInProgress: pct(inProgressSP),
-      pctRemaining: pct(remainingSP),
-    };
-  }, [allSprints, storiesBySprint]);
-
-  const { totalSP } = stats;
-  if (totalSP === 0) {
+  if (bucketsSum === 0) {
     return (
       <p className="text-sm text-slate-400">
         No stories yet — import the Jira backlog to populate project totals.
@@ -102,41 +52,77 @@ export function ProjectView({ storiesBySprint }: Props) {
     );
   }
 
+  const pct = (v: number) => (bucketsSum > 0 ? (v / bucketsSum) * 100 : 0);
+  const pctDelivered = pct(deliveredSP);
+  const pctInProgress = pct(inProgress.sp);
+  const pctRemaining = pct(remaining.sp);
+  const pctExcluded = pct(excluded.sp);
+
+  const closedSprints = overview.bySprint.filter(
+    (s) => s.delivered.sp > 0 && s.sprintStatus !== "current",
+  ).length;
+  const remainingSprints = overview.bySprint.filter(
+    (s) =>
+      s.sprintStatus === "next" ||
+      s.sprintStatus === "planning" ||
+      s.sprintStatus === "future",
+  ).length;
+  const currentSprint = overview.bySprint.find((s) => s.sprintStatus === "current");
+
+  // Headline scope = every story from the CSV, descoped/split included.
+  const headlineSP = totalSP + excluded.sp;
+  const headlineStories = totalStories + excluded.stories;
+
   return (
     <div className="flex flex-col gap-8">
       {/* Headline total + stacked progress bar */}
       <section className="rounded-2xl border border-white/[0.06] bg-slate-900/40 p-6">
         <p className="text-[12px] text-slate-500">Total scope</p>
         <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-100">
-          {fmt(totalSP)} <span className="text-base font-normal text-slate-500">SP</span>
+          {fmt(headlineSP)}{" "}
+          <span className="text-base font-normal text-slate-500">SP</span>
+          <span className="ml-3 text-base font-normal text-slate-500 tabular-nums">
+            {fmt(headlineStories)} stories
+          </span>
         </p>
         <p className="mt-1 text-[12px] text-slate-500">
-          {fmt(stats.deliveredSP)} delivered · {fmt(stats.inProgressSP)} in progress ·{" "}
-          {fmt(stats.remainingSP)} remaining
+          {fmt(deliveredSP)} delivered · {fmt(inProgress.sp)} in progress ·{" "}
+          {fmt(remaining.sp)} remaining
+          {excluded.sp > 0 && <> · {fmt(excluded.sp)} descoped/split</>}
         </p>
 
         {/* Stacked progress bar */}
         <div className="mt-5 flex h-2 w-full overflow-hidden rounded-full bg-white/[0.04]">
           <div
             className="bg-emerald-400/80"
-            style={{ width: `${stats.pctDelivered}%` }}
-            title={`${fmt(stats.deliveredSP)} SP delivered`}
+            style={{ width: `${pctDelivered}%` }}
+            title={`${fmt(deliveredSP)} SP delivered`}
           />
           <div
             className="bg-amber-400/80"
-            style={{ width: `${stats.pctInProgress}%` }}
-            title={`${fmt(stats.inProgressSP)} SP in progress`}
+            style={{ width: `${pctInProgress}%` }}
+            title={`${fmt(inProgress.sp)} SP in progress`}
           />
           <div
             className="bg-blue-400/60"
-            style={{ width: `${stats.pctRemaining}%` }}
-            title={`${fmt(stats.remainingSP)} SP remaining`}
+            style={{ width: `${pctRemaining}%` }}
+            title={`${fmt(remaining.sp)} SP remaining`}
           />
+          {excluded.sp > 0 && (
+            <div
+              className="bg-red-400/70"
+              style={{ width: `${pctExcluded}%` }}
+              title={`${fmt(excluded.sp)} SP descoped/split`}
+            />
+          )}
         </div>
         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[11px]">
-          <LegendDot color="bg-emerald-400" label="Delivered" pct={stats.pctDelivered} />
-          <LegendDot color="bg-amber-400" label="In progress" pct={stats.pctInProgress} />
-          <LegendDot color="bg-blue-400" label="Remaining" pct={stats.pctRemaining} />
+          <LegendDot color="bg-emerald-400" label="Delivered" pct={pctDelivered} />
+          <LegendDot color="bg-amber-400" label="In progress" pct={pctInProgress} />
+          <LegendDot color="bg-blue-400" label="Remaining" pct={pctRemaining} />
+          {excluded.sp > 0 && (
+            <LegendDot color="bg-red-400" label="Descoped/split" pct={pctExcluded} />
+          )}
         </div>
       </section>
 
@@ -146,30 +132,30 @@ export function ProjectView({ storiesBySprint }: Props) {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
             label="Delivered"
-            value={`${fmt(stats.deliveredSP)} SP`}
-            hint={`${stats.closedSprints} closed sprint${stats.closedSprints === 1 ? "" : "s"} · ${fmt(stats.pctDelivered, 1)}%`}
+            value={`${fmt(deliveredSP)} SP`}
+            hint={`${closedSprints} closed sprint${closedSprints === 1 ? "" : "s"} · ${fmt(deliveredStories)} stor${deliveredStories === 1 ? "y" : "ies"} · ${fmt(pctDelivered, 1)}%`}
             tone="emerald"
           />
           <Kpi
             label="In progress"
-            value={`${fmt(stats.inProgressSP)} SP`}
+            value={`${fmt(inProgress.sp)} SP`}
             hint={
-              stats.currentSprint
-                ? `${stats.currentSprint.name} · ${fmt(stats.pctInProgress, 1)}%`
+              currentSprint
+                ? `${currentSprint.sprintName} · ${fmt(inProgress.stories)} stor${inProgress.stories === 1 ? "y" : "ies"} · ${fmt(pctInProgress, 1)}%`
                 : "no current sprint"
             }
             tone="amber"
           />
           <Kpi
             label="Remaining"
-            value={`${fmt(stats.remainingSP)} SP`}
-            hint={`${stats.remainingSprints} upcoming sprint${stats.remainingSprints === 1 ? "" : "s"} · ${fmt(stats.pctRemaining, 1)}%`}
+            value={`${fmt(remaining.sp)} SP`}
+            hint={`${remainingSprints} upcoming sprint${remainingSprints === 1 ? "" : "s"} · ${fmt(remaining.stories)} stor${remaining.stories === 1 ? "y" : "ies"} · ${fmt(pctRemaining, 1)}%`}
             tone="blue"
           />
           <Kpi
             label="Total"
-            value={`${fmt(stats.totalSP)} SP`}
-            hint="delivered + in progress + remaining"
+            value={`${fmt(headlineSP)} SP`}
+            hint={`${fmt(headlineStories)} stories incl. descoped`}
           />
         </div>
       </section>
@@ -178,63 +164,57 @@ export function ProjectView({ storiesBySprint }: Props) {
       <section>
         <h3 className="text-[13px] font-medium text-slate-300 mb-3">Per sprint</h3>
         <div className="rounded-2xl border border-white/[0.04] divide-y divide-white/[0.04]">
-          {allSprints
-            .filter((s) => !s.isDemo)
-            .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""))
-            .map((s) => {
-              const scopeStories = storiesBySprint[s.id] ?? [];
-              const scope = scopeStories
-                .filter((st) => !st.isExcluded)
-                .reduce((sum, st) => sum + (st.storyPoints ?? 0), 0);
-              const isPast = s.completedSP != null && s.completedSP > 0;
-              const valueLabel = isPast
-                ? `${fmt(s.completedSP)} delivered`
-                : s.isCurrent
-                  ? `${fmt(scope)} in progress`
-                  : scope > 0
-                    ? `${fmt(scope)} planned`
-                    : "empty";
-              const toneClass = isPast
-                ? "text-emerald-300"
-                : s.isCurrent
-                  ? "text-amber-300"
-                  : scope > 0
-                    ? "text-blue-300"
-                    : "text-slate-600";
-              const activeIdx = sprints.findIndex((a) => a.id === s.id);
-              const clickable = activeIdx >= 0;
-              const handleClick = () => {
-                if (!clickable) return;
-                setSelectedIndex(activeIdx);
-                router.push("/capacity");
-              };
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={handleClick}
-                  disabled={!clickable}
-                  className={`flex w-full items-baseline justify-between gap-4 px-5 py-3 text-left transition-colors ${
-                    clickable
-                      ? "cursor-pointer hover:bg-white/[0.03]"
-                      : "cursor-default opacity-70"
-                  }`}
-                >
-                  <div>
-                    <p className="text-[13px] text-slate-200 font-medium">{s.name}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {scopeStories.length} stor{scopeStories.length === 1 ? "y" : "ies"} in scope
-                      {s.commitmentSP != null && s.commitmentSP > 0 && (
-                        <> · committed {fmt(s.commitmentSP)}</>
-                      )}
-                    </p>
-                  </div>
-                  <p className={`text-[13px] tabular-nums ${toneClass}`}>
-                    {valueLabel}
+          {overview.bySprint.map((s) => {
+            const isCurrent = s.sprintStatus === "current";
+            const isPast = s.delivered.sp > 0 && !isCurrent;
+            const valueLabel = isPast
+              ? `${fmt(s.delivered.sp)} delivered`
+              : isCurrent
+                ? `${fmt(s.inProgress.sp + s.delivered.sp)} in progress`
+                : s.remaining.sp > 0
+                  ? `${fmt(s.remaining.sp)} planned`
+                  : "empty";
+            const toneClass = isPast
+              ? "text-emerald-300"
+              : isCurrent
+                ? "text-amber-300"
+                : s.remaining.sp > 0
+                  ? "text-blue-300"
+                  : "text-slate-600";
+            const activeIdx = sprints.findIndex((a) => a.id === s.sprintId);
+            const clickable = activeIdx >= 0;
+            const handleClick = () => {
+              if (!clickable) return;
+              setSelectedIndex(activeIdx);
+              router.push("/capacity");
+            };
+            return (
+              <button
+                key={s.sprintId}
+                type="button"
+                onClick={handleClick}
+                disabled={!clickable}
+                className={`flex w-full items-baseline justify-between gap-4 px-5 py-3 text-left transition-colors ${
+                  clickable
+                    ? "cursor-pointer hover:bg-white/[0.03]"
+                    : "cursor-default opacity-70"
+                }`}
+              >
+                <div>
+                  <p className="text-[13px] text-slate-200 font-medium">{s.sprintName}</p>
+                  <p className="text-[11px] text-slate-500">
+                    {s.totalStories} stor{s.totalStories === 1 ? "y" : "ies"} in scope
+                    {s.excluded.sp > 0 && (
+                      <> · {s.excluded.stories} descoped/split</>
+                    )}
                   </p>
-                </button>
-              );
-            })}
+                </div>
+                <p className={`text-[13px] tabular-nums ${toneClass}`}>
+                  {valueLabel}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </section>
     </div>

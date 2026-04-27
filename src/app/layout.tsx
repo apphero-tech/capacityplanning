@@ -1,16 +1,30 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import "./globals.css"
 
-const inter = Inter({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-display",
+  axes: ["opsz", "SOFT"],
+  display: "swap",
+})
+
+const interTight = Inter_Tight({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["300", "400", "500", "600", "700"],
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["300", "400", "500", "600"],
 })
 
 export const metadata: Metadata = {
-  title: "York Capacity Planning",
-  description: "Sprint capacity planning and team allocation tool",
+  title: "York · Capacity",
+  description: "An editorial planning surface.",
 }
 
 export default function RootLayout({
@@ -21,11 +35,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${inter.variable} font-sans antialiased bg-[#0a0a12] text-slate-100`}
+        className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
-        <TooltipProvider>
-          {children}
-        </TooltipProvider>
+        <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
   )

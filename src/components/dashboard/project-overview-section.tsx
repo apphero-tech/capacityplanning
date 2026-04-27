@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { Clock, AlertCircle } from "lucide-react";
-import { BacklogAutoImportButton } from "@/components/backlog/auto-import-button";
 import type { ProjectOverview } from "@/lib/project-overview";
 
 interface Props {
@@ -184,7 +183,6 @@ export function ProjectOverviewSection({ overview }: Props) {
         </div>
 
         <div className="flex flex-col items-end gap-1.5">
-          <BacklogAutoImportButton />
           {freshness && (
             <div className={`flex items-center gap-1.5 text-[11px] ${isStale ? "text-amber-300/80" : "text-slate-500"}`}>
               {isStale ? <AlertCircle className="size-3" /> : <Clock className="size-3" />}
@@ -195,7 +193,9 @@ export function ProjectOverviewSection({ overview }: Props) {
             </div>
           )}
           {!freshness && (
-            <p className="text-[11px] text-slate-500">Aucun backlog importé pour l&apos;instant</p>
+            <p className="text-[11px] text-slate-500">
+              Aucun backlog importé — importer depuis Project Backlog
+            </p>
           )}
         </div>
       </div>

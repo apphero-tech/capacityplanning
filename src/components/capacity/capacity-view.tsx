@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSprint } from "@/contexts/sprint-context";
 import { useProjectionSettings } from "@/contexts/projection-settings-context";
 import type { SprintStory } from "@/types";
@@ -13,7 +14,40 @@ import {
   type VelocityBasis,
 } from "@/lib/capacity-engine";
 import { formatDateRangeShort } from "@/lib/date-utils";
-import { Check, AlertTriangle, Info } from "lucide-react";
+import { Check, AlertTriangle, Info, Upload, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+interface ReconcileResponse {
+  ok: true;
+  sprintId: string;
+  sprintName: string;
+  totals: {
+    csvRows: number;
+    inScope: number;
+    ignoredRows: number;
+    existing: number;
+    matched: number;
+    added: number;
+    removed: number;
+    changed: number;
+  };
+  added: { key: string; summary: string; storyPoints: number | null; status: string }[];
+  removed: { key: string; summary: string; storyPoints: number | null; status: string }[];
+  changed: {
+    key: string;
+    summary: string;
+    diffs: { field: string; before: unknown; after: unknown }[];
+  }[];
+}
+
+const RECONCILABLE_STATUSES = new Set(["current", "next", "planning"]);
 
 function fmt(n: number | null | undefined, decimals = 0): string {
   if (n === null || n === undefined) return "—";
@@ -167,6 +201,8 @@ export function CapacityView({ storiesBySprint }: Props) {
     ? `Fits — ${fmt(plan.defaultProjection - plan.scopeSP)} SP of room`
     : `Overflow — ${fmt(Math.abs(plan.defaultProjection - plan.scopeSP))} SP to cut`;
 
+  const canReconcile = !!sprint && RECONCILABLE_STATUSES.has(sprint.status);
+
   const projections = basisResults.map(({ basis: b, result }) => {
     const effectiveVelocity = result.velocity * effectiveMultiplier;
     return {
@@ -189,9 +225,17 @@ export function CapacityView({ storiesBySprint }: Props) {
             Can we deliver{" "}
             <span className="text-slate-200 font-medium">{sprint.name}</span>?
           </p>
-          <p className="text-[12px] text-slate-500">
-            {formatDateRangeShort(sprint.startDate, sprint.endDate)}
-          </p>
+          <div className="flex items-center gap-3">
+            {canReconcile && (
+              <ReconcileSprintButton
+                sprintId={sprint.id}
+                sprintName={sprint.name}
+              />
+            )}
+            <p className="text-[12px] text-slate-500">
+              {formatDateRangeShort(sprint.startDate, sprint.endDate)}
+            </p>
+          </div>
         </div>
 
         <div className="mt-5 space-y-3">
@@ -587,5 +631,309 @@ function BreakdownRow({
         </span>
       )}
     </div>
+  );
+}
+
+/**
+ * Sprint-scoped CSV reconciliation button.
+ *
+ * Two-step UX so the user can audit deltas before any DB write:
+ *  1. Pick a CSV → POST /api/backlog/reconcile (read-only diff).
+ *  2. A modal shows matched / added / removed / changed counts plus the
+ *     full diff. Confirming calls the existing /api/backlog/import with
+ *     sprintId, which atomically replaces this sprint's stories.
+ */
+function ReconcileSprintButton({
+  sprintId,
+  sprintName,
+}: {
+  sprintId: string;
+  sprintName: string;
+}) {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [report, setReport] = useState<ReconcileResponse | null>(null);
+
+  const reset = () => {
+    setReport(null);
+    setError(null);
+    setPickedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPickedFile(file);
+    setError(null);
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("sprintId", sprintId);
+      const res = await fetch("/api/backlog/reconcile", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Reconciliation failed");
+        setReport(null);
+      } else {
+        setReport(data as ReconcileResponse);
+      }
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const apply = async () => {
+    if (!pickedFile) return;
+    setApplying(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", pickedFile);
+      fd.append("sprintId", sprintId);
+      const res = await fetch("/api/backlog/import", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Import failed");
+      } else {
+        reset();
+        router.refresh();
+      }
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const open = report !== null || error !== null || loading;
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={onFile}
+      />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:bg-white/[0.06] hover:text-slate-100 transition-colors"
+      >
+        <Upload className="size-3" />
+        Re-import scope CSV
+      </button>
+
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) reset();
+        }}
+      >
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              Reconcile {sprintName} against {pickedFile?.name ?? "CSV"}
+            </DialogTitle>
+            <DialogDescription>
+              Read-only diff between the CSV scope and what&apos;s currently stored.
+              Nothing has been written yet.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            {loading && (
+              <div className="flex items-center gap-2 text-sm text-slate-400 py-8 justify-center">
+                <Loader2 className="size-4 animate-spin" />
+                Parsing & comparing…
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
+
+            {report && (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
+                  <SummaryTile label="Matched" value={report.totals.matched} tone="muted" />
+                  <SummaryTile label="Added" value={report.totals.added} tone={report.totals.added > 0 ? "emerald" : "muted"} />
+                  <SummaryTile label="Removed" value={report.totals.removed} tone={report.totals.removed > 0 ? "red" : "muted"} />
+                  <SummaryTile label="Changed" value={report.totals.changed} tone={report.totals.changed > 0 ? "amber" : "muted"} />
+                </div>
+
+                <p className="text-[11px] text-slate-500">
+                  CSV: {report.totals.csvRows} rows · {report.totals.inScope} match{" "}
+                  {sprintName} · {report.totals.ignoredRows} ignored (other sprints) ·
+                  DB has {report.totals.existing} stor
+                  {report.totals.existing === 1 ? "y" : "ies"} for this sprint.
+                </p>
+
+                {report.added.length > 0 && (
+                  <DiffSection title="Added" tone="emerald">
+                    <ul className="divide-y divide-white/[0.04]">
+                      {report.added.map((s) => (
+                        <li key={s.key} className="py-1.5 flex items-baseline justify-between gap-3 text-[12px]">
+                          <span className="font-mono text-slate-400 w-20 shrink-0">{s.key}</span>
+                          <span className="flex-1 truncate text-slate-200">{s.summary}</span>
+                          <span className="text-emerald-300 tabular-nums">
+                            {s.storyPoints ?? "—"} SP
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </DiffSection>
+                )}
+
+                {report.removed.length > 0 && (
+                  <DiffSection title="Removed" tone="red">
+                    <ul className="divide-y divide-white/[0.04]">
+                      {report.removed.map((s) => (
+                        <li key={s.key} className="py-1.5 flex items-baseline justify-between gap-3 text-[12px]">
+                          <span className="font-mono text-slate-400 w-20 shrink-0">{s.key}</span>
+                          <span className="flex-1 truncate text-slate-200">{s.summary}</span>
+                          <span className="text-red-300 tabular-nums">
+                            {s.storyPoints ?? "—"} SP
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </DiffSection>
+                )}
+
+                {report.changed.length > 0 && (
+                  <DiffSection title="Changed" tone="amber">
+                    <ul className="space-y-2">
+                      {report.changed.map((s) => (
+                        <li key={s.key} className="text-[12px]">
+                          <div className="flex items-baseline gap-3">
+                            <span className="font-mono text-slate-400 w-20 shrink-0">{s.key}</span>
+                            <span className="flex-1 truncate text-slate-200">{s.summary}</span>
+                          </div>
+                          <ul className="mt-1 ml-23 pl-23 space-y-0.5 text-[11px] text-slate-400">
+                            {s.diffs.map((d, i) => (
+                              <li key={i} className="ml-23">
+                                <span className="text-slate-500">{d.field}:</span>{" "}
+                                <span className="line-through text-red-300/80">
+                                  {String(d.before ?? "—")}
+                                </span>{" "}
+                                <span className="text-slate-500">→</span>{" "}
+                                <span className="text-emerald-300">
+                                  {String(d.after ?? "—")}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  </DiffSection>
+                )}
+
+                {report.totals.added === 0 &&
+                  report.totals.removed === 0 &&
+                  report.totals.changed === 0 && (
+                    <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm text-emerald-300 flex items-center gap-2">
+                      <Check className="size-4" />
+                      Perfect match — nothing to apply.
+                    </div>
+                  )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="border-t border-white/[0.06] pt-3">
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-md border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[12px] font-medium text-slate-300 hover:bg-white/[0.06]"
+            >
+              Cancel
+            </button>
+            {report && (
+              <button
+                type="button"
+                onClick={apply}
+                disabled={
+                  applying ||
+                  (report.totals.added === 0 &&
+                    report.totals.removed === 0 &&
+                    report.totals.changed === 0)
+                }
+                className="rounded-md bg-emerald-500/90 px-3 py-1.5 text-[12px] font-medium text-emerald-50 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                {applying && <Loader2 className="size-3 animate-spin" />}
+                Apply changes
+              </button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function SummaryTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "muted" | "emerald" | "red" | "amber";
+}) {
+  const colorByTone: Record<typeof tone, string> = {
+    muted: "text-slate-300",
+    emerald: "text-emerald-300",
+    red: "text-red-300",
+    amber: "text-amber-300",
+  };
+  return (
+    <div className="rounded-md border border-white/[0.06] bg-slate-900/40 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
+      <p className={`text-lg font-semibold tabular-nums ${colorByTone[tone]}`}>{value}</p>
+    </div>
+  );
+}
+
+function DiffSection({
+  title,
+  tone,
+  children,
+}: {
+  title: string;
+  tone: "emerald" | "red" | "amber";
+  children: React.ReactNode;
+}) {
+  const dotByTone: Record<typeof tone, string> = {
+    emerald: "bg-emerald-400",
+    red: "bg-red-400",
+    amber: "bg-amber-400",
+  };
+  return (
+    <details open className="rounded-md border border-white/[0.06] bg-slate-950/30 px-3 py-2">
+      <summary className="cursor-pointer text-[12px] font-medium text-slate-200 flex items-center gap-2">
+        <span className={`size-1.5 rounded-full ${dotByTone[tone]}`} />
+        {title}
+      </summary>
+      <div className="mt-2">{children}</div>
+    </details>
   );
 }

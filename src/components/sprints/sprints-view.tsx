@@ -42,7 +42,12 @@ function fmt(n: number, decimals = 1): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function SprintsView() {
+interface SprintsViewProps {
+  /** Per-sprint imported scope (story count + SP) — keyed by sprint id. */
+  scopeBySprint?: Record<string, { stories: number; sp: number }>;
+}
+
+export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
   const router = useRouter();
   const {
     selectedSprint,
@@ -158,6 +163,26 @@ export function SprintsView() {
           { label: "Total sprints", value: totalSprints },
           { label: "Selected", value: selectedSprint?.name ?? "—", muted: !selectedSprint },
           {
+            label: "Current scope",
+            value:
+              selectedSprint != null
+                ? (() => {
+                    const sc = scopeBySprint[selectedSprint.id];
+                    return sc && sc.sp > 0 ? `${fmt(sc.sp, 0)} SP` : "—";
+                  })()
+                : "—",
+            hint:
+              selectedSprint != null
+                ? (() => {
+                    const sc = scopeBySprint[selectedSprint.id];
+                    return sc && sc.stories > 0
+                      ? `${sc.stories} stor${sc.stories === 1 ? "y" : "ies"} imported`
+                      : "no stories imported";
+                  })()
+                : undefined,
+            muted: !selectedSprint,
+          },
+          {
             label: "Expected delivery",
             value:
               selectedSprint != null
@@ -218,8 +243,13 @@ export function SprintsView() {
                     </span>
                   )}
                 </div>
-                <div className="w-14 shrink-0 flex items-end justify-end pb-1">
-                  <span className="text-[10px] text-emerald-400/60 font-medium">SP</span>
+                <div className="w-32 shrink-0 flex items-end justify-end pb-1 gap-3 pr-1">
+                  <span className="text-[10px] text-cyan-400/70 font-medium w-14 text-right">
+                    Scope
+                  </span>
+                  <span className="text-[10px] text-emerald-400/60 font-medium w-14 text-right">
+                    Forecast
+                  </span>
                 </div>
               </div>
 
@@ -343,34 +373,82 @@ export function SprintsView() {
                   })}
                 </div>
 
-                {/* SP column */}
-                <div className="w-14 shrink-0">
-                  {sprintPlan.rows.map((s) => {
-                    const sp =
-                      sprintExpectedSP(s, s.forecast?.projectedSPProven) ?? 0;
-                    return (
-                      <div
-                        key={s.id}
-                        className="h-8 flex items-center justify-end pl-2"
-                      >
-                        {sp > 0 ? (
-                          <span
-                            className={`text-xs tabular-nums font-semibold ${
-                              s.isCurrent
-                                ? "text-emerald-400"
-                                : s.isActive
-                                  ? "text-emerald-400/70"
-                                  : "text-slate-500"
-                            }`}
-                          >
-                            {fmt(sp, 0)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-700">—</span>
-                        )}
-                      </div>
-                    );
-                  })}
+                {/* Right-side numbers: Scope (imported) + Forecast/Delivered */}
+                <div className="w-32 shrink-0 flex">
+                  {/* Scope column — current SP loaded into the sprint */}
+                  <div className="w-14 shrink-0 pr-1">
+                    {sprintPlan.rows.map((s) => {
+                      const scope = scopeBySprint[s.id]?.sp ?? 0;
+                      const stories = scopeBySprint[s.id]?.stories ?? 0;
+                      return (
+                        <div
+                          key={s.id}
+                          className="h-8 flex items-center justify-end"
+                          title={
+                            stories > 0
+                              ? `${stories} stor${stories === 1 ? "y" : "ies"} imported`
+                              : "no stories imported"
+                          }
+                        >
+                          {scope > 0 ? (
+                            <span
+                              className={`text-xs tabular-nums font-semibold ${
+                                s.isCurrent
+                                  ? "text-cyan-300"
+                                  : s.isActive
+                                    ? "text-cyan-400/70"
+                                    : "text-cyan-500/50"
+                              }`}
+                            >
+                              {fmt(scope, 0)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-700">—</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Forecast/Delivered column */}
+                  <div className="w-14 shrink-0 pl-2">
+                    {sprintPlan.rows.map((s) => {
+                      const sp =
+                        sprintExpectedSP(s, s.forecast?.projectedSPProven) ?? 0;
+                      const isActual =
+                        s.completedSP != null && s.completedSP > 0;
+                      return (
+                        <div
+                          key={s.id}
+                          className="h-8 flex items-center justify-end"
+                          title={
+                            isActual
+                              ? `Delivered: ${fmt(sp, 0)} SP`
+                              : sp > 0
+                                ? `Forecast: ${fmt(sp, 0)} SP`
+                                : "no forecast"
+                          }
+                        >
+                          {sp > 0 ? (
+                            <span
+                              className={`text-xs tabular-nums font-semibold ${
+                                isActual
+                                  ? "text-blue-300"
+                                  : s.isCurrent
+                                    ? "text-emerald-400"
+                                    : s.isActive
+                                      ? "text-emerald-400/70"
+                                      : "text-slate-500"
+                              }`}
+                            >
+                              {fmt(sp, 0)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-700">—</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -399,6 +477,9 @@ export function SprintsView() {
                   DEV hrs
                 </TableHead>
                 <TableHead className="text-[11px] font-medium text-slate-500 text-right w-28">
+                  Scope
+                </TableHead>
+                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-28">
                   Projected SP
                 </TableHead>
                 <TableHead className="text-[11px] font-medium text-slate-500 text-center w-28">
@@ -410,7 +491,7 @@ export function SprintsView() {
               {sprints.length === 0 ? (
                 <TableRow className="border-white/[0.06]">
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center text-slate-500 py-8"
                   >
                     No sprints found.
@@ -472,6 +553,28 @@ export function SprintsView() {
                         ) : (
                           <span className="text-slate-600">&mdash;</span>
                         )}
+                      </TableCell>
+
+                      {/* Scope — current SP loaded into the sprint from the
+                          imported backlog (story count + SP). Cyan to set it
+                          apart from the green forecast / blue delivered. */}
+                      <TableCell className="text-right">
+                        {(() => {
+                          const scope = scopeBySprint[s.id];
+                          if (!scope || scope.sp === 0) {
+                            return <span className="text-slate-600">&mdash;</span>;
+                          }
+                          return (
+                            <span className="inline-flex items-baseline gap-1.5 justify-end">
+                              <span className="font-semibold text-cyan-300 tabular-nums">
+                                {fmt(scope.sp, 0)}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                · {scope.stories} stor{scope.stories === 1 ? "y" : "ies"}
+                              </span>
+                            </span>
+                          );
+                        })()}
                       </TableCell>
 
                       {/* Projected SP — delivered (closed) / in-progress scope

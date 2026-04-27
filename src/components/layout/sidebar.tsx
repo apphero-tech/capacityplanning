@@ -3,178 +3,191 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  LayoutDashboard,
-  Users,
-  ListTodo,
-  BarChart3,
-  Calendar,
-  CalendarOff,
-  PieChart,
-  Activity,
-  Target,
-  Settings,
-  PanelLeftClose,
-  PanelLeft,
-} from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Separator } from "@/components/ui/separator"
 
-// Inputs (top) → answer (bottom). Plan is the single output page that
-// answers "can we deliver the next sprint?". Velocity was folded into
-// Plan's historical footer in the v2 simplification.
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/sprints", label: "Sprint Plan", icon: Calendar },
-  { href: "/backlog", label: "Backlog", icon: ListTodo },
-  { href: "/team", label: "Team", icon: Users },
-  { href: "/time-off", label: "Time Off", icon: CalendarOff },
-  { href: "/capacity", label: "Capacity Planning", icon: BarChart3 },
-  { href: "/project", label: "Project", icon: Target },
+/**
+ * Editorial sidebar.
+ *
+ * Layout — three movements:
+ *   1. Masthead   : a compressed serif "Y." mark + the publication line.
+ *   2. Sections   : navigation rendered as a numbered editorial table of
+ *                   contents. Active item gets a hairline coral underline,
+ *                   not a filled pill — pills feel SaaS, underlines feel
+ *                   typeset.
+ *   3. Colophon   : settings + collapse toggle, in a small caps register.
+ *
+ * Collapsed state shrinks to a 56px rail showing only the section number;
+ * the label appears in a tooltip. The whole rail keeps its 1px right rule.
+ */
+
+const sections = [
+  { href: "/",                label: "Dashboard"        },
+  { href: "/sprints",         label: "Sprint Plan"      },
+  { href: "/project-backlog", label: "Project Backlog"  },
+  { href: "/team",            label: "Team"             },
+  { href: "/time-off",        label: "Time Off"         },
+  { href: "/capacity",        label: "Capacity Planning"},
 ] as const
 
-const bottomNavItems = [
-  { href: "/settings", label: "Settings", icon: Settings },
+const colophon = [
+  { href: "/settings", label: "Settings" },
 ] as const
 
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = React.useState(false)
 
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/"
-    return pathname.startsWith(href)
-  }
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href)
 
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r border-white/[0.06] bg-[#0c0c14] transition-all duration-200 ease-in-out",
-        collapsed ? "w-16" : "w-60"
+        "flex h-screen flex-col border-r hairline bg-[color:var(--paper)] transition-[width] duration-300 ease-out",
+        collapsed ? "w-14" : "w-64",
       )}
     >
-      {/* Logo / Brand */}
-      <div className="flex h-14 items-center gap-3 px-4">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#E31837] font-bold text-white text-sm">
-          Y
-        </div>
-        {!collapsed && (
-          <span className="truncate text-sm font-semibold text-slate-100">
-            York Planning
-          </span>
-        )}
-      </div>
-
-      <Separator className="bg-white/[0.06]" />
-
-      {/* Main nav */}
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3">
-        {navItems.map((item) => {
-          const active = isActive(item.href)
-          const linkContent = (
-            <Link
-              href={item.href}
-              className={cn(
-                "group flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-                active
-                  ? "bg-[#E31837]/15 text-[#E31837]"
-                  : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
-              )}
-            >
-              <item.icon
-                className={cn(
-                  "size-4 shrink-0",
-                  active ? "text-[#E31837]" : "text-slate-500 group-hover:text-slate-300"
-                )}
-              />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
-          )
-
-          if (collapsed) {
-            return (
-              <Tooltip key={item.href}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            )
-          }
-
-          return (
-            <React.Fragment key={item.href}>{linkContent}</React.Fragment>
-          )
-        })}
-      </nav>
-
-      {/* Bottom section */}
-      <div className="flex flex-col gap-1 px-2 pb-3">
-        <Separator className="mb-2 bg-white/[0.06]" />
-
-        {bottomNavItems.map((item) => {
-          const active = isActive(item.href)
-          const linkContent = (
-            <Link
-              href={item.href}
-              className={cn(
-                "group flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-                active
-                  ? "bg-[#E31837]/15 text-[#E31837]"
-                  : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
-              )}
-            >
-              <item.icon
-                className={cn(
-                  "size-4 shrink-0",
-                  active ? "text-[#E31837]" : "text-slate-500 group-hover:text-slate-300"
-                )}
-              />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
-          )
-
-          if (collapsed) {
-            return (
-              <Tooltip key={item.href}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            )
-          }
-
-          return (
-            <React.Fragment key={item.href}>{linkContent}</React.Fragment>
-          )
-        })}
-
-        {/* Collapse toggle */}
-        <Button
-          variant="ghost"
-          size={collapsed ? "icon" : "sm"}
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "mt-1 h-9 text-slate-500 hover:bg-white/[0.04] hover:text-slate-300",
-            collapsed ? "mx-auto w-9" : "w-full justify-start gap-3 px-3"
-          )}
-        >
-          {collapsed ? (
-            <PanelLeft className="size-4" />
-          ) : (
+      {/* Masthead */}
+      <div className="px-5 pt-7 pb-6">
+        <Link href="/" className="block group">
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-[44px] leading-none font-light text-[color:var(--ink)] tracking-tight">
+              Y
+            </span>
+            <span className="text-[color:var(--coral)] text-2xl leading-none">.</span>
+          </div>
+          {!collapsed && (
             <>
-              <PanelLeftClose className="size-4" />
-              <span className="text-sm">Collapse</span>
+              <p className="eyebrow mt-3">York Planning</p>
+              <p className="font-display text-[11px] italic font-light text-[color:var(--muted-fg)] mt-1 tracking-wide">
+                A capacity journal
+              </p>
             </>
           )}
-        </Button>
+        </Link>
+      </div>
+
+      <div className="px-5">
+        <div className="h-px bg-[color:var(--line)]" />
+      </div>
+
+      {/* Sections */}
+      <nav className={cn("flex-1 overflow-y-auto py-6", collapsed ? "px-2" : "px-5")}>
+        {!collapsed && <p className="eyebrow mb-4">Sections</p>}
+        <ol className="flex flex-col gap-0.5" data-stagger>
+          {sections.map((item, idx) => {
+            const active = isActive(item.href)
+            const number = String(idx + 1).padStart(2, "0")
+
+            const inner = (
+              <Link
+                href={item.href}
+                className={cn(
+                  "group relative flex items-baseline py-2.5 transition-colors",
+                  collapsed ? "justify-center" : "gap-4",
+                )}
+              >
+                <span
+                  className={cn(
+                    "font-mono text-[10px] tracking-wider tabular-nums shrink-0 transition-colors",
+                    active
+                      ? "text-[color:var(--coral)]"
+                      : "text-[color:var(--faint-fg)] group-hover:text-[color:var(--muted-fg)]",
+                  )}
+                >
+                  {number}
+                </span>
+                {!collapsed && (
+                  <span
+                    className={cn(
+                      "text-[14px] tracking-tight transition-colors flex-1",
+                      active
+                        ? "text-[color:var(--ink)]"
+                        : "text-[color:var(--muted-fg)] group-hover:text-[color:var(--ink)]",
+                    )}
+                  >
+                    {item.label}
+                    {active && (
+                      <span className="block h-px bg-[color:var(--coral)] mt-1.5 origin-left draw-line" />
+                    )}
+                  </span>
+                )}
+              </Link>
+            )
+
+            if (collapsed) {
+              return (
+                <li key={item.href}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>{inner}</TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={12}>
+                      {item.label}
+                    </TooltipContent>
+                  </Tooltip>
+                </li>
+              )
+            }
+            return <li key={item.href}>{inner}</li>
+          })}
+        </ol>
+      </nav>
+
+      {/* Colophon */}
+      <div className={cn("pb-6", collapsed ? "px-2" : "px-5")}>
+        <div className="h-px bg-[color:var(--line)] mb-4" />
+        {colophon.map((item) => {
+          const active = isActive(item.href)
+          const inner = (
+            <Link
+              href={item.href}
+              className={cn(
+                "flex items-baseline py-2 transition-colors",
+                collapsed ? "justify-center" : "gap-4",
+                active
+                  ? "text-[color:var(--ink)]"
+                  : "text-[color:var(--muted-fg)] hover:text-[color:var(--ink)]",
+              )}
+            >
+              <span
+                className={cn(
+                  "font-mono text-[10px] tracking-wider tabular-nums",
+                  active ? "text-[color:var(--coral)]" : "text-[color:var(--faint-fg)]",
+                )}
+              >
+                {String(sections.length + 1).padStart(2, "0")}
+              </span>
+              {!collapsed && <span className="text-[14px] tracking-tight">{item.label}</span>}
+            </Link>
+          )
+          if (collapsed) {
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>{inner}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={12}>
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            )
+          }
+          return <React.Fragment key={item.href}>{inner}</React.Fragment>
+        })}
+
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          className={cn(
+            "mt-4 w-full text-left text-[10px] tracking-[0.2em] uppercase transition-colors",
+            collapsed ? "text-center" : "",
+            "text-[color:var(--faint-fg)] hover:text-[color:var(--ink)]",
+          )}
+        >
+          {collapsed ? "→" : "← Collapse"}
+        </button>
       </div>
     </aside>
   )

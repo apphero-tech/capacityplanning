@@ -30,15 +30,17 @@ export default async function CapacityPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-          Capacity Planning
+    <div className="flex flex-col gap-12" data-stagger>
+      <header className="pb-8 border-b hairline-strong">
+        <p className="eyebrow">Volume VI</p>
+        <h2 className="font-display text-[clamp(40px,5vw,64px)] leading-[0.95] font-light tracking-[-0.02em] mt-3 text-[color:var(--ink)]">
+          <span className="italic">Capacity</span> Planning
         </h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Can the Deloitte team fit the upcoming sprint&apos;s scope?
+        <p className="mt-4 text-[14px] text-[color:var(--muted-fg)] max-w-xl">
+          Can the team fit the selected sprint&rsquo;s scope into its hours?
+          Adjust the velocity basis and growth to see how the verdict moves.
         </p>
-      </div>
+      </header>
 
       <CapacityView storiesBySprint={storiesBySprint} />
     </div>

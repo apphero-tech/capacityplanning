@@ -4,11 +4,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---------------------------------------------------------------------------
+ * Editorial design system — "York Capacity"
+ *
+ * Palette  : deep charcoal canvas, warm off-white type, a single coral accent.
+ * Type     : Fraunces (display, optical-size, soft-axis), Inter Tight (body),
+ *            JetBrains Mono (numbers).
+ * Detail   : 1px hairlines, generous whitespace, tabular numerals everywhere.
+ * ------------------------------------------------------------------------- */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-muted-fg: var(--muted-fg);
+  --color-faint-fg: var(--faint-fg);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,86 +68,128 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
+
+  /* Editorial palette */
+  --ink:        #f4efe6;   /* warm off-white type */
+  --paper:      #0e0d0b;   /* deep charcoal canvas */
+  --paper-elev: #161412;   /* one step lighter for cards */
+  --coral:      #ff6a4d;   /* single accent — used sparingly */
+  --coral-soft: #ff6a4d22;
+  --line:       rgba(244, 239, 230, 0.07);
+  --line-strong:rgba(244, 239, 230, 0.18);
+  --muted-fg:   rgba(244, 239, 230, 0.55);
+  --faint-fg:   rgba(244, 239, 230, 0.32);
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-elev);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-elev);
+  --popover-foreground: var(--ink);
+  --primary: var(--coral);
+  --primary-foreground: #1a0f0d;
+  --secondary: rgba(244, 239, 230, 0.06);
+  --secondary-foreground: var(--ink);
+  --muted: rgba(244, 239, 230, 0.04);
+  --muted-foreground: var(--muted-fg);
+  --accent: rgba(244, 239, 230, 0.06);
+  --accent-foreground: var(--ink);
+  --destructive: #ff6a4d;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--coral);
+
+  --chart-1: var(--coral);
+  --chart-2: #6ec6b8;
+  --chart-3: #c8a86a;
+  --chart-4: #8c8c8c;
+  --chart-5: #d6c7a8;
+
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--coral);
+  --sidebar-primary-foreground: var(--ink);
+  --sidebar-accent: rgba(244, 239, 230, 0.06);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--coral);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.55 0.22 25);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.55 0.22 25);
-  --chart-1: oklch(0.55 0.22 25);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.45 0.18 25);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.55 0.22 25);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.55 0.22 25);
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-elev);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-elev);
+  --popover-foreground: var(--ink);
+  --primary: var(--coral);
+  --primary-foreground: #1a0f0d;
+  --secondary: rgba(244, 239, 230, 0.06);
+  --secondary-foreground: var(--ink);
+  --muted: rgba(244, 239, 230, 0.04);
+  --muted-foreground: var(--muted-fg);
+  --accent: rgba(244, 239, 230, 0.06);
+  --accent-foreground: var(--ink);
+  --destructive: var(--coral);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--coral);
 }
 
 @layer base {
   * {
     @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv11", "tnum";
   }
 
-  /* Kill browser focus outlines on non-form elements. The shadcn default
-     applied `outline-ring/50` globally, which in dark mode draws a red
-     (primary) outline on anything that receives focus — buttons, SVGs,
-     chart containers. We keep focus styling on real form inputs only. */
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  body {
+    /* subtle vertical gradient + warm grain to break the flat dark canvas */
+    background-image:
+      radial-gradient(1200px 800px at 50% -10%, rgba(255, 106, 77, 0.08), transparent 60%),
+      radial-gradient(800px 600px at 100% 100%, rgba(110, 198, 184, 0.04), transparent 70%);
+    background-attachment: fixed;
+    font-feature-settings: "ss01", "cv11";
+    letter-spacing: -0.005em;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.025em;
+  }
+
+  .num,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "cv11";
+  }
+
+  /* Editorial hairline */
+  .hairline {
+    border-color: var(--line);
+  }
+  .hairline-strong {
+    border-color: var(--line-strong);
+  }
+
+  /* Section eyebrow */
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--faint-fg);
+    font-weight: 500;
+  }
+
+  /* Reset focus rings except on real inputs */
   *:focus,
   *:focus-visible {
     outline: none;
@@ -135,7 +197,65 @@
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 1px;
+    outline: 1px solid var(--coral);
+    outline-offset: 2px;
+  }
+
+  /* Scrollbar — slim, ink-on-paper */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(244, 239, 230, 0.08);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(244, 239, 230, 0.15);
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Page-load choreography — staggered editorial reveal
+ * ------------------------------------------------------------------------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes drawLine {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+.rise {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.draw-line {
+  transform-origin: left;
+  animation: drawLine 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.pulse-soft {
+  animation: pulse-soft 2.4s ease-in-out infinite;
+}
+
+[data-stagger] > * {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+[data-stagger] > *:nth-child(1) { animation-delay: 0.00s; }
+[data-stagger] > *:nth-child(2) { animation-delay: 0.05s; }
+[data-stagger] > *:nth-child(3) { animation-delay: 0.10s; }
+[data-stagger] > *:nth-child(4) { animation-delay: 0.15s; }
+[data-stagger] > *:nth-child(5) { animation-delay: 0.20s; }
+[data-stagger] > *:nth-child(6) { animation-delay: 0.25s; }
+[data-stagger] > *:nth-child(7) { animation-delay: 0.30s; }
+[data-stagger] > *:nth-child(8) { animation-delay: 0.35s; }

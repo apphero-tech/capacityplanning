@@ -1,4 +1,5 @@
 import { getAllSprints, getStoriesBySprint, getBacklogFreshness } from "@/lib/data";
+import { EXCLUDED_STATUSES } from "@/lib/constants";
 import type { Sprint } from "@/types";
 
 /**
@@ -50,8 +51,6 @@ export interface ProjectOverview {
   bySprint: SprintBreakdown[];
 }
 
-const EXCLUDED_HINTS = ["descoped", "split", "x-out"];
-
 /**
  * Status-order threshold above which a story is counted as "delivered" for
  * the DEV team's purposes — matches "Dev Ready to Deploy to QA" and beyond
@@ -60,9 +59,15 @@ const EXCLUDED_HINTS = ["descoped", "split", "x-out"];
  */
 const DELIVERED_STATUS_ORDER = 40;
 
+/**
+ * Exclude Descoped / Merged / Split — the canonical "moved out of scope"
+ * statuses defined in `lib/constants.ts` and shared with `isExcludedStory`.
+ * Keeping a single list here is what guarantees the Excluded bucket on the
+ * Dashboard / Project Backlog matches the Backlog table and Capacity view.
+ */
 function isExcluded(status: string): boolean {
   const lower = status.toLowerCase();
-  return EXCLUDED_HINTS.some((h) => lower.includes(h));
+  return EXCLUDED_STATUSES.some((s) => lower.includes(s.toLowerCase()));
 }
 
 function statusOrder(status: string): number {

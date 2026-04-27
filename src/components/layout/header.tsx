@@ -2,101 +2,138 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { useSprint } from "@/contexts/sprint-context"
-import {
-  LayoutDashboard,
-  Users,
-  ListTodo,
-  BarChart3,
-  Calendar,
-  Palmtree,
-  UserCheck,
-  PieChart,
-  Settings,
-} from "lucide-react"
-
 import type { SprintStatus } from "@/types"
 
-const statusDotColors: Record<SprintStatus, string> = {
-  past: "bg-slate-600",
-  previous: "bg-blue-400",
-  current: "bg-[#E31837]",
-  next: "bg-amber-400",
-  planning: "bg-violet-400",
-  future: "bg-slate-600",
+const PAGE_TITLES: Record<string, { eyebrow: string; title: string }> = {
+  "/":                { eyebrow: "I",   title: "Dashboard" },
+  "/sprints":         { eyebrow: "II",  title: "Sprint Plan" },
+  "/project-backlog": { eyebrow: "III", title: "Project Backlog" },
+  "/team":            { eyebrow: "IV",  title: "Team" },
+  "/time-off":        { eyebrow: "V",   title: "Time Off" },
+  "/capacity":        { eyebrow: "VI",  title: "Capacity Planning" },
+  "/settings":        { eyebrow: "VII", title: "Settings" },
 }
 
-const pageConfig: Record<string, { title: string; icon: React.ElementType }> = {
-  "/": { title: "Dashboard", icon: LayoutDashboard },
-  "/team": { title: "Team", icon: Users },
-  "/backlog": { title: "Backlog", icon: ListTodo },
-  "/capacity": { title: "Capacity Planning", icon: BarChart3 },
-  "/sprints": { title: "Sprint Plan", icon: Calendar },
-  "/holidays": { title: "Holidays", icon: Palmtree },
-  "/availability": { title: "Availability", icon: UserCheck },
-  "/allocations": { title: "Allocations", icon: PieChart },
-  "/settings": { title: "Settings", icon: Settings },
+const SPRINT_SELECTOR_ROUTES = new Set([
+  "/capacity",
+  "/sprints",
+  "/project-backlog",
+  "/team",
+  "/time-off",
+  "/velocity",
+])
+
+const STATUS_DOT: Record<SprintStatus, string> = {
+  past:     "bg-[color:var(--faint-fg)]",
+  previous: "bg-sky-300/70",
+  current:  "bg-[color:var(--coral)]",
+  next:     "bg-amber-300/80",
+  planning: "bg-violet-300/70",
+  future:   "bg-[color:var(--faint-fg)]",
 }
 
 export function Header() {
   const pathname = usePathname()
-  const {
-    sprints,
-    selectedSprint,
-    selectedIndex,
-    setSelectedIndex,
-  } = useSprint()
+  const { sprints, selectedIndex, setSelectedIndex } = useSprint()
 
-  const currentPage =
-    pageConfig[pathname] ??
-    pageConfig[`/${pathname.split("/")[1]}`] ?? {
-      title: "Dashboard",
-      icon: LayoutDashboard,
-    }
+  const route = pathname.startsWith("/")
+    ? `/${pathname.split("/")[1] || ""}` || "/"
+    : pathname
+  const meta = PAGE_TITLES[route] ?? { eyebrow: "—", title: "—" }
+  const showSelector = SPRINT_SELECTOR_ROUTES.has(route)
 
-  const PageIcon = currentPage.icon
+  const today = React.useMemo(
+    () =>
+      new Date().toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }),
+    [],
+  )
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.06] bg-[#0a0a12]/80 px-6 backdrop-blur-sm">
-      {/* Left: page title */}
-      <div className="flex items-center gap-3">
-        <PageIcon className="size-4 text-slate-500" />
-        <h1 className="text-sm font-semibold text-slate-100">
-          {currentPage.title}
-        </h1>
+    <header className="border-b hairline bg-[color:var(--paper)]/80 backdrop-blur-md">
+      {/* Editorial dateline */}
+      <div className="px-10 pt-5 pb-1 flex items-center justify-between">
+        <p className="eyebrow">
+          <span className="text-[color:var(--coral)]">●</span>{" "}
+          <span className="ml-2">York · Capacity Journal</span>
+        </p>
+        <p className="eyebrow tabular-nums">{today}</p>
       </div>
 
-      {/* Right: sprint selector */}
-      <div className="flex items-center gap-3">
-
-        <Separator orientation="vertical" className="h-4 bg-white/[0.08]" />
-
-        {/* Sprint selector — compact tabs for active sprints */}
-        <div className="flex items-center rounded-lg bg-white/[0.03] p-0.5">
-          {sprints.map((s, idx) => {
-            const isSelected = idx === selectedIndex
-            return (
-              <button
-                key={s.id}
-                onClick={() => setSelectedIndex(idx)}
-                className={`relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium cursor-pointer transition-all ${
-                  isSelected
-                    ? "bg-slate-800 text-slate-100 shadow-sm"
-                    : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]"
-                }`}
-              >
-                <span
-                  className={`size-1.5 rounded-full shrink-0 ${statusDotColors[s.status]} ${s.isCurrent && isSelected ? "animate-pulse" : ""}`}
-                />
-                <span className="whitespace-nowrap">{s.name}</span>
-              </button>
-            )
-          })}
+      {/* Title row */}
+      <div className="px-10 pb-5 flex items-end justify-between gap-6 flex-wrap">
+        <div className="flex items-baseline gap-5">
+          <span className="font-mono text-[10px] tracking-[0.25em] text-[color:var(--faint-fg)]">
+            §{meta.eyebrow}
+          </span>
+          <h1 className="font-display text-[28px] leading-none font-light tracking-tight text-[color:var(--ink)]">
+            {meta.title}
+          </h1>
         </div>
+
+        {showSelector && (
+          <SprintRibbon
+            sprints={sprints}
+            selectedIndex={selectedIndex}
+            onSelect={setSelectedIndex}
+          />
+        )}
       </div>
     </header>
+  )
+}
+
+function SprintRibbon({
+  sprints,
+  selectedIndex,
+  onSelect,
+}: {
+  sprints: ReturnType<typeof useSprint>["sprints"]
+  selectedIndex: number
+  onSelect: (idx: number) => void
+}) {
+  return (
+    <nav className="flex items-baseline gap-0">
+      <span className="eyebrow mr-4">Window</span>
+      <ul className="flex items-baseline divide-x divide-[color:var(--line)]">
+        {sprints.map((s, idx) => {
+          const isSelected = idx === selectedIndex
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(idx)}
+                className="group relative px-4 py-1.5 text-left transition-colors"
+              >
+                <span className="flex items-baseline gap-2">
+                  <span
+                    className={`size-1.5 rounded-full shrink-0 ${STATUS_DOT[s.status]} ${
+                      s.isCurrent && isSelected ? "pulse-soft" : ""
+                    }`}
+                  />
+                  <span
+                    className={`text-[12px] tracking-tight whitespace-nowrap transition-colors ${
+                      isSelected
+                        ? "text-[color:var(--ink)]"
+                        : "text-[color:var(--muted-fg)] group-hover:text-[color:var(--ink)]"
+                    }`}
+                  >
+                    {s.name}
+                  </span>
+                </span>
+                {isSelected && (
+                  <span className="absolute left-4 right-4 -bottom-px h-px bg-[color:var(--coral)] origin-left draw-line" />
+                )}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
   )
 }

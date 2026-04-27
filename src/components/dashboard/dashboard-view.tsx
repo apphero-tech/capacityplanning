@@ -633,7 +633,7 @@ export function DashboardView({ storiesBySprint }: Props) {
             hint="Holidays & PTO"
           />
           <InputTile
-            href="/backlog"
+            href="/project-backlog"
             icon={ListTodo}
             label="Backlog"
             hint="Stories from Jira"
