@@ -19,6 +19,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
     "@prisma/client": "^7.4.2",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.0",
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -27,6 +29,7 @@
     "exceljs": "^4.4.0",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
+    "pg": "^8.20.0",
     "prisma": "^7.4.2",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
