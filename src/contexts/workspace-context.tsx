@@ -8,13 +8,16 @@ import { createContext, useContext, type ReactNode } from "react";
  * Populated by `[slug]/layout.tsx` once the slug + membership have been
  * validated server-side. Components that build links (sidebar, header,
  * intra-app navigation) read `slug` from here so URLs stay correct
- * across workspace switches.
+ * across workspace switches; visual chrome reads `accentColor` to render
+ * brand-tinted indicators.
  */
 interface WorkspaceContextValue {
   slug: string;
   name: string;
   role: "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
   email: string | null;
+  /** Hex string used as the app's accent colour for this workspace. */
+  accentColor: string;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -24,10 +27,11 @@ export function WorkspaceProvider({
   name,
   role,
   email,
+  accentColor,
   children,
 }: WorkspaceContextValue & { children: ReactNode }) {
   return (
-    <WorkspaceContext.Provider value={{ slug, name, role, email }}>
+    <WorkspaceContext.Provider value={{ slug, name, role, email, accentColor }}>
       {children}
     </WorkspaceContext.Provider>
   );

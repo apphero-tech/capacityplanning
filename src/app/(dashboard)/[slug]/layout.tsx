@@ -53,12 +53,20 @@ export default async function DashboardLayout({
     ptoEntries,
   );
 
+  // Workspace accent colour overrides --coral for everything rendered
+  // inside this subtree. The default value in globals.css remains coral
+  // for non-workspace pages (login etc.); inside the dashboard, every
+  // mention of var(--coral) resolves to the workspace's brand colour.
+  const accentColor = ctx.workspace.accentColor;
+  const accentSoft = `${accentColor}1f`; // ~12% alpha as 8-digit hex
+
   return (
     <WorkspaceProvider
       slug={ctx.workspace.slug}
       name={ctx.workspace.name}
       role={ctx.role}
       email={ctx.email}
+      accentColor={accentColor}
     >
       <SprintProvider
         sprints={activeSprints}
@@ -71,7 +79,17 @@ export default async function DashboardLayout({
         ptoEntries={ptoEntries}
       >
         <ProjectionSettingsProvider>
-          <div className="flex h-screen overflow-hidden">
+          <div
+            className="flex h-screen overflow-hidden"
+            style={
+              {
+                "--coral": accentColor,
+                "--coral-soft": accentSoft,
+                "--primary": accentColor,
+                "--ring": accentColor,
+              } as React.CSSProperties
+            }
+          >
             <Sidebar />
             <div className="flex flex-1 flex-col overflow-hidden">
               <Header />
