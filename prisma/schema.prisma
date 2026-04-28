@@ -23,8 +23,11 @@ model Workspace {
   slug        String   @unique
   name        String
   // Brand accent colour — used wherever the app would otherwise use the
-  // default coral. Hex string, e.g. "#E31837" for York University red.
-  accentColor String   @default("#ff6a4d")
+  // default. Hex string, e.g. "#E31837" for York University red.
+  // Default is apphero cyan #01cafd, applied to any workspace created
+  // without an explicit colour; existing workspaces keep whatever they
+  // already have (the column has been backfilled).
+  accentColor String   @default("#01cafd")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

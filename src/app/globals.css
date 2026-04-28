@@ -83,12 +83,17 @@
 :root {
   --radius: 0.375rem;
 
-  /* Palette */
+  /* Palette
+     ---
+     The "coral" variable holds the active accent. Default is apphero's
+     cyan #01cafd — used on workspace-less surfaces like the generic
+     /login page. Inside a workspace subtree it's overridden via inline
+     style with the workspace's brand colour (e.g. York red #E31837). */
   --ink:        #f4efe6;
   --paper:      #0c0c10;
   --paper-elev: #14141a;
-  --coral:      #ff6a4d;
-  --coral-soft: #ff6a4d18;
+  --coral:      #01cafd;
+  --coral-soft: #01cafd1f;
   --line:       rgba(244, 239, 230, 0.06);
   --line-strong:rgba(244, 239, 230, 0.14);
   --muted-fg:   rgba(244, 239, 230, 0.58);
@@ -118,6 +123,7 @@
   --chart-3: #c8a86a;
   --chart-4: #8c8c8c;
   --chart-5: #d6c7a8;
+  /* Soft pre-mixed tints derived from --coral for hover/halo states. */
 
   --sidebar: var(--paper);
   --sidebar-foreground: var(--ink);
