@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const entry = insertInitialCapacity({
+  const entry = await insertInitialCapacity({
     lastName,
     firstName,
     role,

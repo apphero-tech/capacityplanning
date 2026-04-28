@@ -8,7 +8,7 @@ export async function PUT(
   const { id } = await params;
   const body = await request.json();
 
-  const updated = updateInitialCapacity(id, body);
+  const updated = await updateInitialCapacity(id, body);
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -20,7 +20,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const deleted = deleteInitialCapacity(id);
+  const deleted = await deleteInitialCapacity(id);
   if (!deleted) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

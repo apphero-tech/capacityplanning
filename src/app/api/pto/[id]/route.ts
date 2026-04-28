@@ -8,7 +8,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
-  const updated = updatePtoEntry(id, body);
+  const updated = await updatePtoEntry(id, body);
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -21,7 +21,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const deleted = deletePtoEntry(id);
+  const deleted = await deletePtoEntry(id);
 
   if (!deleted) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

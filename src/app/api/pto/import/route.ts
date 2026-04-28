@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
         ? stripInvisible(row[teamCol] ?? "") || null
         : null;
 
-      insertPtoEntry({ who, location, team, startDate, endDate });
+      await insertPtoEntry({ who, location, team, startDate, endDate });
       imported++;
     }
 

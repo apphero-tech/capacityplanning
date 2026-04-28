@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // ---- Mode 1: explicit sprint target -----------------------------------
     if (sprintId) {
-      const { inserted, deleted } = replaceStoriesForSprint(
+      const { inserted, deleted } = await replaceStoriesForSprint(
         sprintId,
         stories.map((s) => ({
           key: s.key,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     // Make sure the synthetic "Backlog (unassigned)" sprint exists before we
     // look up sprints, so stories with no / unknown Sprint value still land
     // somewhere and keep the total row count 1:1 with the CSV.
-    const backlogSprintId = ensureBacklogSprint();
+    const backlogSprintId = await ensureBacklogSprint();
     const allSprints = await getAllSprints();
     const sprintByName = new Map<
       string,
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     const perSprint: { sprintId: string; sprintName: string; imported: number; replaced: number }[] = [];
     for (const [id, { sprintName, rows }] of grouped) {
-      const { inserted, deleted } = replaceStoriesForSprint(
+      const { inserted, deleted } = await replaceStoriesForSprint(
         id,
         rows.map((s) => ({
           key: s.key,

@@ -105,7 +105,7 @@ function emptyBreakdown(): ProjectBreakdown {
 
 export async function getProjectOverview(): Promise<ProjectOverview> {
   const sprints = await getAllSprints();
-  const freshness = getBacklogFreshness();
+  const freshness = await getBacklogFreshness();
 
   const totals = {
     totalStories: 0,
