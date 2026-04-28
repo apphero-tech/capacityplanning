@@ -648,6 +648,9 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                 <TableHead className="text-[11px] font-medium text-slate-500 min-w-[80px]">
                   Org
                 </TableHead>
+                <TableHead className="text-[11px] font-medium text-slate-500 min-w-[100px]">
+                  Location
+                </TableHead>
                 <TableHead className="text-[11px] font-medium text-slate-500">
                   Role
                 </TableHead>
@@ -675,7 +678,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
               {filtered.length === 0 ? (
                 <TableRow className="border-white/[0.06]">
                   <TableCell
-                    colSpan={4 + ALLOCATION_COLUMNS.length + 2}
+                    colSpan={5 + ALLOCATION_COLUMNS.length + 2}
                     className="text-center text-slate-500 py-8"
                   >
                     No allocation data found.
@@ -726,6 +729,14 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                         <EditableTextCell
                           value={cap.organization}
                           onSave={(v) => saveField(cap.id, "organization", v)}
+                          saving={isSaving}
+                          className="text-slate-400 text-xs"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <EditableTextCell
+                          value={cap.location || ""}
+                          onSave={(v) => saveField(cap.id, "location", v)}
                           saving={isSaving}
                           className="text-slate-400 text-xs"
                         />
