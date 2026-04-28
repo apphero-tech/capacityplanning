@@ -337,6 +337,101 @@ export function TimeOffView({
     });
   };
 
+  /**
+   * Export the currently visible rows to CSV. The export reflects every
+   * active filter (scope, team, stream, country) so the user can share or
+   * archive exactly what they're looking at — not the raw table.
+   *
+   * Header columns + filename adapt to the active tab so each export is
+   * self-explanatory without further context.
+   */
+  function csvCell(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) return "";
+    const s = String(value);
+    if (s.includes(",") || s.includes("\"") || s.includes("\n")) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  }
+
+  function downloadCsv(filename: string, rows: (string | number | null | undefined)[][]) {
+    const csv = rows.map((r) => r.map(csvCell).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function streamsForName(who: string): string {
+    const norm = who.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    const set = nameToStreams.get(norm);
+    return set ? Array.from(set).join("/") : "";
+  }
+
+  function handleExportCsv() {
+    const today = new Date().toISOString().slice(0, 10);
+    const scopeTag = scopeMode === "project" ? "project" : (selectedSprint?.name ?? "current").replace(/\s+/g, "-");
+    const orgTag = orgFilter === "all" ? "all" : orgFilter.toLowerCase();
+
+    if (activeTab === "public") {
+      const rows: (string | number | null | undefined)[][] = [
+        ["Date", "Holiday name", "Country", "Sprint", "Days"],
+      ];
+      for (const h of filteredPublicHolidays) {
+        const s = findSprintForDate(h.date, sprints);
+        rows.push([h.date, h.name, h.country, s?.name ?? "", h.days]);
+      }
+      downloadCsv(`public-holidays_${scopeTag}_${orgTag}_${today}.csv`, rows);
+      return;
+    }
+
+    if (activeTab === "project") {
+      const rows: (string | number | null | undefined)[][] = [
+        ["Date", "Closure name", "Sprint", "Days"],
+      ];
+      for (const h of filteredProjectHolidays) {
+        const s = findSprintForDate(h.date, sprints);
+        rows.push([h.date, h.name, s?.name ?? "", h.days]);
+      }
+      downloadCsv(`project-closures_${scopeTag}_${today}.csv`, rows);
+      return;
+    }
+
+    // Personal time off — include team, location, sprint, duration, streams.
+    const streamTag =
+      streamFilter.size === 0 ? "all-streams" : Array.from(streamFilter).join("-").toLowerCase();
+    const rows: (string | number | null | undefined)[][] = [
+      ["Who", "Streams", "Team", "Location", "Start", "End", "Sprint", "Business days"],
+    ];
+    for (const e of filteredPtoEntries) {
+      const s = findSprintForDate(e.startDate, sprints);
+      // Resolve team from the member roster — PtoEntry has team but it's
+      // unreliable across imports, fallback to InitialCapacity.
+      const norm = e.who.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+      const member = teamMembers.find(
+        (m) =>
+          `${m.lastName}, ${m.firstName}`.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase() ===
+          norm,
+      );
+      rows.push([
+        e.who,
+        streamsForName(e.who),
+        member?.organization ?? e.team ?? "",
+        e.location || member?.location || "",
+        e.startDate,
+        e.endDate,
+        s?.name ?? "",
+        computeDurationDays(e.startDate, e.endDate),
+      ]);
+    }
+    downloadCsv(`pto_${scopeTag}_${orgTag}_${streamTag}_${today}.csv`, rows);
+  }
+
   const filteredPublicHolidays = useMemo(() => {
     if (!activeWindow) return [];
     let list = publicHolidays.filter((h) =>
@@ -539,6 +634,15 @@ export function TimeOffView({
       ? `in ${selectedSprint.name}`
       : "(select a sprint in the top bar)";
 
+  // Compact suffix used inside the per-tab card descriptions, e.g.
+  // "12 holidays through end of project" or "12 holidays in Sprint 9".
+  const windowSuffix =
+    scopeMode === "project"
+      ? "through end of project"
+      : selectedSprint
+        ? `in ${selectedSprint.name}`
+        : "";
+
   const scopeRange =
     scopeMode === "project"
       ? activeWindow
@@ -644,7 +748,17 @@ export function TimeOffView({
             )}
           </div>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+            onClick={handleExportCsv}
+            title="Export the currently filtered rows to CSV"
+          >
+            <FileSpreadsheet className="size-4 mr-1.5" />
+            Export CSV
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -692,10 +806,8 @@ export function TimeOffView({
                         overlap{filteredPublicHolidays.length - uniquePublicCalendarDays === 1 ? "" : "s"})
                       </span>
                     )}
-                    {selectedSprint && (
-                      <span className="text-slate-500">
-                        {" "}in {selectedSprint.name}
-                      </span>
+                    {windowSuffix && (
+                      <span className="text-slate-500"> {windowSuffix}</span>
                     )}
                   </CardDescription>
                 </div>
@@ -797,10 +909,8 @@ export function TimeOffView({
                 {filteredProjectHolidays.length} closures &mdash;{" "}
                 {uniqueProjectCalendarDays} calendar day
                 {uniqueProjectCalendarDays === 1 ? "" : "s"}
-                {selectedSprint && (
-                  <span className="text-slate-500">
-                    {" "}in {selectedSprint.name}
-                  </span>
+                {windowSuffix && (
+                  <span className="text-slate-500"> {windowSuffix}</span>
                 )}
               </CardDescription>
             </CardHeader>
@@ -872,10 +982,8 @@ export function TimeOffView({
                 {filteredPtoEntries.length}{" "}
                 {filteredPtoEntries.length === 1 ? "entry" : "entries"} &mdash;{" "}
                 {totalPtoDays} total business days
-                {selectedSprint && (
-                  <span className="text-slate-500">
-                    {" "}in {selectedSprint.name}
-                  </span>
+                {windowSuffix && (
+                  <span className="text-slate-500"> {windowSuffix}</span>
                 )}
               </CardDescription>
             </CardHeader>
