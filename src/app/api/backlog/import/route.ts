@@ -4,7 +4,8 @@ import { getAllSprints, replaceStoriesForSprint, ensureBacklogSprint, BACKLOG_SP
 
 /** Extract the two-digit order prefix from a status already stamped by withOrderPrefix(). */
 function orderFromPrefixedStatus(status: string): number {
-  const m = status.match(/^(\d{2})-/);
+  // Accept "10-..." or "10 - ..." — Jira workflows may use either form.
+  const m = status.match(/^(\d{2})\s*-/);
   return m ? Number(m[1]) : 99;
 }
 

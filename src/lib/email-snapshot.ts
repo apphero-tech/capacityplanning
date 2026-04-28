@@ -108,7 +108,7 @@ function buildBacklog(stories: Awaited<ReturnType<typeof getStoriesBySprint>>): 
   for (const s of stories) {
     const sp = s.storyPoints ?? 0;
     totalSP += sp;
-    const statusOrder = Number(s.status.match(/^(\d{2})-/)?.[1] ?? 99);
+    const statusOrder = Number(s.status.match(/^(\d{2})\s*-/)?.[1] ?? 99);
 
     if (statusOrder === 30) {
       readyStories++;

@@ -84,7 +84,9 @@ function isExcluded(status: string): boolean {
 }
 
 function statusOrder(status: string): number {
-  const m = status.match(/^(\d{2})-/);
+  // Accept both compact ("10-To be Refined") and spaced ("10 - To be
+  // Refined") variants, since Jira workflows can be written either way.
+  const m = status.match(/^(\d{2})\s*-/);
   return m ? Number(m[1]) : 99;
 }
 
