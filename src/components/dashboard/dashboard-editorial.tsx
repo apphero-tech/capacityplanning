@@ -206,49 +206,46 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
   }, [overview]);
 
   return (
-    <div className="flex flex-col gap-24" data-stagger>
-      {/* ─── COVER ─── */}
-      <section className="pt-2">
-        <p className="eyebrow">Cover · the question of the day</p>
+    <div className="flex flex-col gap-16" data-stagger>
+      {/* ─── HERO ─── one moment of typographic personality */}
+      <section>
         {verdict ? (
-          <div className="mt-6 grid grid-cols-12 gap-x-8 gap-y-10 items-start">
-            {/* Headline statement */}
+          <div className="grid grid-cols-12 gap-x-8 gap-y-8 items-start">
+            {/* Headline question — Fraunces, the only place it's used. */}
             <div className="col-span-12 lg:col-span-8">
-              <h2 className="font-display text-[clamp(48px,7vw,96px)] leading-[0.95] font-light tracking-[-0.03em] text-[color:var(--ink)]">
+              <p className="eyebrow">The question</p>
+              <h2 className="mt-3 font-display text-[clamp(40px,5.5vw,72px)] leading-[1.0] font-light tracking-[-0.022em] text-[color:var(--ink)]">
                 Can the team deliver{" "}
-                <span className="italic font-light text-[color:var(--muted-fg)]">
+                <span className="text-[color:var(--ink)]">
                   {verdict.target.name}
                 </span>
                 <span className="text-[color:var(--coral)]">?</span>
               </h2>
-              <p className="mt-8 max-w-2xl text-[15px] leading-relaxed text-[color:var(--muted-fg)]">
-                The {verdict.target.name} window holds{" "}
-                <span className="text-[color:var(--ink)] tabular-nums">{fmt(verdict.scopeSP)}&nbsp;SP</span>{" "}
-                across <span className="tabular-nums">{verdict.stories}</span> stories. Against a historical
-                velocity of <span className="tabular-nums">{verdict.velocity.toFixed(2)}&nbsp;SP/hr</span> and{" "}
-                <span className="tabular-nums">{fmt(verdict.hours)}&nbsp;net&nbsp;hours</span>, the team
-                projects to deliver{" "}
-                <span className="text-[color:var(--ink)] tabular-nums">{fmt(verdict.projection)}&nbsp;SP</span>.
+              <p className="mt-6 max-w-2xl text-[14px] leading-relaxed text-[color:var(--muted-fg)]">
+                Scope is <span className="text-[color:var(--ink)] font-mono tabular-nums">{fmt(verdict.scopeSP)}</span> SP across{" "}
+                <span className="font-mono tabular-nums">{verdict.stories}</span> stories.
+                With <span className="font-mono tabular-nums">{fmt(verdict.hours)}</span> net hours at a velocity of{" "}
+                <span className="font-mono tabular-nums">{verdict.velocity.toFixed(2)}</span> SP/hr,
+                projection is <span className="text-[color:var(--ink)] font-mono tabular-nums">{fmt(verdict.projection)}</span> SP.
               </p>
             </div>
 
-            {/* Verdict word + delta — kept compact so it aligns with the
-                left column and never grows past the headline height. */}
+            {/* Verdict block — coral word, delta, link */}
             <div className="col-span-12 lg:col-span-4 lg:pl-8 lg:border-l hairline">
-              <p className="eyebrow mb-4">Verdict</p>
-              <p className="font-display text-[88px] leading-none font-light italic tracking-tight text-[color:var(--coral)]">
+              <p className="eyebrow">Verdict</p>
+              <p className="mt-3 display-italic text-[72px] leading-none text-[color:var(--coral)]">
                 {verdict.label}
               </p>
-              <p className="mt-6 text-[13px] text-[color:var(--muted-fg)]">
+              <p className="mt-5 text-[13px] text-[color:var(--muted-fg)]">
                 {verdict.delta >= 0 ? (
                   <>
-                    <span className="text-[color:var(--ink)] tabular-nums">+{fmt(verdict.delta)}&nbsp;SP</span>{" "}
-                    of room over the projection.
+                    <span className="text-[color:var(--ink)] font-mono tabular-nums">+{fmt(verdict.delta)} SP</span>{" "}
+                    of room.
                   </>
                 ) : (
                   <>
-                    <span className="text-[color:var(--ink)] tabular-nums">{fmt(Math.abs(verdict.delta))}&nbsp;SP</span>{" "}
-                    above the projected ceiling.
+                    <span className="text-[color:var(--ink)] font-mono tabular-nums">{fmt(Math.abs(verdict.delta))} SP</span>{" "}
+                    over the ceiling.
                   </>
                 )}
               </p>
@@ -258,41 +255,34 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
                   const idx = activeSprints.findIndex((s) => s.id === verdict.target.id);
                   if (idx >= 0) setSelectedIndex(idx);
                 }}
-                className="mt-8 inline-flex items-baseline gap-2 text-[12px] tracking-tight text-[color:var(--ink)] border-b hairline-strong hover:text-[color:var(--coral)] hover:border-[color:var(--coral)] transition-colors"
+                className="mt-6 inline-flex items-center gap-1.5 text-[12px] tracking-tight text-[color:var(--ink)] hover:text-[color:var(--coral)] transition-colors"
               >
-                Read the full plan
+                Open capacity plan
                 <span aria-hidden>→</span>
               </Link>
             </div>
           </div>
         ) : (
-          <p className="mt-6 text-[15px] text-[color:var(--muted-fg)]">
+          <p className="text-[15px] text-[color:var(--muted-fg)]">
             No upcoming sprint configured. Define dates in <Link href={`/${slug}/sprints`} className="underline">Sprint Plan</Link>.
           </p>
         )}
       </section>
 
-      {/* ─── TUNE THE VERDICT ─── */}
+      {/* ─── TUNE ─── velocity basis + scenario, software-first */}
       {verdict && (
         <section>
-          <div className="flex items-baseline justify-between flex-wrap gap-4">
-            <div>
-              <p className="eyebrow">Apparatus · tune the verdict</p>
-              <h3 className="font-display text-[36px] leading-tight font-light italic mt-2 tracking-tight">
-                Two dials. One projection.
-              </h3>
-            </div>
-            <p className="text-[12px] text-[color:var(--muted-fg)] max-w-md text-right">
-              Pick how many recent sprints feed the velocity, then layer a
-              ±10% scenario on top. Math is shown in plain sight.
-            </p>
-          </div>
+          <SectionHeader
+            label="Tune"
+            title="Velocity basis & scenario"
+            help="Pick how many recent sprints feed the velocity, then layer a ±10% scenario on top."
+          />
 
-          <div className="mt-10 grid grid-cols-12 gap-x-8 gap-y-10">
-            {/* Velocity basis */}
+          <div className="mt-6 grid grid-cols-12 gap-x-6 gap-y-8">
+            {/* Velocity basis — segmented control */}
             <div className="col-span-12 lg:col-span-5">
-              <p className="eyebrow mb-4">Velocity basis · sprints averaged</p>
-              <div className="flex divide-x divide-[color:var(--line)] border hairline">
+              <p className="code-label mb-2.5">VELOCITY BASIS</p>
+              <div className="grid grid-cols-5 rounded-md border hairline overflow-hidden bg-[color:var(--paper-elev)]/40">
                 {BASIS_OPTIONS.map((opt) => {
                   const active = basis === opt.key;
                   return (
@@ -301,123 +291,107 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
                       type="button"
                       title={opt.hint}
                       onClick={() => setBasis(opt.key)}
-                      className={`flex-1 px-3 py-3 text-center transition-colors ${
+                      className={`relative px-2 py-2.5 text-center transition-colors border-r hairline last:border-r-0 ${
                         active
-                          ? "bg-[color:var(--coral)]/10 text-[color:var(--ink)]"
-                          : "text-[color:var(--muted-fg)] hover:text-[color:var(--ink)] hover:bg-[color:var(--ink)]/[0.03]"
+                          ? "bg-[color:var(--ink)]/[0.06]"
+                          : "hover:bg-[color:var(--ink)]/[0.03]"
                       }`}
                     >
                       <span
-                        className={`block font-mono text-[14px] tracking-tight ${
-                          active ? "text-[color:var(--coral)]" : ""
+                        className={`block font-mono text-[13px] tracking-tight transition-colors ${
+                          active ? "text-[color:var(--coral)]" : "text-[color:var(--muted-fg)]"
                         }`}
                       >
                         {opt.label}
-                      </span>
-                      <span className="block mt-1 font-mono text-[9px] tracking-wider text-[color:var(--faint-fg)] uppercase">
-                        {opt.hint}
                       </span>
                     </button>
                   );
                 })}
               </div>
-              <p className="mt-3 font-mono text-[11px] tracking-wider text-[color:var(--faint-fg)] tabular-nums">
-                baseline · {(velocityByBasis[basis] || 0).toFixed(2)} SP/hr
+              <p className="mt-2 code-label tabular-nums">
+                {BASIS_OPTIONS.find((o) => o.key === basis)?.hint} · baseline {(velocityByBasis[basis] || 0).toFixed(2)} SP/hr
               </p>
             </div>
 
-            {/* Scenario buttons */}
+            {/* Scenario — list of three */}
             <div className="col-span-12 lg:col-span-4">
-              <p className="eyebrow mb-4">Scenario · growth on top</p>
-              <div>
+              <p className="code-label mb-2.5">SCENARIO</p>
+              <ul className="rounded-md border hairline overflow-hidden bg-[color:var(--paper-elev)]/40 divide-y divide-[color:var(--line)]">
                 {SCENARIO_OPTIONS.map((sc) => {
                   const baseV = velocityByBasis[basis] || 0;
                   const projection = verdict.hours * baseV * (1 + sc.growth / 100);
                   const active = activeScenario === sc.key;
                   return (
-                    <button
-                      key={sc.key}
-                      type="button"
-                      onClick={() => setGrowthPct(sc.growth)}
-                      className={`group relative flex w-full items-baseline justify-between py-3 border-b hairline transition-colors text-left ${
-                        active
-                          ? "text-[color:var(--ink)]"
-                          : "text-[color:var(--muted-fg)] hover:text-[color:var(--ink)]"
-                      }`}
-                    >
-                      <span className="flex items-baseline gap-3">
-                        <span
-                          className={`size-1.5 rounded-full shrink-0 transition-colors ${
-                            active ? "bg-[color:var(--coral)]" : "bg-[color:var(--line-strong)]"
-                          }`}
-                        />
-                        <span className="text-[14px] tracking-tight">{sc.label}</span>
-                        <span className="font-mono text-[10px] tracking-wider text-[color:var(--faint-fg)] tabular-nums">
-                          {sc.growth > 0 ? "+" : ""}{sc.growth}%
-                        </span>
-                      </span>
-                      <span
-                        className={`font-mono text-[15px] tabular-nums transition-colors ${
-                          active ? "text-[color:var(--coral)]" : "text-[color:var(--muted-fg)]"
+                    <li key={sc.key}>
+                      <button
+                        type="button"
+                        onClick={() => setGrowthPct(sc.growth)}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 transition-colors text-left ${
+                          active
+                            ? "bg-[color:var(--ink)]/[0.05]"
+                            : "hover:bg-[color:var(--ink)]/[0.03]"
                         }`}
                       >
-                        {fmt(projection)}{" "}
-                        <span className="text-[10px] text-[color:var(--faint-fg)]">SP</span>
-                      </span>
-                    </button>
+                        <span className="flex items-center gap-2.5">
+                          <span
+                            className={`size-1.5 rounded-full shrink-0 ${
+                              active ? "bg-[color:var(--coral)]" : "bg-[color:var(--line-strong)]"
+                            }`}
+                          />
+                          <span className={`text-[13px] tracking-tight ${active ? "text-[color:var(--ink)]" : "text-[color:var(--muted-fg)]"}`}>
+                            {sc.label}
+                          </span>
+                          <span className="font-mono text-[10px] tabular-nums text-[color:var(--faint-fg)]">
+                            {sc.growth > 0 ? "+" : ""}{sc.growth}%
+                          </span>
+                        </span>
+                        <span className={`font-mono text-[13px] tabular-nums ${active ? "text-[color:var(--coral)]" : "text-[color:var(--muted-fg)]"}`}>
+                          {fmt(projection)} <span className="text-[10px] text-[color:var(--faint-fg)]">SP</span>
+                        </span>
+                      </button>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </div>
 
             {/* Calculation chain */}
-            <div className="col-span-12 lg:col-span-3 lg:pl-8 lg:border-l hairline">
-              <p className="eyebrow mb-4">Calculation</p>
-              <p className="font-mono text-[12px] tabular-nums leading-relaxed text-[color:var(--muted-fg)]">
-                <span className="text-[color:var(--ink)]">{fmt(verdict.hours)}</span>{" "}
-                <span className="text-[color:var(--faint-fg)]">net hrs</span>
-                <br />
-                ×{" "}
-                <span className="text-[color:var(--ink)]">
-                  {(velocityByBasis[basis] || 0).toFixed(2)}
-                </span>{" "}
-                <span className="text-[color:var(--faint-fg)]">SP/hr</span>
-                <br />
-                ×{" "}
-                <span className="text-[color:var(--ink)]">
-                  {growthPct > 0 ? "+" : ""}{growthPct}%
-                </span>{" "}
-                <span className="text-[color:var(--faint-fg)]">scenario</span>
-              </p>
-              <p className="mt-4 font-display text-[32px] leading-none font-light italic text-[color:var(--coral)] tabular-nums">
-                {fmt(verdict.projection)}
-                <span className="ml-2 text-[12px] font-sans not-italic text-[color:var(--faint-fg)]">SP</span>
-              </p>
+            <div className="col-span-12 lg:col-span-3 lg:pl-6 lg:border-l hairline">
+              <p className="code-label mb-2.5">CALCULATION</p>
+              <pre className="font-mono text-[12px] leading-[1.6] text-[color:var(--muted-fg)] tabular-nums whitespace-pre">
+{fmt(verdict.hours).padStart(7)} <span className="opacity-50">net hrs</span>
+×{(velocityByBasis[basis] || 0).toFixed(2).padStart(6)} <span className="opacity-50">SP/hr</span>
+×{`${growthPct > 0 ? "+" : ""}${growthPct}%`.padStart(6)} <span className="opacity-50">scenario</span>
+              </pre>
+              <div className="mt-3 pt-3 border-t hairline">
+                <span className="font-mono text-[24px] font-medium text-[color:var(--coral)] tabular-nums">
+                  {fmt(verdict.projection)}
+                </span>
+                <span className="ml-1.5 text-[11px] text-[color:var(--faint-fg)]">SP projected</span>
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* ─── PROJECT FIGURE ─── */}
+      {/* ─── PROJECT OVERVIEW ─── */}
       <section>
-        <div className="flex items-baseline justify-between flex-wrap gap-4">
-          <div>
-            <p className="eyebrow">Figure I · the project at a glance</p>
-            <h3 className="font-display text-[36px] leading-tight font-light italic mt-2 tracking-tight">
-              The journey, by the numbers.
-            </h3>
-          </div>
-          <p className="text-[12px] text-[color:var(--muted-fg)] max-w-md text-right">
-            {overview.totalStories + overview.excluded.stories} stories total · imported from Jira ·
-            <Link href={`/${slug}/project-backlog`} className="ml-1 text-[color:var(--ink)] underline-offset-4 hover:text-[color:var(--coral)] underline">
-              re-import
-            </Link>
-          </p>
-        </div>
+        <SectionHeader
+          label="Project"
+          title="Scope overview"
+          right={
+            <p className="text-[12px] text-[color:var(--muted-fg)] tabular-nums">
+              <span className="font-mono">{overview.totalStories + overview.excluded.stories}</span> stories from Jira ·{" "}
+              <Link href={`/${slug}/project-backlog`} className="text-[color:var(--ink)] hover:text-[color:var(--coral)] transition-colors">
+                re-import →
+              </Link>
+            </p>
+          }
+        />
 
-        {/* Stacked progress bar — single hairline */}
-        <div className="mt-10">
-          <div className="relative h-1 w-full bg-[color:var(--line)] overflow-hidden">
+        {/* Progress bar */}
+        <div className="mt-6">
+          <div className="relative h-1.5 w-full bg-[color:var(--line)] rounded-full overflow-hidden">
             {(() => {
               let offset = 0;
               return buckets.map((b) => {
@@ -444,19 +418,21 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
         </div>
 
         {/* Bucket grid */}
-        <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 divide-x divide-[color:var(--line)]">
-          {buckets.map((b, i) => (
-            <div key={b.key} className={`${i === 0 ? "pl-0" : "pl-8"} pr-8`}>
-              <p className="eyebrow">{b.label}</p>
-              <p className="mt-3 font-display text-[56px] leading-none font-light tracking-tight text-[color:var(--ink)] tabular-nums">
+        <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+          {buckets.map((b) => (
+            <div key={b.key} className="rounded-md border hairline bg-[color:var(--paper-elev)]/30 p-4 hover:border-[color:var(--line-strong)] transition-colors">
+              <div className="flex items-baseline justify-between">
+                <p className="code-label">{b.label.toUpperCase()}</p>
+                <p className="text-[11px] font-mono tabular-nums text-[color:var(--faint-fg)]">
+                  {b.pct.toFixed(1)}%
+                </p>
+              </div>
+              <p className="mt-3 font-mono text-[34px] leading-none font-medium text-[color:var(--ink)] tabular-nums">
                 {fmt(b.sp)}
-                <span className="ml-2 text-[16px] text-[color:var(--faint-fg)] font-sans tracking-wide">SP</span>
+                <span className="ml-1.5 text-[12px] text-[color:var(--faint-fg)] font-sans tracking-wide">SP</span>
               </p>
-              <p className="mt-3 text-[12px] text-[color:var(--muted-fg)] tabular-nums">
-                {fmt(b.stories)} stor{b.stories === 1 ? "y" : "ies"} · {b.pct.toFixed(1)}%
-              </p>
-              <p className="mt-1 text-[11px] italic text-[color:var(--faint-fg)]">
-                {b.hint}
+              <p className="mt-2.5 text-[11px] text-[color:var(--muted-fg)] tabular-nums">
+                {fmt(b.stories)} stor{b.stories === 1 ? "y" : "ies"} · <span className="text-[color:var(--faint-fg)]">{b.hint}</span>
               </p>
             </div>
           ))}
@@ -465,113 +441,140 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
 
       {/* ─── LOOK-AHEAD ─── */}
       <section>
-        <p className="eyebrow">Figure II · the four sprints ahead</p>
-        <h3 className="font-display text-[36px] leading-tight font-light italic mt-2 tracking-tight">
-          Where the team is going.
-        </h3>
+        <SectionHeader
+          label="Plan"
+          title="The next sprints"
+          help="Scope vs forecast for every active sprint. Click to open in Capacity Planning."
+        />
 
-        <div className="mt-10 grid grid-cols-12 gap-x-6 text-[11px] tracking-wider uppercase text-[color:var(--faint-fg)] pb-3 border-b hairline-strong">
-          <div className="col-span-3">Sprint</div>
-          <div className="col-span-2">Window</div>
-          <div className="col-span-2 text-right">Scope</div>
-          <div className="col-span-2 text-right">Forecast</div>
-          <div className="col-span-3">Margin</div>
-        </div>
+        <div className="mt-6 rounded-md border hairline overflow-hidden">
+          <div className="grid grid-cols-12 gap-x-4 px-4 py-2.5 code-label border-b hairline bg-[color:var(--paper-elev)]/30">
+            <div className="col-span-3">Sprint</div>
+            <div className="col-span-3">Window</div>
+            <div className="col-span-2 text-right">Scope</div>
+            <div className="col-span-2 text-right">Forecast</div>
+            <div className="col-span-2">Margin</div>
+          </div>
 
-        <ul>
-          {lookAhead.map((s) => {
-            const sprint = allSprints.find((a) => a.id === s.sprintId);
-            if (!sprint) return null;
-            const scopeSP = s.inProgress.sp + s.remaining.sp;
-            const devCaps = computeDevCapacityFromIC(
-              deloitteCaps,
-              sprint,
-              publicHolidays,
-              projectHolidays,
-              ptoEntries,
-            );
-            const hours = devCaps.reduce((sum, d) => sum + d.netDevHrs, 0);
-            const projection = hours * historical.velocity * effectiveMultiplier;
-            const delta = projection - scopeSP;
-            const margin = scopeSP > 0 ? (delta / scopeSP) * 100 : 0;
-            const fits = delta >= 0;
+          <ul>
+            {lookAhead.map((s) => {
+              const sprint = allSprints.find((a) => a.id === s.sprintId);
+              if (!sprint) return null;
+              const scopeSP = s.inProgress.sp + s.remaining.sp;
+              const devCaps = computeDevCapacityFromIC(
+                deloitteCaps,
+                sprint,
+                publicHolidays,
+                projectHolidays,
+                ptoEntries,
+              );
+              const hours = devCaps.reduce((sum, d) => sum + d.netDevHrs, 0);
+              const projection = hours * historical.velocity * effectiveMultiplier;
+              const delta = projection - scopeSP;
+              const margin = scopeSP > 0 ? (delta / scopeSP) * 100 : 0;
+              const fits = delta >= 0;
 
-            const dates = sprint.startDate && sprint.endDate
-              ? `${formatShort(sprint.startDate)} – ${formatShort(sprint.endDate)}`
-              : "—";
+              const dates = sprint.startDate && sprint.endDate
+                ? `${formatShort(sprint.startDate)} – ${formatShort(sprint.endDate)}`
+                : "—";
 
-            return (
-              <li
-                key={s.sprintId}
-                className="grid grid-cols-12 gap-x-6 items-baseline py-5 border-b hairline group hover:bg-[color:var(--ink)]/[0.02] transition-colors"
-              >
-                <div className="col-span-3 flex items-baseline gap-3">
-                  <span
-                    className={`size-1.5 rounded-full shrink-0 ${
-                      s.sprintStatus === "current"
-                        ? "bg-[color:var(--coral)] pulse-soft"
-                        : "bg-[color:var(--faint-fg)]"
-                    }`}
-                  />
-                  <span className="font-display text-[20px] font-light italic tracking-tight text-[color:var(--ink)]">
-                    {sprint.name}
-                  </span>
-                  <span className="eyebrow">
-                    {s.sprintStatus}
-                  </span>
-                </div>
-                <div className="col-span-2 text-[12px] text-[color:var(--muted-fg)] tabular-nums">
-                  {dates}
-                </div>
-                <div className="col-span-2 text-right">
-                  <span className="font-mono text-[18px] font-light text-[color:var(--ink)]">
-                    {fmt(scopeSP)}
-                  </span>
-                  <span className="ml-1.5 text-[10px] text-[color:var(--faint-fg)]">SP</span>
-                </div>
-                <div className="col-span-2 text-right">
-                  <span className="font-mono text-[18px] font-light text-[color:var(--ink)]">
-                    {fmt(projection)}
-                  </span>
-                  <span className="ml-1.5 text-[10px] text-[color:var(--faint-fg)]">SP</span>
-                </div>
-                <div className="col-span-3 flex items-center gap-3">
-                  <div className="flex-1 h-px relative bg-[color:var(--line)]">
+              return (
+                <li
+                  key={s.sprintId}
+                  className="grid grid-cols-12 gap-x-4 items-center px-4 py-3 border-b hairline last:border-b-0 hover:bg-[color:var(--ink)]/[0.02] transition-colors"
+                >
+                  <div className="col-span-3 flex items-center gap-2.5">
                     <span
-                      className={`absolute top-1/2 -translate-y-1/2 h-px ${fits ? "bg-[color:var(--ink)]" : "bg-[color:var(--coral)]"}`}
-                      style={{
-                        width: `${Math.min(100, Math.abs(margin))}%`,
-                        left: fits ? "50%" : `${50 - Math.min(50, Math.abs(margin) / 2)}%`,
-                      }}
+                      className={`size-1.5 rounded-full shrink-0 ${
+                        s.sprintStatus === "current"
+                          ? "bg-[color:var(--coral)] pulse-soft"
+                          : s.sprintStatus === "next"
+                            ? "bg-amber-300/80"
+                            : s.sprintStatus === "planning"
+                              ? "bg-violet-300/70"
+                              : "bg-[color:var(--faint-fg)]"
+                      }`}
                     />
-                    <span
-                      className="absolute top-1/2 -translate-y-1/2 size-1.5 rounded-full bg-[color:var(--ink)]"
-                      style={{ left: "50%", transform: "translate(-50%, -50%)" }}
-                    />
+                    <span className="text-[13px] font-medium tracking-tight text-[color:var(--ink)]">
+                      {sprint.name}
+                    </span>
+                    <span className="code-label">
+                      {s.sprintStatus}
+                    </span>
                   </div>
-                  <span
-                    className={`font-mono text-[12px] tabular-nums ${
-                      fits ? "text-[color:var(--ink)]" : "text-[color:var(--coral)]"
-                    }`}
-                  >
-                    {fits ? "+" : ""}{fmt(delta)} SP
-                  </span>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {/* ─── COLOPHON ─── */}
-      <section className="pt-8 pb-4 border-t hairline">
-        <div className="flex items-baseline justify-between flex-wrap gap-4">
-          <p className="font-display text-[14px] italic font-light text-[color:var(--faint-fg)] tracking-wide">
-            Set in Fraunces & Inter Tight — composed for York Planning.
-          </p>
-          <p className="eyebrow">End of front matter</p>
+                  <div className="col-span-3 text-[12px] text-[color:var(--muted-fg)] font-mono tabular-nums">
+                    {dates}
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <span className="font-mono text-[14px] text-[color:var(--ink)] tabular-nums">
+                      {fmt(scopeSP)}
+                    </span>
+                    <span className="ml-1 text-[10px] text-[color:var(--faint-fg)]">SP</span>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <span className="font-mono text-[14px] text-[color:var(--ink)] tabular-nums">
+                      {fmt(projection)}
+                    </span>
+                    <span className="ml-1 text-[10px] text-[color:var(--faint-fg)]">SP</span>
+                  </div>
+                  <div className="col-span-2 flex items-center gap-2">
+                    <div className="flex-1 h-px relative bg-[color:var(--line)]">
+                      <span
+                        className={`absolute top-1/2 -translate-y-1/2 h-px ${fits ? "bg-[color:var(--ink)]" : "bg-[color:var(--coral)]"}`}
+                        style={{
+                          width: `${Math.min(100, Math.abs(margin))}%`,
+                          left: fits ? "50%" : `${50 - Math.min(50, Math.abs(margin) / 2)}%`,
+                        }}
+                      />
+                      <span
+                        className="absolute top-1/2 -translate-y-1/2 size-1 rounded-full bg-[color:var(--muted-fg)]"
+                        style={{ left: "50%", transform: "translate(-50%, -50%)" }}
+                      />
+                    </div>
+                    <span
+                      className={`font-mono text-[11px] tabular-nums shrink-0 ${
+                        fits ? "text-[color:var(--ink)]" : "text-[color:var(--coral)]"
+                      }`}
+                    >
+                      {fits ? "+" : ""}{fmt(delta)}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </section>
+    </div>
+  );
+}
+
+/** Section header — eyebrow label + title on one line, optional help/right slot. */
+function SectionHeader({
+  label,
+  title,
+  help,
+  right,
+}: {
+  label: string;
+  title: string;
+  help?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-baseline justify-between flex-wrap gap-3 pb-3 border-b hairline">
+      <div className="flex items-baseline gap-3">
+        <p className="code-label">{label.toUpperCase()}</p>
+        <h3 className="text-[15px] font-medium tracking-tight text-[color:var(--ink)]">
+          {title}
+        </h3>
+        {help && (
+          <p className="text-[12px] text-[color:var(--muted-fg)] hidden lg:inline">
+            {help}
+          </p>
+        )}
+      </div>
+      {right}
     </div>
   );
 }

@@ -37,29 +37,25 @@ export default async function ProjectBacklogPage() {
   }
 
   return (
-    <div className="flex flex-col gap-16" data-stagger>
-      <header className="flex items-end justify-between flex-wrap gap-6 pb-8 border-b hairline-strong">
-        <div>
-          <p className="eyebrow">Volume III</p>
-          <h2 className="font-display text-[clamp(40px,5vw,64px)] leading-[0.95] font-light tracking-[-0.02em] mt-3 text-[color:var(--ink)]">
-            The <span className="italic">Project</span> Backlog
-          </h2>
-          <p className="mt-4 text-[14px] text-[color:var(--muted-fg)] max-w-xl">
-            End-to-end scope. Import the Jira backlog here to refresh every
-            sprint in one motion — every other tab reads from this source.
-          </p>
-        </div>
+    <div className="flex flex-col gap-10" data-stagger>
+      <header className="flex items-end justify-between flex-wrap gap-4 pb-4 border-b hairline">
+        <p className="text-[13px] text-[color:var(--muted-fg)] max-w-xl">
+          End-to-end scope. Import the Jira backlog here to refresh every
+          sprint in one motion — every other tab reads from this source.
+        </p>
         <BacklogAutoImportButton />
       </header>
 
       <ProjectView overview={overview} />
 
       <section>
-        <p className="eyebrow">Detail · the selected sprint, story by story</p>
-        <h3 className="font-display text-[28px] leading-tight font-light italic mt-2 tracking-tight text-[color:var(--ink)]">
-          Composition.
-        </h3>
-        <div className="mt-8">
+        <div className="flex items-baseline gap-3 pb-3 border-b hairline">
+          <p className="code-label">DETAIL</p>
+          <h3 className="text-[15px] font-medium tracking-tight text-[color:var(--ink)]">
+            Selected sprint, story by story
+          </h3>
+        </div>
+        <div className="mt-6">
           <BacklogTable storiesBySprint={storiesBySprint} />
         </div>
       </section>

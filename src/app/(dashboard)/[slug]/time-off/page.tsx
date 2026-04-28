@@ -30,13 +30,9 @@ export default async function TimeOffPage() {
       : `${publicHolidays.length} public holiday${publicHolidays.length !== 1 ? "s" : ""} · ${projectHolidays.length} project closure${projectHolidays.length !== 1 ? "s" : ""} · ${ptoEntries.length} PTO entries`;
 
   return (
-    <div className="flex flex-col gap-12" data-stagger>
-      <header className="pb-8 border-b hairline-strong">
-        <p className="eyebrow">Volume V</p>
-        <h2 className="font-display text-[clamp(40px,5vw,64px)] leading-[0.95] font-light tracking-[-0.02em] mt-3 text-[color:var(--ink)]">
-          <span className="italic">Time</span> Off
-        </h2>
-        <p className="mt-4 text-[14px] text-[color:var(--muted-fg)] max-w-xl">{subtitle}.</p>
+    <div className="flex flex-col gap-8" data-stagger>
+      <header className="pb-4 border-b hairline">
+        <p className="text-[13px] text-[color:var(--muted-fg)]">{subtitle}.</p>
       </header>
 
       <TimeOffView

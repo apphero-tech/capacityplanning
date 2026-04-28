@@ -3,6 +3,18 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import {
+  LayoutDashboard,
+  Calendar,
+  Target,
+  Users,
+  CalendarOff,
+  BarChart3,
+  Settings,
+  PanelLeftClose,
+  PanelLeft,
+  type LucideIcon,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/contexts/workspace-context"
 import {
@@ -12,42 +24,39 @@ import {
 } from "@/components/ui/tooltip"
 
 /**
- * Editorial sidebar.
+ * Sidebar — software product.
  *
- * Layout — three movements:
- *   1. Masthead   : a compressed serif "Y." mark + the publication line.
- *   2. Sections   : navigation rendered as a numbered editorial table of
- *                   contents. Active item gets a hairline coral underline,
- *                   not a filled pill — pills feel SaaS, underlines feel
- *                   typeset.
- *   3. Colophon   : settings + collapse toggle, in a small caps register.
- *
- * Collapsed state shrinks to a 56px rail showing only the section number;
- * the label appears in a tooltip. The whole rail keeps its 1px right rule.
+ *   • Compact "Y." mark + workspace name (no tagline, no italic).
+ *   • Icon + label rows. Active row: coral indicator on the left edge,
+ *     ink colour on the icon and label. Hover: subtle ink fade-in.
+ *   • Collapsed state shrinks to a 56px rail of icons with tooltips.
  */
 
-// Workspace-relative section paths — the `[slug]` prefix is injected at
-// render time using the active workspace from `useWorkspace()`.
-const sections = [
-  { path: "",                 label: "Dashboard"        },
-  { path: "/sprints",         label: "Sprint Plan"      },
-  { path: "/project-backlog", label: "Project Backlog"  },
-  { path: "/team",            label: "Team"             },
-  { path: "/time-off",        label: "Time Off"         },
-  { path: "/capacity",        label: "Capacity Planning"},
-] as const
+interface NavItem {
+  path: string
+  label: string
+  icon: LucideIcon
+}
 
-const colophon = [
-  { path: "/settings", label: "Settings" },
-] as const
+const sections: NavItem[] = [
+  { path: "",                 label: "Dashboard",         icon: LayoutDashboard },
+  { path: "/sprints",         label: "Sprint Plan",       icon: Calendar },
+  { path: "/project-backlog", label: "Project Backlog",   icon: Target },
+  { path: "/team",            label: "Team",              icon: Users },
+  { path: "/time-off",        label: "Time Off",          icon: CalendarOff },
+  { path: "/capacity",        label: "Capacity Planning", icon: BarChart3 },
+]
+
+const colophon: NavItem[] = [
+  { path: "/settings", label: "Settings", icon: Settings },
+]
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { slug } = useWorkspace()
+  const { slug, name } = useWorkspace()
   const [collapsed, setCollapsed] = React.useState(false)
 
   const hrefFor = (path: string) => `/${slug}${path}`
-
   const isActive = (path: string) => {
     const href = hrefFor(path)
     return path === "" ? pathname === href : pathname.startsWith(href)
@@ -56,75 +65,59 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r hairline bg-[color:var(--paper)] transition-[width] duration-300 ease-out",
-        collapsed ? "w-14" : "w-64",
+        "flex h-screen flex-col border-r hairline bg-[color:var(--paper)] transition-[width] duration-200 ease-out",
+        collapsed ? "w-14" : "w-56",
       )}
     >
-      {/* Masthead */}
-      <div className="px-5 pt-7 pb-6">
-        <Link href={`/${slug}`} className="block group">
-          <div className="flex items-baseline gap-2">
-            <span className="font-display text-[44px] leading-none font-light text-[color:var(--ink)] tracking-tight">
+      {/* Masthead — compact, sober. */}
+      <div className="px-4 h-14 flex items-center border-b hairline">
+        <Link href={`/${slug}`} className="flex items-center gap-2.5 group">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-[color:var(--ink)]/[0.04] border hairline">
+            <span className="font-display text-[16px] leading-none font-light text-[color:var(--ink)] tracking-tight">
               Y
             </span>
-            <span className="text-[color:var(--coral)] text-2xl leading-none">.</span>
-          </div>
+          </span>
           {!collapsed && (
-            <>
-              <p className="eyebrow mt-3">York Planning</p>
-              <p className="font-display text-[11px] italic font-light text-[color:var(--muted-fg)] mt-1 tracking-wide">
-                A capacity journal
-              </p>
-            </>
+            <span className="text-[13px] font-medium tracking-tight text-[color:var(--ink)] truncate">
+              {name}
+            </span>
           )}
         </Link>
       </div>
 
-      <div className="px-5">
-        <div className="h-px bg-[color:var(--line)]" />
-      </div>
-
       {/* Sections */}
-      <nav className={cn("flex-1 overflow-y-auto py-6", collapsed ? "px-2" : "px-5")}>
-        {!collapsed && <p className="eyebrow mb-4">Sections</p>}
-        <ol className="flex flex-col gap-0.5" data-stagger>
-          {sections.map((item, idx) => {
+      <nav className={cn("flex-1 overflow-y-auto py-4", collapsed ? "px-2" : "px-3")}>
+        {!collapsed && <p className="eyebrow px-2 mb-2.5">Navigate</p>}
+        <ul className="flex flex-col gap-0.5">
+          {sections.map((item) => {
             const href = hrefFor(item.path)
             const active = isActive(item.path)
-            const number = String(idx + 1).padStart(2, "0")
+            const Icon = item.icon
 
             const inner = (
               <Link
                 href={href}
                 className={cn(
-                  "group relative flex items-baseline py-2.5 transition-colors",
-                  collapsed ? "justify-center" : "gap-4",
+                  "group relative flex items-center rounded-md transition-colors",
+                  collapsed ? "h-9 w-9 justify-center mx-auto" : "h-9 px-2.5 gap-3",
+                  active
+                    ? "bg-[color:var(--ink)]/[0.05] text-[color:var(--ink)]"
+                    : "text-[color:var(--muted-fg)] hover:text-[color:var(--ink)] hover:bg-[color:var(--ink)]/[0.03]",
                 )}
               >
-                <span
+                {active && !collapsed && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] bg-[color:var(--coral)] rounded-r-sm" />
+                )}
+                <Icon
                   className={cn(
-                    "font-mono text-[10px] tracking-wider tabular-nums shrink-0 transition-colors",
+                    "size-[15px] shrink-0 transition-colors",
                     active
                       ? "text-[color:var(--coral)]"
                       : "text-[color:var(--faint-fg)] group-hover:text-[color:var(--muted-fg)]",
                   )}
-                >
-                  {number}
-                </span>
+                />
                 {!collapsed && (
-                  <span
-                    className={cn(
-                      "text-[14px] tracking-tight transition-colors flex-1",
-                      active
-                        ? "text-[color:var(--ink)]"
-                        : "text-[color:var(--muted-fg)] group-hover:text-[color:var(--ink)]",
-                    )}
-                  >
-                    {item.label}
-                    {active && (
-                      <span className="block h-px bg-[color:var(--coral)] mt-1.5 origin-left draw-line" />
-                    )}
-                  </span>
+                  <span className="text-[13px] tracking-tight">{item.label}</span>
                 )}
               </Link>
             )
@@ -134,7 +127,7 @@ export function Sidebar() {
                 <li key={item.path}>
                   <Tooltip>
                     <TooltipTrigger asChild>{inner}</TooltipTrigger>
-                    <TooltipContent side="right" sideOffset={12}>
+                    <TooltipContent side="right" sideOffset={10}>
                       {item.label}
                     </TooltipContent>
                   </Tooltip>
@@ -143,60 +136,72 @@ export function Sidebar() {
             }
             return <li key={item.path}>{inner}</li>
           })}
-        </ol>
+        </ul>
       </nav>
 
-      {/* Colophon */}
-      <div className={cn("pb-6", collapsed ? "px-2" : "px-5")}>
-        <div className="h-px bg-[color:var(--line)] mb-4" />
-        {colophon.map((item) => {
-          const href = hrefFor(item.path)
-          const active = isActive(item.path)
-          const inner = (
-            <Link
-              href={href}
-              className={cn(
-                "flex items-baseline py-2 transition-colors",
-                collapsed ? "justify-center" : "gap-4",
-                active
-                  ? "text-[color:var(--ink)]"
-                  : "text-[color:var(--muted-fg)] hover:text-[color:var(--ink)]",
-              )}
-            >
-              <span
+      {/* Footer — settings + collapse */}
+      <div className={cn("border-t hairline py-3", collapsed ? "px-2" : "px-3")}>
+        <ul className="flex flex-col gap-0.5">
+          {colophon.map((item) => {
+            const href = hrefFor(item.path)
+            const active = isActive(item.path)
+            const Icon = item.icon
+
+            const inner = (
+              <Link
+                href={href}
                 className={cn(
-                  "font-mono text-[10px] tracking-wider tabular-nums",
-                  active ? "text-[color:var(--coral)]" : "text-[color:var(--faint-fg)]",
+                  "group relative flex items-center rounded-md transition-colors",
+                  collapsed ? "h-9 w-9 justify-center mx-auto" : "h-9 px-2.5 gap-3",
+                  active
+                    ? "bg-[color:var(--ink)]/[0.05] text-[color:var(--ink)]"
+                    : "text-[color:var(--muted-fg)] hover:text-[color:var(--ink)] hover:bg-[color:var(--ink)]/[0.03]",
                 )}
               >
-                {String(sections.length + 1).padStart(2, "0")}
-              </span>
-              {!collapsed && <span className="text-[14px] tracking-tight">{item.label}</span>}
-            </Link>
-          )
-          if (collapsed) {
-            return (
-              <Tooltip key={item.path}>
-                <TooltipTrigger asChild>{inner}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={12}>
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
+                <Icon
+                  className={cn(
+                    "size-[15px] shrink-0",
+                    active ? "text-[color:var(--coral)]" : "text-[color:var(--faint-fg)]",
+                  )}
+                />
+                {!collapsed && (
+                  <span className="text-[13px] tracking-tight">{item.label}</span>
+                )}
+              </Link>
             )
-          }
-          return <React.Fragment key={item.path}>{inner}</React.Fragment>
-        })}
+            if (collapsed) {
+              return (
+                <li key={item.path}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>{inner}</TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={10}>
+                      {item.label}
+                    </TooltipContent>
+                  </Tooltip>
+                </li>
+              )
+            }
+            return <li key={item.path}>{inner}</li>
+          })}
+        </ul>
 
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
           className={cn(
-            "mt-4 w-full text-left text-[10px] tracking-[0.2em] uppercase transition-colors",
-            collapsed ? "text-center" : "",
-            "text-[color:var(--faint-fg)] hover:text-[color:var(--ink)]",
+            "mt-2 flex items-center rounded-md text-[color:var(--faint-fg)] hover:text-[color:var(--muted-fg)] hover:bg-[color:var(--ink)]/[0.03] transition-colors",
+            collapsed ? "h-9 w-9 justify-center mx-auto" : "h-8 px-2.5 gap-3 w-full",
           )}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? "→" : "← Collapse"}
+          {collapsed ? (
+            <PanelLeft className="size-[14px]" />
+          ) : (
+            <>
+              <PanelLeftClose className="size-[14px] shrink-0" />
+              <span className="text-[12px] tracking-tight">Collapse</span>
+            </>
+          )}
         </button>
       </div>
     </aside>

@@ -4,14 +4,27 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ---------------------------------------------------------------------------
- * Editorial design system — "York Capacity"
+/* ─────────────────────────────────────────────────────────────────────────
+ * York Capacity — design system
  *
- * Palette  : deep charcoal canvas, warm off-white type, a single coral accent.
- * Type     : Fraunces (display, optical-size, soft-axis), Inter Tight (body),
- *            JetBrains Mono (numbers).
- * Detail   : 1px hairlines, generous whitespace, tabular numerals everywhere.
- * ------------------------------------------------------------------------- */
+ * Direction:
+ *   Software-first, calm and airy. One typographic moment lives in the
+ *   dashboard hero (Fraunces serif on a single question) — everything else
+ *   is sans-serif, monospaced for data, aligned to a strict grid. Not a
+ *   magazine, not an art piece — a precise instrument that's pleasant to
+ *   touch every day.
+ *
+ * Type:
+ *   • Inter Tight — body & UI (300/400/500/600/700)
+ *   • JetBrains Mono — every number, every label, every status code
+ *   • Fraunces — hero question, verdict word, two-line section openers ONLY
+ *
+ * Color:
+ *   • Ink #f4efe6 on charcoal #0e0d0b — high contrast but warm.
+ *   • Single accent: coral #ff6a4d. Used for the verdict word, the active
+ *     state on tabs, and links on hover. Nowhere else.
+ *   • Hairlines: 1px ink at 6% (rest), 14% (strong/dividers between zones).
+ * ───────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
   --color-background: var(--background);
@@ -68,18 +81,18 @@
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.375rem;
 
-  /* Editorial palette */
-  --ink:        #f4efe6;   /* warm off-white type */
-  --paper:      #0e0d0b;   /* deep charcoal canvas */
-  --paper-elev: #161412;   /* one step lighter for cards */
-  --coral:      #ff6a4d;   /* single accent — used sparingly */
-  --coral-soft: #ff6a4d22;
-  --line:       rgba(244, 239, 230, 0.07);
-  --line-strong:rgba(244, 239, 230, 0.18);
-  --muted-fg:   rgba(244, 239, 230, 0.55);
-  --faint-fg:   rgba(244, 239, 230, 0.32);
+  /* Palette */
+  --ink:        #f4efe6;
+  --paper:      #0c0c10;
+  --paper-elev: #14141a;
+  --coral:      #ff6a4d;
+  --coral-soft: #ff6a4d18;
+  --line:       rgba(244, 239, 230, 0.06);
+  --line-strong:rgba(244, 239, 230, 0.14);
+  --muted-fg:   rgba(244, 239, 230, 0.58);
+  --faint-fg:   rgba(244, 239, 230, 0.36);
 
   --background: var(--paper);
   --foreground: var(--ink);
@@ -95,7 +108,7 @@
   --muted-foreground: var(--muted-fg);
   --accent: rgba(244, 239, 230, 0.06);
   --accent-foreground: var(--ink);
-  --destructive: #ff6a4d;
+  --destructive: var(--coral);
   --border: var(--line);
   --input: var(--line);
   --ring: var(--coral);
@@ -149,28 +162,30 @@
   }
 
   body {
-    /* subtle vertical gradient + warm grain to break the flat dark canvas */
-    background-image:
-      radial-gradient(1200px 800px at 50% -10%, rgba(255, 106, 77, 0.08), transparent 60%),
-      radial-gradient(800px 600px at 100% 100%, rgba(110, 198, 184, 0.04), transparent 70%);
-    background-attachment: fixed;
+    /* Pure flat surface — no decorative gradients. The "atmosphere" comes
+       from typography and rhythm, not from washes of colour. */
+    font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
-    letter-spacing: -0.005em;
+    letter-spacing: -0.003em;
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .font-display {
     font-family: var(--font-display);
     font-optical-sizing: auto;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.022em;
   }
 
+  .font-mono,
   .num,
   .tabular-nums {
     font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum", "cv11";
+    font-feature-settings: "tnum", "cv11", "ss01";
   }
 
-  /* Editorial hairline */
+  /* Editorial hairline tokens reused everywhere. */
   .hairline {
     border-color: var(--line);
   }
@@ -178,15 +193,32 @@
     border-color: var(--line-strong);
   }
 
-  /* Section eyebrow */
+  /* Section eyebrow — uppercase mono, the only "label" idiom in the app. */
   .eyebrow {
-    font-family: var(--font-sans);
+    font-family: var(--font-mono);
     font-size: 10px;
     line-height: 1;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--faint-fg);
     font-weight: 500;
+  }
+
+  /* "Code-ish" inline label for tech-feeling micro-data. */
+  .code-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--faint-fg);
+  }
+
+  /* A single "moment" — italic display reserved for the hero verdict and
+     the cover question. Used sparingly. */
+  .display-italic {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 300;
+    letter-spacing: -0.025em;
   }
 
   /* Reset focus rings except on real inputs */
@@ -196,12 +228,13 @@
   }
   input:focus-visible,
   textarea:focus-visible,
-  select:focus-visible {
+  select:focus-visible,
+  button:focus-visible {
     outline: 1px solid var(--coral);
     outline-offset: 2px;
   }
 
-  /* Scrollbar — slim, ink-on-paper */
+  /* Slim scrollbar — ink on paper, not chrome. */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -213,15 +246,18 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(244, 239, 230, 0.15);
   }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
-/* ---------------------------------------------------------------------------
- * Page-load choreography — staggered editorial reveal
- * ------------------------------------------------------------------------- */
+/* ─────────────────────────────────────────────────────────────────────────
+ * Page-load choreography — a single soft rise, no theatre.
+ * ───────────────────────────────────────────────────────────────────────── */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translate3d(0, 12px, 0);
+    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
@@ -233,29 +269,29 @@
   to   { transform: scaleX(1); }
 }
 @keyframes pulse-soft {
-  0%, 100% { opacity: 0.6; }
+  0%, 100% { opacity: 0.55; }
   50%      { opacity: 1; }
 }
 
 .rise {
-  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 .draw-line {
   transform-origin: left;
-  animation: drawLine 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: drawLine 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 .pulse-soft {
   animation: pulse-soft 2.4s ease-in-out infinite;
 }
 
 [data-stagger] > * {
-  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 [data-stagger] > *:nth-child(1) { animation-delay: 0.00s; }
-[data-stagger] > *:nth-child(2) { animation-delay: 0.05s; }
-[data-stagger] > *:nth-child(3) { animation-delay: 0.10s; }
-[data-stagger] > *:nth-child(4) { animation-delay: 0.15s; }
-[data-stagger] > *:nth-child(5) { animation-delay: 0.20s; }
-[data-stagger] > *:nth-child(6) { animation-delay: 0.25s; }
-[data-stagger] > *:nth-child(7) { animation-delay: 0.30s; }
-[data-stagger] > *:nth-child(8) { animation-delay: 0.35s; }
+[data-stagger] > *:nth-child(2) { animation-delay: 0.04s; }
+[data-stagger] > *:nth-child(3) { animation-delay: 0.08s; }
+[data-stagger] > *:nth-child(4) { animation-delay: 0.12s; }
+[data-stagger] > *:nth-child(5) { animation-delay: 0.16s; }
+[data-stagger] > *:nth-child(6) { animation-delay: 0.20s; }
+[data-stagger] > *:nth-child(7) { animation-delay: 0.24s; }
+[data-stagger] > *:nth-child(8) { animation-delay: 0.28s; }

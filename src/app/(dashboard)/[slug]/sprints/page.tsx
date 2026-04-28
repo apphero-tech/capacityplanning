@@ -30,17 +30,11 @@ export default async function SprintsPage() {
       : `${nonDemo} delivery sprints${demo > 0 ? ` + ${demo} demo` : ""}${current ? ` · ${current.name} in flight` : ""}`;
 
   return (
-    <div className="flex flex-col gap-12" data-stagger>
-      <header className="flex items-end justify-between flex-wrap gap-6 pb-8 border-b hairline-strong">
-        <div>
-          <p className="eyebrow">Volume II</p>
-          <h2 className="font-display text-[clamp(40px,5vw,64px)] leading-[0.95] font-light tracking-[-0.02em] mt-3 text-[color:var(--ink)]">
-            The <span className="italic">Sprint</span> Plan
-          </h2>
-          <p className="mt-4 text-[14px] text-[color:var(--muted-fg)] max-w-xl">
-            {subtitle}. Edit any name, range or focus inline.
-          </p>
-        </div>
+    <div className="flex flex-col gap-8" data-stagger>
+      <header className="flex items-end justify-between flex-wrap gap-4 pb-4 border-b hairline">
+        <p className="text-[13px] text-[color:var(--muted-fg)]">
+          {subtitle}. Edit any name, range or focus inline.
+        </p>
         <AddSprintDialog />
       </header>
 
