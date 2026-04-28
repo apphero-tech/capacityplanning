@@ -53,11 +53,24 @@ export interface ProjectOverview {
 
 /**
  * Status-order threshold above which a story is counted as "delivered" for
- * the DEV team's purposes — matches "Dev Ready to Deploy to QA" and beyond
- * (QA-ready, demo-ready, merged, deployed). Anything below is still in the
- * DEV cycle.
+ * the DEV team's purposes — anything from QA onwards (QA-ready, demo-ready,
+ * deployed). Below the threshold the story is still in REF / DES / DEV.
+ *
+ * Numbering convention (set with the user 2026-04-28):
+ *   00     — placeholder (New, not yet refined)
+ *   10-19  — REF  (FCT refinement)
+ *   20-29  — DES  (FCT design)
+ *   30-49  — DEV  (development cycle, incl. code review / pre-QA)
+ *   50-59  — QA
+ *   60-69  — DEMO / SIT
+ *   70-79  — reserved (post-demo buffer)
+ *   90+    — Out of scope (Descoped / Merged / Split)
+ *
+ * The threshold sits at 50 — first QA status — so adding a 4x status in
+ * Jira (e.g. "40-DEV-Code Review") leaves the story in flight rather than
+ * silently flipping it to delivered.
  */
-const DELIVERED_STATUS_ORDER = 40;
+const DELIVERED_STATUS_ORDER = 50;
 
 /**
  * Exclude Descoped / Merged / Split — the canonical "moved out of scope"
