@@ -1,25 +1,28 @@
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Resolve the current workspace for a server-rendered page.
+ * Resolve the active workspace for the current request.
  *
- * Reads the Supabase auth session from cookies, looks up the user's first
- * membership, and returns the corresponding workspace id + slug. Cached for
- * the duration of a single request via React's `cache()` so the lookup
- * happens once even when many components call this on the same render.
+ * Slug resolution order:
+ *   1. Explicit `slug` argument (used by `[slug]/layout.tsx` to validate
+ *      the URL parameter).
+ *   2. `x-workspace-slug` request header (set by middleware from the URL).
+ *      This is what every `data.ts` query reads — no plumbing needed.
+ *   3. Fallback: the user's first workspace (lowest createdAt on
+ *      Membership). Only hit by routes that aren't workspace-scoped, like
+ *      the post-login redirect.
  *
- * Throws (via `redirect`) when:
- *   • there is no auth session — back to /login
- *   • the user has no memberships — to /no-workspace placeholder
+ * 404s when the workspace exists but the user has no membership for it
+ * (treated like "doesn't exist" — never leak existence cross-tenant).
  *
- * Multi-tenant note: when the slug routing lands (Phase 3), this function
- * will accept a slug param and verify membership against THAT workspace
- * rather than picking the first one.
+ * Cached per request via React's `cache()` so several callers within the
+ * same render share one DB lookup.
  */
-export const getCurrentWorkspace = cache(async () => {
+export const getCurrentWorkspace = cache(async (slug?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -29,6 +32,35 @@ export const getCurrentWorkspace = cache(async () => {
     redirect("/login");
   }
 
+  // Resolve the slug source.
+  let resolvedSlug = slug;
+  if (!resolvedSlug) {
+    const h = await headers();
+    resolvedSlug = h.get("x-workspace-slug") ?? undefined;
+  }
+
+  if (resolvedSlug) {
+    const workspace = await prisma.workspace.findUnique({
+      where: { slug: resolvedSlug },
+    });
+    if (!workspace) notFound();
+
+    const membership = await prisma.membership.findUnique({
+      where: {
+        userId_workspaceId: { userId: user.id, workspaceId: workspace.id },
+      },
+    });
+    if (!membership) notFound();
+
+    return {
+      userId: user.id,
+      email: user.email ?? null,
+      workspace,
+      role: membership.role,
+    };
+  }
+
+  // No slug context — fall back to the user's first workspace.
   const membership = await prisma.membership.findFirst({
     where: { userId: user.id },
     include: { workspace: true },
@@ -47,10 +79,7 @@ export const getCurrentWorkspace = cache(async () => {
   };
 });
 
-/**
- * Convenience: just the workspace id, when that's all you need.
- */
-export async function getCurrentWorkspaceId(): Promise<string> {
-  const ctx = await getCurrentWorkspace();
+export async function getCurrentWorkspaceId(slug?: string): Promise<string> {
+  const ctx = await getCurrentWorkspace(slug);
   return ctx.workspace.id;
 }

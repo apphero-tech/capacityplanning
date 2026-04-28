@@ -2,6 +2,8 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { SprintProvider } from "@/contexts/sprint-context"
 import { ProjectionSettingsProvider } from "@/contexts/projection-settings-context"
+import { WorkspaceProvider } from "@/contexts/workspace-context"
+import { getCurrentWorkspace } from "@/lib/auth/workspace"
 import {
   getAllSprints,
   getInitialCapacities,
@@ -13,9 +15,16 @@ import { computeAllSprintForecasts } from "@/lib/capacity-engine"
 
 export default async function DashboardLayout({
   children,
+  params,
 }: {
   children: React.ReactNode
+  params: Promise<{ slug: string }>
 }) {
+  // Validate the slug + membership before loading any workspace data.
+  // notFound() fires inside getCurrentWorkspace if the user can't see it.
+  const { slug } = await params;
+  const ctx = await getCurrentWorkspace(slug);
+
   const [allSprints, initialCapacities, publicHolidays, projectHolidays, ptoEntries] =
     await Promise.all([
       getAllSprints(),
@@ -45,29 +54,36 @@ export default async function DashboardLayout({
   );
 
   return (
-    <SprintProvider
-      sprints={activeSprints}
-      allSprints={allSprints}
-      initialIndex={initialIndex}
-      forecasts={forecasts}
-      initialCapacities={initialCapacities}
-      publicHolidays={publicHolidays}
-      projectHolidays={projectHolidays}
-      ptoEntries={ptoEntries}
+    <WorkspaceProvider
+      slug={ctx.workspace.slug}
+      name={ctx.workspace.name}
+      role={ctx.role}
+      email={ctx.email}
     >
-      <ProjectionSettingsProvider>
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <Header />
-            <main className="flex-1 overflow-y-auto px-10 py-10">
-              <div className="mx-auto w-full max-w-[1400px]">
-                {children}
-              </div>
-            </main>
+      <SprintProvider
+        sprints={activeSprints}
+        allSprints={allSprints}
+        initialIndex={initialIndex}
+        forecasts={forecasts}
+        initialCapacities={initialCapacities}
+        publicHolidays={publicHolidays}
+        projectHolidays={projectHolidays}
+        ptoEntries={ptoEntries}
+      >
+        <ProjectionSettingsProvider>
+          <div className="flex h-screen overflow-hidden">
+            <Sidebar />
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <Header />
+              <main className="flex-1 overflow-y-auto px-10 py-10">
+                <div className="mx-auto w-full max-w-[1400px]">
+                  {children}
+                </div>
+              </main>
+            </div>
           </div>
-        </div>
-      </ProjectionSettingsProvider>
-    </SprintProvider>
+        </ProjectionSettingsProvider>
+      </SprintProvider>
+    </WorkspaceProvider>
   )
 }

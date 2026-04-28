@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useSprint } from "@/contexts/sprint-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import type { ProjectOverview } from "@/lib/project-overview";
 
 function fmt(n: number | null | undefined, decimals = 0): string {
@@ -25,6 +26,7 @@ interface Props {
  */
 export function ProjectView({ overview }: Props) {
   const { sprints, setSelectedIndex } = useSprint();
+  const { slug } = useWorkspace();
   const router = useRouter();
 
   const {
@@ -186,7 +188,7 @@ export function ProjectView({ overview }: Props) {
             const handleClick = () => {
               if (!clickable) return;
               setSelectedIndex(activeIdx);
-              router.push("/capacity");
+              router.push(`/${slug}/capacity`);
             };
             return (
               <button

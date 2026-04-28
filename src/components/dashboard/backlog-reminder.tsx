@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSprint } from "@/contexts/sprint-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import Link from "next/link";
 import { RefreshCw, Clock, X } from "lucide-react";
 import { SPRINT_MODE_LABELS } from "@/lib/constants";
@@ -55,6 +56,7 @@ function getDismissKey(sprintId: string): string {
 
 export function BacklogReminder({ freshness }: BacklogReminderProps) {
   const { selectedSprint } = useSprint();
+  const { slug } = useWorkspace();
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export function BacklogReminder({ freshness }: BacklogReminderProps) {
         </div>
 
         <Link
-          href="/project-backlog"
+          href={`/${slug}/project-backlog`}
           className="group flex flex-1 items-center gap-3 min-w-0"
         >
           <div className="flex items-center gap-2 text-[13px]">
