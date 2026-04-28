@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
   let deleted = 0;
   if (replaceAll) {
-    deleted = deleteAllInitialCapacities();
+    deleted = await deleteAllInitialCapacities();
   }
 
   const perSheet: {
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
       const ftPt = ftPtRaw === "PT" ? "PT" : "FT";
 
       try {
-        insertInitialCapacity({
+        await insertInitialCapacity({
           lastName,
           firstName,
           role,

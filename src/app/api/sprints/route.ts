@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
     }
 
-    const id = insertSprint({
+    const id = await insertSprint({
       name,
       startDate: typeof body.startDate === "string" && body.startDate ? body.startDate : null,
       endDate: typeof body.endDate === "string" && body.endDate ? body.endDate : null,

@@ -1,13 +1,20 @@
 /**
  * Data access layer for the capacity planning app.
  *
- * Uses better-sqlite3 directly (instead of Prisma) to avoid ESM
- * compatibility issues with Prisma 7. All queries are read-only.
+ * Reads from Supabase Postgres via Prisma Client. Every query is scoped
+ * to the current workspace — resolved lazily from the auth session by
+ * `getCurrentWorkspaceId()` so callers don't have to thread workspaceId
+ * through every component.
+ *
+ * Mutations expect the caller to be a member of the workspace; Postgres
+ * Row-Level Security enforces that on top of the app-level scoping for
+ * defence in depth.
  */
 
-import Database from "better-sqlite3";
-import path from "path";
 import { differenceInBusinessDays } from "date-fns";
+
+import { prisma } from "@/lib/prisma";
+import { getCurrentWorkspaceId } from "@/lib/auth/workspace";
 
 import type {
   Sprint,
@@ -26,142 +33,7 @@ import type {
 } from "@/types";
 
 // ---------------------------------------------------------------------------
-// Database singleton
-// ---------------------------------------------------------------------------
-
-const DB_PATH = path.join(process.cwd(), "prisma/dev.db");
-let _db: Database.Database | null = null;
-
-function getDb(): Database.Database {
-  if (!_db) {
-    _db = new Database(DB_PATH);
-    _db.pragma("journal_mode = WAL");
-  }
-  return _db;
-}
-
-// ---------------------------------------------------------------------------
-// Row types (what SQLite actually returns before we map to domain types)
-// ---------------------------------------------------------------------------
-
-interface SprintRow {
-  id: string;
-  name: string;
-  startDate: string | null;
-  endDate: string | null;
-  durationWeeks: number;
-  workingDays: number;
-  focusFactor: number;
-  velocityProven: number | null;
-  velocityTarget: number | null;
-  isCurrent: number; // SQLite stores booleans as 0/1
-  isDemo: number;
-  progressFactor: number;
-  storyCount: number | null;
-  storyPoints: number | null;
-  commitmentSP: number | null;
-  completedSP: number | null;
-}
-
-interface TeamMemberRow {
-  id: string;
-  lastName: string;
-  firstName: string;
-  role: string;
-  location: string;
-  stream: string;
-  ftPt: string;
-  hrsPerWeek: number;
-  allocation: number;
-  pod: string | null;
-  sheetRow: number | null;
-}
-
-interface StoryRow {
-  key: string;
-  summary: string;
-  status: string;
-  storyPoints: number | null;
-  pod: string | null;
-  dependency: string | null;
-  stream: string;
-  sheetRow: number | null;
-}
-
-interface PublicHolidayRow {
-  id: string;
-  date: string;
-  name: string;
-  country: string;
-  sprint: string | null;
-  days: number;
-}
-
-interface ProjectHolidayRow {
-  id: string;
-  date: string;
-  name: string;
-  sprint: string | null;
-  days: number;
-}
-
-interface PtoEntryRow {
-  id: string;
-  who: string;
-  location: string;
-  team: string | null;
-  startDate: string;
-  endDate: string;
-}
-
-interface InitialCapacityRow {
-  id: string;
-  lastName: string;
-  firstName: string;
-  role: string;
-  location: string;
-  organization: string;
-  stream: string;
-  ftPt: string;
-  hrsPerWeek: number;
-  isActive: number; // SQLite stores booleans as 0/1
-  refinement: number;
-  design: number;
-  development: number;
-  qa: number;
-  kt: number;
-  lead: number;
-  pmo: number;
-  retrofits: number;
-  ocmComms: number;
-  ocmTraining: number;
-  other: number;
-}
-
-interface SprintStoryRow {
-  id: string;
-  sprintId: string;
-  key: string;
-  summary: string;
-  status: string;
-  storyPoints: number | null;
-  pod: string | null;
-  dependency: string | null;
-  stream: string;
-  groupName: string | null;
-  importedAt: string;
-}
-
-interface GuideEntryRow {
-  id: string;
-  section: string;
-  term: string;
-  defaultVal: string | null;
-  description: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Guide entry type (not defined in src/types/index.ts)
+// Local domain type — guide entry isn't in src/types/index.ts
 // ---------------------------------------------------------------------------
 
 export interface GuideEntry {
@@ -173,7 +45,7 @@ export interface GuideEntry {
 }
 
 // ---------------------------------------------------------------------------
-// Sprint natural sort key
+// Sprint natural sort
 // ---------------------------------------------------------------------------
 
 /**
@@ -189,7 +61,6 @@ function sprintSortKey(name: string): [number, number] {
   return [major, sub];
 }
 
-/** Natural comparison for two sprint names. */
 function compareSprintNames(a: string, b: string): number {
   const [aMaj, aSub] = sprintSortKey(a);
   const [bMaj, bSub] = sprintSortKey(b);
@@ -198,8 +69,14 @@ function compareSprintNames(a: string, b: string): number {
 }
 
 // ---------------------------------------------------------------------------
-// Mapping helpers
+// Mapping helpers — Prisma row → domain type
 // ---------------------------------------------------------------------------
+
+type SprintRow = Awaited<ReturnType<typeof prisma.sprint.findFirst>> extends infer T
+  ? T extends null
+    ? never
+    : T
+  : never;
 
 function mapSprint(
   row: SprintRow,
@@ -217,8 +94,8 @@ function mapSprint(
     focusFactor: row.focusFactor,
     velocityProven: row.velocityProven,
     velocityTarget: row.velocityTarget,
-    isCurrent: isCurrentOverride ?? row.isCurrent === 1,
-    isDemo: row.isDemo === 1,
+    isCurrent: isCurrentOverride ?? row.isCurrent,
+    isDemo: row.isDemo,
     progressFactor: row.progressFactor ?? 0,
     status,
     isActive,
@@ -229,135 +106,10 @@ function mapSprint(
   };
 }
 
-function mapTeamMember(
-  row: TeamMemberRow
-): Omit<TeamMember, "effHrsPerWeek" | "totalHrs" | "holidayHrs" | "netHrs"> {
-  return {
-    id: row.id,
-    lastName: row.lastName,
-    firstName: row.firstName,
-    role: row.role,
-    location: row.location as Country,
-    stream: row.stream as TeamStream,
-    ftPt: row.ftPt as FtPt,
-    hrsPerWeek: row.hrsPerWeek,
-    allocation: row.allocation,
-    pod: row.pod,
-  };
-}
-
-function mapStory(row: StoryRow): Omit<Story, "isExcluded"> & { sheetRow: number | null } {
-  return {
-    key: row.key,
-    summary: row.summary,
-    status: row.status,
-    storyPoints: row.storyPoints,
-    pod: row.pod,
-    dependency: row.dependency,
-    stream: row.stream as BacklogStream,
-    sheetRow: row.sheetRow,
-  };
-}
-
-function mapPublicHoliday(row: PublicHolidayRow): PublicHoliday {
-  return {
-    id: row.id,
-    date: row.date,
-    name: row.name,
-    country: row.country as Country,
-    sprint: row.sprint,
-    days: row.days,
-  };
-}
-
-function mapProjectHoliday(row: ProjectHolidayRow): ProjectHoliday {
-  return {
-    id: row.id,
-    date: row.date,
-    name: row.name,
-    sprint: row.sprint,
-    days: row.days,
-  };
-}
-
-function mapPtoEntry(row: PtoEntryRow): PtoEntry {
-  return {
-    id: row.id,
-    who: row.who,
-    location: row.location,
-    team: row.team,
-    startDate: row.startDate,
-    endDate: row.endDate,
-  };
-}
-
-function mapInitialCapacity(row: InitialCapacityRow): InitialCapacity {
-  return {
-    id: row.id,
-    lastName: row.lastName,
-    firstName: row.firstName,
-    role: row.role,
-    location: (row.location || "") as Country,
-    organization: row.organization ?? "",
-    stream: row.stream ?? "",
-    ftPt: row.ftPt as FtPt,
-    hrsPerWeek: row.hrsPerWeek,
-    isActive: row.isActive !== 0,
-    refinement: row.refinement,
-    design: row.design,
-    development: row.development,
-    qa: row.qa,
-    kt: row.kt,
-    lead: row.lead,
-    pmo: row.pmo,
-    retrofits: row.retrofits ?? 0,
-    ocmComms: row.ocmComms ?? 0,
-    ocmTraining: row.ocmTraining ?? 0,
-    other: row.other,
-  };
-}
-
-function mapGuideEntry(row: GuideEntryRow): GuideEntry {
-  return {
-    id: row.id,
-    section: row.section,
-    term: row.term,
-    defaultVal: row.defaultVal,
-    description: row.description,
-  };
-}
-
-function mapSprintStory(row: SprintStoryRow): Omit<SprintStory, "isExcluded"> {
-  return {
-    id: row.id,
-    sprintId: row.sprintId,
-    key: row.key,
-    summary: row.summary,
-    status: row.status,
-    storyPoints: row.storyPoints,
-    pod: row.pod,
-    dependency: row.dependency,
-    stream: row.stream as BacklogStream,
-    groupName: row.groupName,
-    importedAt: row.importedAt,
-  };
-}
-
 // ---------------------------------------------------------------------------
-// Public query functions
+// Current-sprint resolution (date-based)
 // ---------------------------------------------------------------------------
 
-/**
- * Pick the "current" sprint relative to today's date.
- *
- * - If today falls inside a sprint window, that sprint is current.
- * - If today falls in a gap (e.g. a weekend between two sprints), the next
- *   sprint to start is current — that's the one we're actively planning for.
- * - Demo / PD sprints are eligible too: when a PD cycle is running, that's
- *   the cycle in flight.
- *
- * Returns the chosen SprintRow, or null if no sprint has dates that match.
- */
 function pickCurrentSprintRow(rows: SprintRow[]): SprintRow | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -367,45 +119,40 @@ function pickCurrentSprintRow(rows: SprintRow[]): SprintRow | null {
     .filter((r) => r.startDate && r.endDate)
     .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
 
-  // Sprint whose window contains today
   const inFlight = dated.find(
     (r) => (r.startDate ?? "") <= todayStr && (r.endDate ?? "") >= todayStr,
   );
   if (inFlight) return inFlight;
 
-  // Otherwise, the next sprint to start
   const upcoming = dated.find((r) => (r.startDate ?? "") > todayStr);
   return upcoming ?? null;
 }
 
-/** Return the current sprint, derived from today's date. */
+// ---------------------------------------------------------------------------
+// Sprints
+// ---------------------------------------------------------------------------
+
 export async function getCurrentSprint(): Promise<Sprint | null> {
-  const db = getDb();
-  const rows = db.prepare("SELECT * FROM Sprint").all() as SprintRow[];
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.sprint.findMany({ where: { workspaceId } });
   const row = pickCurrentSprintRow(rows);
   return row ? mapSprint(row, "current", true, true) : null;
 }
 
 /**
- * Return all sprints sorted naturally (Sprint 0, 1, 2, …, 3-PD1, …, 12)
- * with computed status: past | previous | current | next | future.
+ * Return all sprints sorted naturally with computed status:
+ *   past | previous | current | next | future.
  *
- * The active 4-sprint window is based on **main sprint numbers**:
- * if current is Sprint N, then previous = Sprint (N-1), next = Sprint (N+1),
- * and planning = Sprint (N+2).
- * "PD" sub-sprints (e.g. Sprint 3-PD1) inherit the status of their parent
- * main sprint number — e.g. Sprint 6-PD2 has major=6 so it gets the same
- * window status as Sprint 6.
+ * The active 4-sprint window is derived from main sprint numbers:
+ * if current is Sprint N, then previous = Sprint (N-1), next = (N+1),
+ * and planning = (N+2). PD sub-sprints inherit the major's window.
  */
 export async function getAllSprints(): Promise<Sprint[]> {
-  const db = getDb();
-  const rows = db.prepare("SELECT * FROM Sprint").all() as SprintRow[];
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.sprint.findMany({ where: { workspaceId } });
 
-  // Sort naturally by sprint name
   rows.sort((a, b) => compareSprintNames(a.name, b.name));
 
-  // Derive the current sprint from today's date — the stored isCurrent flag
-  // is ignored so the app stays in sync as time passes without manual updates.
   const currentRow = pickCurrentSprintRow(rows);
   const currentMajor = currentRow ? sprintSortKey(currentRow.name)[0] : -1;
 
@@ -429,8 +176,6 @@ export async function getAllSprints(): Promise<Sprint[]> {
       } else if (major === currentMajor + 2) {
         status = "planning";
         isActive = true;
-      } else {
-        status = "future";
       }
     }
 
@@ -445,32 +190,18 @@ export async function getAllSprints(): Promise<Sprint[]> {
 }
 
 /**
- * Update commitment/completed SP for a sprint.
- * Returns true if a row was updated.
+ * Create a new sprint in the current workspace. workingDays + isCurrent
+ * are derived from the dates so callers don't have to think about them.
  */
-/**
- * Create a new sprint.
- *
- * Business-day count and current-sprint flag are derived from the dates so
- * callers don't need to think about them:
- *   - workingDays = business days between startDate and endDate inclusive
- *     (falls back to 4 weeks * 5 days = 20 when dates are missing)
- *   - isCurrent is true when today is within [startDate, endDate]
- *
- * When a new sprint is marked current, any previously-current sprint is
- * cleared so the app's "current" invariant (single active sprint) holds.
- */
-export function insertSprint(input: {
+export async function insertSprint(input: {
   name: string;
   startDate?: string | null;
   endDate?: string | null;
   durationWeeks?: number;
   focusFactor?: number;
   isDemo?: boolean;
-}): string {
-  const db = getDb();
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
+}): Promise<string> {
+  const workspaceId = await getCurrentWorkspaceId();
 
   const startDate = input.startDate ?? null;
   const endDate = input.endDate ?? null;
@@ -488,70 +219,71 @@ export function insertSprint(input: {
     isCurrent = today >= start && today <= end;
   }
 
+  // Single-current invariant
   if (isCurrent) {
-    db.prepare("UPDATE Sprint SET isCurrent = 0 WHERE isCurrent = 1").run();
+    await prisma.sprint.updateMany({
+      where: { workspaceId, isCurrent: true },
+      data: { isCurrent: false },
+    });
   }
 
-  db.prepare(
-    `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, isDemo, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    id,
-    input.name,
-    startDate,
-    endDate,
-    durationWeeks,
-    workingDays,
-    input.focusFactor ?? 0.9,
-    isCurrent ? 1 : 0,
-    input.isDemo ? 1 : 0,
-    now,
-    now,
-  );
-  return id;
+  const created = await prisma.sprint.create({
+    data: {
+      workspaceId,
+      name: input.name,
+      startDate,
+      endDate,
+      durationWeeks,
+      workingDays,
+      focusFactor: input.focusFactor ?? 0.9,
+      isCurrent,
+      isDemo: input.isDemo ?? false,
+    },
+  });
+  return created.id;
 }
 
-/**
- * Name of the synthetic sprint that holds stories imported without a
- * recognised Sprint value (empty cell, or a sprint not registered in the
- * app yet). Surfaces them on the Dashboard's "Remaining to deliver" bucket
- * rather than silently dropping them — the CSV must round-trip 1:1.
- */
 export const BACKLOG_SPRINT_NAME = "Backlog (unassigned)";
 
 /**
- * Make sure the synthetic "Backlog (unassigned)" sprint exists and return
- * its id. Idempotent — safe to call at the start of every import.
+ * Make sure the synthetic "Backlog (unassigned)" sprint exists for the
+ * current workspace and return its id. Idempotent.
  */
-export function ensureBacklogSprint(): string {
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT id FROM Sprint WHERE name = ?")
-    .get(BACKLOG_SPRINT_NAME) as { id: string } | undefined;
+export async function ensureBacklogSprint(): Promise<string> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const existing = await prisma.sprint.findFirst({
+    where: { workspaceId, name: BACKLOG_SPRINT_NAME },
+    select: { id: true },
+  });
   if (existing) return existing.id;
 
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  db.prepare(
-    `INSERT INTO Sprint (id, name, startDate, endDate, durationWeeks, workingDays, focusFactor, isCurrent, isDemo, createdAt, updatedAt)
-     VALUES (?, ?, NULL, NULL, 0, 0, 0.9, 0, 0, ?, ?)`,
-  ).run(id, BACKLOG_SPRINT_NAME, now, now);
-  return id;
+  const created = await prisma.sprint.create({
+    data: {
+      workspaceId,
+      name: BACKLOG_SPRINT_NAME,
+      startDate: null,
+      endDate: null,
+      durationWeeks: 0,
+      workingDays: 0,
+      focusFactor: 0.9,
+      isCurrent: false,
+      isDemo: false,
+    },
+  });
+  return created.id;
 }
 
-/** Delete a sprint by id. Returns true when a row was removed. */
-export function deleteSprint(id: string): boolean {
-  const db = getDb();
-  const result = db.prepare("DELETE FROM Sprint WHERE id = ?").run(id);
-  return result.changes > 0;
+export async function deleteSprint(id: string): Promise<boolean> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const result = await prisma.sprint.deleteMany({ where: { id, workspaceId } });
+  return result.count > 0;
 }
 
 /**
- * Update any subset of a sprint's editable fields. When the start/end dates
- * change, workingDays, durationWeeks and isCurrent are recomputed from them.
- * Returns true when a row was updated.
+ * Update any subset of a sprint's editable fields. workingDays,
+ * durationWeeks and isCurrent are recomputed when dates change.
  */
-export function updateSprint(
+export async function updateSprint(
   id: string,
   updates: {
     name?: string;
@@ -560,9 +292,9 @@ export function updateSprint(
     focusFactor?: number;
     isDemo?: boolean;
   },
-): boolean {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM Sprint WHERE id = ?").get(id) as SprintRow | undefined;
+): Promise<boolean> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const row = await prisma.sprint.findFirst({ where: { id, workspaceId } });
   if (!row) return false;
 
   const nextStart = updates.startDate !== undefined ? updates.startDate : row.startDate;
@@ -580,281 +312,398 @@ export function updateSprint(
       durationWeeks = Math.max(1, Math.ceil(workingDays / 5));
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      isCurrent = today >= start && today <= end ? 1 : 0;
+      isCurrent = today >= start && today <= end;
     }
   }
 
-  const now = new Date().toISOString();
-
-  if (isCurrent === 1 && row.isCurrent !== 1) {
-    db.prepare("UPDATE Sprint SET isCurrent = 0 WHERE isCurrent = 1 AND id != ?").run(id);
+  if (isCurrent && !row.isCurrent) {
+    await prisma.sprint.updateMany({
+      where: { workspaceId, isCurrent: true, NOT: { id } },
+      data: { isCurrent: false },
+    });
   }
 
-  const sets: string[] = [];
-  const values: unknown[] = [];
+  const data: Record<string, unknown> = {
+    workingDays,
+    durationWeeks,
+    isCurrent,
+  };
+  if (updates.name !== undefined) data.name = updates.name;
+  if (updates.startDate !== undefined) data.startDate = updates.startDate;
+  if (updates.endDate !== undefined) data.endDate = updates.endDate;
+  if (updates.focusFactor !== undefined) data.focusFactor = updates.focusFactor;
+  if (updates.isDemo !== undefined) data.isDemo = updates.isDemo;
 
-  if (updates.name !== undefined) {
-    sets.push("name = ?");
-    values.push(updates.name);
-  }
-  if (updates.startDate !== undefined) {
-    sets.push("startDate = ?");
-    values.push(updates.startDate);
-  }
-  if (updates.endDate !== undefined) {
-    sets.push("endDate = ?");
-    values.push(updates.endDate);
-  }
-  if (updates.focusFactor !== undefined) {
-    sets.push("focusFactor = ?");
-    values.push(updates.focusFactor);
-  }
-  if (updates.isDemo !== undefined) {
-    sets.push("isDemo = ?");
-    values.push(updates.isDemo ? 1 : 0);
-  }
-  sets.push("workingDays = ?", "durationWeeks = ?", "isCurrent = ?", "updatedAt = ?");
-  values.push(workingDays, durationWeeks, isCurrent, now, id);
-
-  const result = db.prepare(`UPDATE Sprint SET ${sets.join(", ")} WHERE id = ?`).run(...values);
-  return result.changes > 0;
+  const result = await prisma.sprint.updateMany({
+    where: { id, workspaceId },
+    data,
+  });
+  return result.count > 0;
 }
 
-export function updateSprintActuals(
+export async function updateSprintActuals(
   id: string,
-  updates: { commitmentSP?: number | null; completedSP?: number | null }
-): boolean {
-  const db = getDb();
-  const fields: string[] = [];
-  const values: unknown[] = [];
+  updates: { commitmentSP?: number | null; completedSP?: number | null },
+): Promise<boolean> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const data: Record<string, unknown> = {};
+  if (updates.commitmentSP !== undefined) data.commitmentSP = updates.commitmentSP;
+  if (updates.completedSP !== undefined) data.completedSP = updates.completedSP;
+  if (Object.keys(data).length === 0) return false;
 
-  if (updates.commitmentSP !== undefined) {
-    fields.push("commitmentSP = ?");
-    values.push(updates.commitmentSP);
-  }
-  if (updates.completedSP !== undefined) {
-    fields.push("completedSP = ?");
-    values.push(updates.completedSP);
-  }
-
-  if (fields.length === 0) return false;
-  values.push(id);
-  const result = db
-    .prepare(`UPDATE Sprint SET ${fields.join(", ")} WHERE id = ?`)
-    .run(...values);
-  return result.changes > 0;
+  const result = await prisma.sprint.updateMany({
+    where: { id, workspaceId },
+    data,
+  });
+  return result.count > 0;
 }
 
-/** Return all team members. */
+// ---------------------------------------------------------------------------
+// Team members
+// ---------------------------------------------------------------------------
+
 export async function getTeamMembers(): Promise<
   Omit<TeamMember, "effHrsPerWeek" | "totalHrs" | "holidayHrs" | "netHrs">[]
 > {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM TeamMember ORDER BY lastName, firstName")
-    .all() as TeamMemberRow[];
-  return rows.map(mapTeamMember);
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.teamMember.findMany({
+    where: { workspaceId },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    lastName: row.lastName,
+    firstName: row.firstName,
+    role: row.role,
+    location: row.location as Country,
+    stream: row.stream as TeamStream,
+    ftPt: row.ftPt as FtPt,
+    hrsPerWeek: row.hrsPerWeek,
+    allocation: row.allocation,
+    pod: row.pod,
+  }));
 }
 
-/** Return all stories. */
+// ---------------------------------------------------------------------------
+// Stories (project-wide, not sprint-scoped)
+// ---------------------------------------------------------------------------
+
 export async function getStories(): Promise<
   (Omit<Story, "isExcluded"> & { sheetRow: number | null })[]
 > {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM Story ORDER BY key")
-    .all() as StoryRow[];
-  return rows.map(mapStory);
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.story.findMany({
+    where: { workspaceId },
+    orderBy: { key: "asc" },
+  });
+  return rows.map((row) => ({
+    key: row.key,
+    summary: row.summary,
+    status: row.status,
+    storyPoints: row.storyPoints,
+    pod: row.pod,
+    dependency: row.dependency,
+    stream: row.stream as BacklogStream,
+    sheetRow: row.sheetRow,
+  }));
 }
 
-/** Return all public holidays. */
+// ---------------------------------------------------------------------------
+// Holidays
+// ---------------------------------------------------------------------------
+
 export async function getPublicHolidays(): Promise<PublicHoliday[]> {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM PublicHoliday ORDER BY date")
-    .all() as PublicHolidayRow[];
-  return rows.map(mapPublicHoliday);
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.publicHoliday.findMany({
+    where: { workspaceId },
+    orderBy: { date: "asc" },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    date: row.date,
+    name: row.name,
+    country: row.country as Country,
+    sprint: row.sprint,
+    days: row.days,
+  }));
 }
 
-/** Return all project holidays. */
 export async function getProjectHolidays(): Promise<ProjectHoliday[]> {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM ProjectHoliday ORDER BY date")
-    .all() as ProjectHolidayRow[];
-  return rows.map(mapProjectHoliday);
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.projectHoliday.findMany({
+    where: { workspaceId },
+    orderBy: { date: "asc" },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    date: row.date,
+    name: row.name,
+    sprint: row.sprint,
+    days: row.days,
+  }));
 }
 
-/** Return all PTO entries. */
+// ---------------------------------------------------------------------------
+// PTO
+// ---------------------------------------------------------------------------
+
 export async function getPtoEntries(): Promise<PtoEntry[]> {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM PtoEntry ORDER BY startDate")
-    .all() as PtoEntryRow[];
-  return rows.map(mapPtoEntry);
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.ptoEntry.findMany({
+    where: { workspaceId },
+    orderBy: { startDate: "asc" },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    who: row.who,
+    location: row.location,
+    team: row.team,
+    startDate: row.startDate,
+    endDate: row.endDate,
+  }));
 }
 
-/** Return all initial capacity entries. */
-export async function getInitialCapacities(): Promise<InitialCapacity[]> {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM InitialCapacity ORDER BY lastName, firstName")
-    .all() as InitialCapacityRow[];
-  return rows.map(mapInitialCapacity);
+export async function insertPtoEntry(entry: Omit<PtoEntry, "id">): Promise<PtoEntry> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const created = await prisma.ptoEntry.create({
+    data: {
+      workspaceId,
+      who: entry.who,
+      location: entry.location,
+      team: entry.team ?? null,
+      startDate: entry.startDate,
+      endDate: entry.endDate,
+    },
+  });
+  return {
+    id: created.id,
+    who: created.who,
+    location: created.location,
+    team: created.team,
+    startDate: created.startDate,
+    endDate: created.endDate,
+  };
 }
 
-/** Insert a new initial capacity entry. */
-export function insertInitialCapacity(entry: Omit<InitialCapacity, "id">): InitialCapacity {
-  const db = getDb();
-  const id = crypto.randomUUID();
-  db.prepare(
-    `INSERT INTO InitialCapacity (id, lastName, firstName, role, location, organization, stream,
-     ftPt, hrsPerWeek, isActive,
-     refinement, design, development, qa, kt, lead, pmo, retrofits, ocmComms, ocmTraining, other)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    id, entry.lastName, entry.firstName, entry.role, entry.location,
-    entry.organization ?? "", entry.stream ?? "",
-    entry.ftPt, entry.hrsPerWeek, entry.isActive ? 1 : 0,
-    entry.refinement, entry.design, entry.development, entry.qa,
-    entry.kt, entry.lead, entry.pmo,
-    entry.retrofits ?? 0, entry.ocmComms ?? 0, entry.ocmTraining ?? 0,
-    entry.other,
-  );
-  return { id, ...entry };
-}
-
-/** Update an initial capacity entry. Returns true if a row was updated. */
-export function updateInitialCapacity(id: string, updates: Partial<Omit<InitialCapacity, "id">>): boolean {
-  const db = getDb();
-  const fields: string[] = [];
-  const values: unknown[] = [];
-
-  for (const [key, value] of Object.entries(updates)) {
-    if (value !== undefined) {
-      fields.push(`${key} = ?`);
-      // SQLite doesn't support JS booleans — convert to 0/1
-      values.push(typeof value === "boolean" ? (value ? 1 : 0) : value);
-    }
-  }
-
-  if (fields.length === 0) return false;
-  values.push(id);
-  const result = db.prepare(`UPDATE InitialCapacity SET ${fields.join(", ")} WHERE id = ?`).run(...values);
-  return result.changes > 0;
-}
-
-/** Delete an initial capacity entry by id. Returns true if a row was deleted. */
-export function deleteInitialCapacity(id: string): boolean {
-  const db = getDb();
-  const result = db.prepare("DELETE FROM InitialCapacity WHERE id = ?").run(id);
-  return result.changes > 0;
-}
-
-/** Delete all initial capacity entries. Returns the number of rows removed. */
-export function deleteAllInitialCapacities(): number {
-  const db = getDb();
-  const result = db.prepare("DELETE FROM InitialCapacity").run();
-  return result.changes;
-}
-
-/** Insert a new PTO entry. */
-export function insertPtoEntry(entry: Omit<PtoEntry, "id">): PtoEntry {
-  const db = getDb();
-  const id = crypto.randomUUID();
-  db.prepare(
-    "INSERT INTO PtoEntry (id, who, location, team, startDate, endDate) VALUES (?, ?, ?, ?, ?, ?)"
-  ).run(id, entry.who, entry.location, entry.team ?? null, entry.startDate, entry.endDate);
-  return { id, ...entry };
-}
-
-/** Update a PTO entry. Returns the updated entry or null if not found. */
-export function updatePtoEntry(
+export async function updatePtoEntry(
   id: string,
   fields: Partial<Omit<PtoEntry, "id">>,
-): PtoEntry | null {
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT * FROM PtoEntry WHERE id = ?")
-    .get(id) as PtoEntry | undefined;
+): Promise<PtoEntry | null> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const existing = await prisma.ptoEntry.findFirst({ where: { id, workspaceId } });
   if (!existing) return null;
 
-  const updated = { ...existing, ...fields };
-  db.prepare(
-    "UPDATE PtoEntry SET who = ?, location = ?, team = ?, startDate = ?, endDate = ? WHERE id = ?",
-  ).run(
-    updated.who,
-    updated.location,
-    updated.team ?? null,
-    updated.startDate,
-    updated.endDate,
-    id,
-  );
-  return updated;
+  const updated = await prisma.ptoEntry.update({
+    where: { id },
+    data: {
+      who: fields.who ?? existing.who,
+      location: fields.location ?? existing.location,
+      team: fields.team !== undefined ? fields.team : existing.team,
+      startDate: fields.startDate ?? existing.startDate,
+      endDate: fields.endDate ?? existing.endDate,
+    },
+  });
+  return {
+    id: updated.id,
+    who: updated.who,
+    location: updated.location,
+    team: updated.team,
+    startDate: updated.startDate,
+    endDate: updated.endDate,
+  };
 }
 
-/** Delete a PTO entry by id. Returns true if a row was deleted. */
-export function deletePtoEntry(id: string): boolean {
-  const db = getDb();
-  const result = db.prepare("DELETE FROM PtoEntry WHERE id = ?").run(id);
-  return result.changes > 0;
+export async function deletePtoEntry(id: string): Promise<boolean> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const result = await prisma.ptoEntry.deleteMany({ where: { id, workspaceId } });
+  return result.count > 0;
 }
 
-/** Return all guide / glossary entries. */
+// ---------------------------------------------------------------------------
+// Initial capacities (allocations)
+// ---------------------------------------------------------------------------
+
+export async function getInitialCapacities(): Promise<InitialCapacity[]> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.initialCapacity.findMany({
+    where: { workspaceId },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    lastName: row.lastName,
+    firstName: row.firstName,
+    role: row.role,
+    location: (row.location || "") as Country,
+    organization: row.organization ?? "",
+    stream: row.stream ?? "",
+    ftPt: row.ftPt as FtPt,
+    hrsPerWeek: row.hrsPerWeek,
+    isActive: row.isActive,
+    refinement: row.refinement,
+    design: row.design,
+    development: row.development,
+    qa: row.qa,
+    kt: row.kt,
+    lead: row.lead,
+    pmo: row.pmo,
+    retrofits: row.retrofits ?? 0,
+    ocmComms: row.ocmComms ?? 0,
+    ocmTraining: row.ocmTraining ?? 0,
+    other: row.other,
+  }));
+}
+
+export async function insertInitialCapacity(
+  entry: Omit<InitialCapacity, "id">,
+): Promise<InitialCapacity> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const created = await prisma.initialCapacity.create({
+    data: {
+      workspaceId,
+      lastName: entry.lastName,
+      firstName: entry.firstName,
+      role: entry.role,
+      location: entry.location,
+      organization: entry.organization ?? "",
+      stream: entry.stream ?? "",
+      ftPt: entry.ftPt,
+      hrsPerWeek: entry.hrsPerWeek,
+      isActive: entry.isActive,
+      refinement: entry.refinement,
+      design: entry.design,
+      development: entry.development,
+      qa: entry.qa,
+      kt: entry.kt,
+      lead: entry.lead,
+      pmo: entry.pmo,
+      retrofits: entry.retrofits ?? 0,
+      ocmComms: entry.ocmComms ?? 0,
+      ocmTraining: entry.ocmTraining ?? 0,
+      other: entry.other,
+    },
+  });
+  return { ...entry, id: created.id };
+}
+
+export async function updateInitialCapacity(
+  id: string,
+  updates: Partial<Omit<InitialCapacity, "id">>,
+): Promise<boolean> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const data: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined) data[key] = value;
+  }
+  if (Object.keys(data).length === 0) return false;
+
+  const result = await prisma.initialCapacity.updateMany({
+    where: { id, workspaceId },
+    data,
+  });
+  return result.count > 0;
+}
+
+export async function deleteInitialCapacity(id: string): Promise<boolean> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const result = await prisma.initialCapacity.deleteMany({
+    where: { id, workspaceId },
+  });
+  return result.count > 0;
+}
+
+export async function deleteAllInitialCapacities(): Promise<number> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const result = await prisma.initialCapacity.deleteMany({ where: { workspaceId } });
+  return result.count;
+}
+
+// ---------------------------------------------------------------------------
+// Guide entries (glossary)
+// ---------------------------------------------------------------------------
+
 export async function getGuideEntries(): Promise<GuideEntry[]> {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM GuideEntry ORDER BY section, term")
-    .all() as GuideEntryRow[];
-  return rows.map(mapGuideEntry);
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.guideEntry.findMany({
+    where: { workspaceId },
+    orderBy: [{ section: "asc" }, { term: "asc" }],
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    section: row.section,
+    term: row.term,
+    defaultVal: row.defaultVal,
+    description: row.description,
+  }));
 }
 
 // ---------------------------------------------------------------------------
-// SprintStory (per-sprint backlog)
+// SprintStory (per-sprint imported backlog)
 // ---------------------------------------------------------------------------
 
-/** Return all stories for a given sprint. */
 export async function getStoriesBySprint(
-  sprintId: string
+  sprintId: string,
 ): Promise<Omit<SprintStory, "isExcluded">[]> {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM SprintStory WHERE sprintId = ? ORDER BY key")
-    .all(sprintId) as SprintStoryRow[];
-  return rows.map(mapSprintStory);
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.sprintStory.findMany({
+    where: { sprintId, workspaceId },
+    orderBy: { key: "asc" },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    sprintId: row.sprintId,
+    key: row.key,
+    summary: row.summary,
+    status: row.status,
+    storyPoints: row.storyPoints,
+    pod: row.pod,
+    dependency: row.dependency,
+    stream: row.stream as BacklogStream,
+    groupName: row.groupName,
+    importedAt: typeof row.importedAt === "string"
+      ? row.importedAt
+      : row.importedAt.toISOString(),
+  }));
 }
 
-/** Return the most recent importedAt date for each sprint. */
-export function getBacklogFreshness(): Record<string, { count: number; lastImportedAt: string | null }> {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      `SELECT sprintId, COUNT(*) as cnt, MAX(importedAt) as lastImportedAt
-       FROM SprintStory GROUP BY sprintId`
-    )
-    .all() as { sprintId: string; cnt: number; lastImportedAt: string | null }[];
-
+export async function getBacklogFreshness(): Promise<
+  Record<string, { count: number; lastImportedAt: string | null }>
+> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const rows = await prisma.sprintStory.groupBy({
+    by: ["sprintId"],
+    where: { workspaceId },
+    _count: { _all: true },
+    _max: { importedAt: true },
+  });
   const result: Record<string, { count: number; lastImportedAt: string | null }> = {};
   for (const row of rows) {
-    result[row.sprintId] = { count: row.cnt, lastImportedAt: row.lastImportedAt };
+    result[row.sprintId] = {
+      count: row._count._all,
+      lastImportedAt: row._max.importedAt
+        ? typeof row._max.importedAt === "string"
+          ? row._max.importedAt
+          : row._max.importedAt.toISOString()
+        : null,
+    };
   }
   return result;
 }
 
-/** Check if a sprint has any imported stories. */
-export function sprintHasStories(sprintId: string): boolean {
-  const db = getDb();
-  const row = db
-    .prepare("SELECT COUNT(*) as cnt FROM SprintStory WHERE sprintId = ?")
-    .get(sprintId) as { cnt: number };
-  return row.cnt > 0;
+export async function sprintHasStories(sprintId: string): Promise<boolean> {
+  const workspaceId = await getCurrentWorkspaceId();
+  const count = await prisma.sprintStory.count({
+    where: { sprintId, workspaceId },
+  });
+  return count > 0;
 }
 
 /**
- * Replace all stories for a sprint (atomic delete + bulk insert).
- * This is the core of the import/re-import flow.
+ * Replace all stories for a sprint atomically. Core of the import /
+ * re-import flow — the entire delete + bulk-insert runs inside one
+ * transaction so a partial failure leaves the sprint untouched.
  */
-export function replaceStoriesForSprint(
+export async function replaceStoriesForSprint(
   sprintId: string,
   stories: {
     key: string;
@@ -865,35 +714,34 @@ export function replaceStoriesForSprint(
     dependency: string | null;
     stream: string;
     groupName: string | null;
-  }[]
-): { inserted: number; deleted: number } {
-  const db = getDb();
-  const deleteStmt = db.prepare("DELETE FROM SprintStory WHERE sprintId = ?");
-  const insertStmt = db.prepare(
-    `INSERT INTO SprintStory (id, sprintId, key, summary, status, storyPoints, pod, dependency, stream, groupName, importedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-  );
+  }[],
+): Promise<{ inserted: number; deleted: number }> {
+  const workspaceId = await getCurrentWorkspaceId();
 
-  const tx = db.transaction(() => {
-    const delResult = deleteStmt.run(sprintId);
-    let count = 0;
-    for (const s of stories) {
-      insertStmt.run(
-        crypto.randomUUID(),
-        sprintId,
-        s.key,
-        s.summary,
-        s.status,
-        s.storyPoints,
-        s.pod,
-        s.dependency,
-        s.stream,
-        s.groupName
-      );
-      count++;
+  return prisma.$transaction(async (tx) => {
+    const del = await tx.sprintStory.deleteMany({
+      where: { sprintId, workspaceId },
+    });
+
+    if (stories.length === 0) {
+      return { inserted: 0, deleted: del.count };
     }
-    return { inserted: count, deleted: delResult.changes };
-  });
 
-  return tx();
+    const created = await tx.sprintStory.createMany({
+      data: stories.map((s) => ({
+        workspaceId,
+        sprintId,
+        key: s.key,
+        summary: s.summary,
+        status: s.status,
+        storyPoints: s.storyPoints,
+        pod: s.pod,
+        dependency: s.dependency,
+        stream: s.stream,
+        groupName: s.groupName,
+      })),
+    });
+
+    return { inserted: created.count, deleted: del.count };
+  });
 }

@@ -17,6 +17,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const entry = insertPtoEntry({ who, location, team: team ?? null, startDate, endDate });
+  const entry = await insertPtoEntry({ who, location, team: team ?? null, startDate, endDate });
   return NextResponse.json(entry, { status: 201 });
 }

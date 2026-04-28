@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSprint } from "@/contexts/sprint-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { useProjectionSettings } from "@/contexts/projection-settings-context";
 import {
   computeDevCapacityFromIC,
@@ -65,6 +66,7 @@ export function DashboardView({ storiesBySprint }: Props) {
     ptoEntries,
     setSelectedIndex,
   } = useSprint();
+  const { slug } = useWorkspace();
   const {
     basis,
     growthPct,
@@ -309,7 +311,7 @@ export function DashboardView({ storiesBySprint }: Props) {
     <div className="flex flex-col gap-8">
       {/* Verdict hero */}
       <Link
-        href="/capacity"
+        href={`/${slug}/capacity`}
         className="group block rounded-2xl border border-white/[0.06] bg-slate-900/40 p-6 transition-colors hover:bg-slate-900/60"
       >
         <div className="flex items-baseline justify-between flex-wrap gap-2">
@@ -615,25 +617,25 @@ export function DashboardView({ storiesBySprint }: Props) {
         <h3 className="text-[13px] font-medium text-slate-300 mb-3">Inputs</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <InputTile
-            href="/sprints"
+            href={`/${slug}/sprints`}
             icon={Calendar}
             label="Sprints"
             hint="Calendar & dates"
           />
           <InputTile
-            href="/team"
+            href={`/${slug}/team`}
             icon={Users}
             label="Team"
             hint="Members & allocations"
           />
           <InputTile
-            href="/time-off"
+            href={`/${slug}/time-off`}
             icon={CalendarOff}
             label="Time Off"
             hint="Holidays & PTO"
           />
           <InputTile
-            href="/project-backlog"
+            href={`/${slug}/project-backlog`}
             icon={ListTodo}
             label="Backlog"
             hint="Stories from Jira"

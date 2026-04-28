@@ -134,27 +134,28 @@ export async function POST(request: Request) {
   let deleted = 0;
 
   if (replaceAll) {
-    deleted = deleteAllInitialCapacities();
+    deleted = await deleteAllInitialCapacities();
   }
 
-  rows.forEach((line, idx) => {
+  for (let idx = 0; idx < rows.length; idx++) {
+    const line = rows[idx];
     const cols = splitRow(line);
     const lastName = getCell(cols, col.lastName);
     const firstName = getCell(cols, col.firstName);
 
-    if (!lastName && !firstName) return; // blank row
+    if (!lastName && !firstName) continue; // blank row
 
     const role = getCell(cols, col.role);
     if (!role) {
       errors.push({ row: idx + 2, reason: "Missing role" });
-      return;
+      continue;
     }
 
     const ftPtRaw = (getCell(cols, col.ftPt) || "FT").toUpperCase();
     const ftPt = ftPtRaw === "PT" ? "PT" : "FT";
 
     try {
-      insertInitialCapacity({
+      await insertInitialCapacity({
         lastName,
         firstName,
         role,
@@ -183,7 +184,7 @@ export async function POST(request: Request) {
         reason: e instanceof Error ? e.message : String(e),
       });
     }
-  });
+  }
 
   return NextResponse.json({
     imported,

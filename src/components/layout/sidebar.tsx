@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useWorkspace } from "@/contexts/workspace-context"
 import {
   Tooltip,
   TooltipContent,
@@ -25,25 +26,32 @@ import {
  * the label appears in a tooltip. The whole rail keeps its 1px right rule.
  */
 
+// Workspace-relative section paths — the `[slug]` prefix is injected at
+// render time using the active workspace from `useWorkspace()`.
 const sections = [
-  { href: "/",                label: "Dashboard"        },
-  { href: "/sprints",         label: "Sprint Plan"      },
-  { href: "/project-backlog", label: "Project Backlog"  },
-  { href: "/team",            label: "Team"             },
-  { href: "/time-off",        label: "Time Off"         },
-  { href: "/capacity",        label: "Capacity Planning"},
+  { path: "",                 label: "Dashboard"        },
+  { path: "/sprints",         label: "Sprint Plan"      },
+  { path: "/project-backlog", label: "Project Backlog"  },
+  { path: "/team",            label: "Team"             },
+  { path: "/time-off",        label: "Time Off"         },
+  { path: "/capacity",        label: "Capacity Planning"},
 ] as const
 
 const colophon = [
-  { href: "/settings", label: "Settings" },
+  { path: "/settings", label: "Settings" },
 ] as const
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { slug } = useWorkspace()
   const [collapsed, setCollapsed] = React.useState(false)
 
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href)
+  const hrefFor = (path: string) => `/${slug}${path}`
+
+  const isActive = (path: string) => {
+    const href = hrefFor(path)
+    return path === "" ? pathname === href : pathname.startsWith(href)
+  }
 
   return (
     <aside
@@ -54,7 +62,7 @@ export function Sidebar() {
     >
       {/* Masthead */}
       <div className="px-5 pt-7 pb-6">
-        <Link href="/" className="block group">
+        <Link href={`/${slug}`} className="block group">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-[44px] leading-none font-light text-[color:var(--ink)] tracking-tight">
               Y
@@ -81,12 +89,13 @@ export function Sidebar() {
         {!collapsed && <p className="eyebrow mb-4">Sections</p>}
         <ol className="flex flex-col gap-0.5" data-stagger>
           {sections.map((item, idx) => {
-            const active = isActive(item.href)
+            const href = hrefFor(item.path)
+            const active = isActive(item.path)
             const number = String(idx + 1).padStart(2, "0")
 
             const inner = (
               <Link
-                href={item.href}
+                href={href}
                 className={cn(
                   "group relative flex items-baseline py-2.5 transition-colors",
                   collapsed ? "justify-center" : "gap-4",
@@ -122,7 +131,7 @@ export function Sidebar() {
 
             if (collapsed) {
               return (
-                <li key={item.href}>
+                <li key={item.path}>
                   <Tooltip>
                     <TooltipTrigger asChild>{inner}</TooltipTrigger>
                     <TooltipContent side="right" sideOffset={12}>
@@ -132,7 +141,7 @@ export function Sidebar() {
                 </li>
               )
             }
-            return <li key={item.href}>{inner}</li>
+            return <li key={item.path}>{inner}</li>
           })}
         </ol>
       </nav>
@@ -141,10 +150,11 @@ export function Sidebar() {
       <div className={cn("pb-6", collapsed ? "px-2" : "px-5")}>
         <div className="h-px bg-[color:var(--line)] mb-4" />
         {colophon.map((item) => {
-          const active = isActive(item.href)
+          const href = hrefFor(item.path)
+          const active = isActive(item.path)
           const inner = (
             <Link
-              href={item.href}
+              href={href}
               className={cn(
                 "flex items-baseline py-2 transition-colors",
                 collapsed ? "justify-center" : "gap-4",
@@ -166,7 +176,7 @@ export function Sidebar() {
           )
           if (collapsed) {
             return (
-              <Tooltip key={item.href}>
+              <Tooltip key={item.path}>
                 <TooltipTrigger asChild>{inner}</TooltipTrigger>
                 <TooltipContent side="right" sideOffset={12}>
                   {item.label}
@@ -174,7 +184,7 @@ export function Sidebar() {
               </Tooltip>
             )
           }
-          return <React.Fragment key={item.href}>{inner}</React.Fragment>
+          return <React.Fragment key={item.path}>{inner}</React.Fragment>
         })}
 
         <button

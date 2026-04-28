@@ -72,14 +72,14 @@ export async function PATCH(
     }
 
     if (hasEdit) {
-      const ok = updateSprint(id, edit);
+      const ok = await updateSprint(id, edit);
       if (!ok) {
         return NextResponse.json({ error: `Sprint "${id}" not found` }, { status: 404 });
       }
     }
 
     if (hasActuals) {
-      const ok = updateSprintActuals(id, updates);
+      const ok = await updateSprintActuals(id, updates);
       if (!ok) {
         return NextResponse.json({ error: `Sprint "${id}" not found` }, { status: 404 });
       }
@@ -102,7 +102,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const removed = deleteSprint(id);
+    const removed = await deleteSprint(id);
     if (!removed) {
       return NextResponse.json({ error: `Sprint "${id}" not found` }, { status: 404 });
     }

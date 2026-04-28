@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useSprint } from "@/contexts/sprint-context";
+import { useWorkspace } from "@/contexts/workspace-context";
 import { useProjectionSettings } from "@/contexts/projection-settings-context";
 import {
   computeDevCapacityFromIC,
@@ -84,6 +85,7 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
     setSelectedIndex,
     sprints: activeSprints,
   } = useSprint();
+  const { slug } = useWorkspace();
   const { basis, growthPct, setBasis, setGrowthPct, effectiveMultiplier } =
     useProjectionSettings();
   const activeScenario =
@@ -251,7 +253,7 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
                 )}
               </p>
               <Link
-                href="/capacity"
+                href={`/${slug}/capacity`}
                 onClick={() => {
                   const idx = activeSprints.findIndex((s) => s.id === verdict.target.id);
                   if (idx >= 0) setSelectedIndex(idx);
@@ -265,7 +267,7 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
           </div>
         ) : (
           <p className="mt-6 text-[15px] text-[color:var(--muted-fg)]">
-            No upcoming sprint configured. Define dates in <Link href="/sprints" className="underline">Sprint Plan</Link>.
+            No upcoming sprint configured. Define dates in <Link href={`/${slug}/sprints`} className="underline">Sprint Plan</Link>.
           </p>
         )}
       </section>
@@ -407,7 +409,7 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
           </div>
           <p className="text-[12px] text-[color:var(--muted-fg)] max-w-md text-right">
             {overview.totalStories + overview.excluded.stories} stories total · imported from Jira ·
-            <Link href="/project-backlog" className="ml-1 text-[color:var(--ink)] underline-offset-4 hover:text-[color:var(--coral)] underline">
+            <Link href={`/${slug}/project-backlog`} className="ml-1 text-[color:var(--ink)] underline-offset-4 hover:text-[color:var(--coral)] underline">
               re-import
             </Link>
           </p>
