@@ -22,6 +22,13 @@ export default async function TimeOffPage() {
     location: m.location,
     organization: m.organization,
     isActive: m.isActive,
+    // Carry the four DEV-cycle stream percentages so the Time Off filter
+    // can decide who counts as REF / DES / DEV / QA. A person belongs to
+    // every stream where their allocation is strictly positive.
+    refinement: m.refinement,
+    design: m.design,
+    development: m.development,
+    qa: m.qa,
   }));
 
   const subtitle =

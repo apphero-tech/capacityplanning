@@ -140,7 +140,21 @@ interface TeamMemberMinimal {
   location: string;
   organization: string;
   isActive: boolean;
+  /** Stream allocations (0..1). A member belongs to a stream when > 0. */
+  refinement: number;
+  design: number;
+  development: number;
+  qa: number;
 }
+
+type StreamKey = "REF" | "DES" | "DEV" | "QA";
+
+const STREAM_LABEL: Record<StreamKey, string> = {
+  REF: "Refinement",
+  DES: "Design",
+  DEV: "Development",
+  QA: "QA",
+};
 
 interface TimeOffViewProps {
   publicHolidays: PublicHoliday[];
@@ -165,8 +179,38 @@ export function TimeOffView({
   // Default to Deloitte — capacity conversations start there; the user
   // flips to York or All when needed.
   const [orgFilter, setOrgFilter] = useState<string>("Deloitte");
+  // Streams selected for filtering PTO. Empty set = no filter (all streams).
+  const [streamFilter, setStreamFilter] = useState<Set<StreamKey>>(new Set());
+  // Scope: "sprint" follows the top-bar sprint selection; "project" widens
+  // to "from today through the last sprint's end date".
+  const [scopeMode, setScopeMode] = useState<"sprint" | "project">("sprint");
   const [isPending, startTransition] = useTransition();
-  const { sprints, selectedSprint } = useSprint();
+  const { sprints, selectedSprint, allSprints } = useSprint();
+
+  // Project window: from today (inclusive) to the latest sprint's endDate.
+  // Used when scopeMode === "project". Falls back to all-time if no dated
+  // sprints exist.
+  const projectWindow = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
+    const ends = allSprints
+      .map((s) => s.endDate)
+      .filter((d): d is string => !!d)
+      .sort();
+    const lastEnd = ends[ends.length - 1];
+    return lastEnd ? { start: todayStr, end: lastEnd } : null;
+  }, [allSprints]);
+
+  // Active window — drives every filter below. Either the selected sprint
+  // (default) or the whole "from today to project end" range.
+  const activeWindow = useMemo(() => {
+    if (scopeMode === "project") return projectWindow;
+    if (selectedSprint?.startDate && selectedSprint?.endDate) {
+      return { start: selectedSprint.startDate, end: selectedSprint.endDate };
+    }
+    return null;
+  }, [scopeMode, projectWindow, selectedSprint]);
 
   // PTO inline edit state
   const [editingPtoId, setEditingPtoId] = useState<string | null>(null);
@@ -249,10 +293,54 @@ export function TimeOffView({
     [orgMemberNames],
   );
 
+  // Build a quick lookup: normalised "Last, First" name \u2192 set of streams the
+  // person works in (any allocation > 0). Used to filter PTO entries by
+  // stream selection.
+  const nameToStreams = useMemo(() => {
+    const norm = (s: string) =>
+      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const map = new Map<string, Set<StreamKey>>();
+    for (const m of teamMembers) {
+      const set = new Set<StreamKey>();
+      if (m.refinement > 0) set.add("REF");
+      if (m.design > 0) set.add("DES");
+      if (m.development > 0) set.add("DEV");
+      if (m.qa > 0) set.add("QA");
+      // Index under both common "Last, First" and "First Last" shapes so
+      // CSV imports from Planner / xlsx match without a strict parser.
+      map.set(norm(`${m.lastName}, ${m.firstName}`), set);
+      map.set(norm(`${m.firstName} ${m.lastName}`), set);
+    }
+    return map;
+  }, [teamMembers]);
+
+  const matchesStream = useCallback(
+    (who: string) => {
+      if (streamFilter.size === 0) return true;
+      const norm = who.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const memberStreams = nameToStreams.get(norm);
+      if (!memberStreams) return false; // unknown member \u2192 exclude when filtering
+      for (const s of streamFilter) {
+        if (memberStreams.has(s)) return true;
+      }
+      return false;
+    },
+    [streamFilter, nameToStreams],
+  );
+
+  const toggleStream = (k: StreamKey) => {
+    setStreamFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+  };
+
   const filteredPublicHolidays = useMemo(() => {
-    if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
+    if (!activeWindow) return [];
     let list = publicHolidays.filter((h) =>
-      isDateInRange(h.date, selectedSprint.startDate!, selectedSprint.endDate!),
+      isDateInRange(h.date, activeWindow.start, activeWindow.end),
     );
     if (countryFilter !== "all") {
       list = list.filter((h) => h.country === countryFilter);
@@ -260,24 +348,25 @@ export function TimeOffView({
       list = list.filter((h) => orgCountries.has(h.country));
     }
     return list;
-  }, [publicHolidays, countryFilter, selectedSprint, orgCountries]);
+  }, [publicHolidays, countryFilter, activeWindow, orgCountries]);
 
   const filteredProjectHolidays = useMemo(() => {
-    if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
+    if (!activeWindow) return [];
     // Project closures apply to the whole engagement, no org filter needed.
     return projectHolidays.filter((h) =>
-      h.date && isDateInRange(h.date, selectedSprint.startDate!, selectedSprint.endDate!),
+      h.date && isDateInRange(h.date, activeWindow.start, activeWindow.end),
     );
-  }, [projectHolidays, selectedSprint]);
+  }, [projectHolidays, activeWindow]);
 
   const filteredPtoEntries = useMemo(() => {
-    if (!selectedSprint?.startDate || !selectedSprint?.endDate) return [];
+    if (!activeWindow) return [];
     return ptoEntries
       .filter((e) =>
-        isOverlapping(e.startDate, e.endDate, selectedSprint.startDate!, selectedSprint.endDate!),
+        isOverlapping(e.startDate, e.endDate, activeWindow.start, activeWindow.end),
       )
-      .filter((e) => matchesOrg(e.who));
-  }, [ptoEntries, selectedSprint, matchesOrg]);
+      .filter((e) => matchesOrg(e.who))
+      .filter((e) => matchesStream(e.who));
+  }, [ptoEntries, activeWindow, matchesOrg, matchesStream]);
 
   const totalPublicDays = filteredPublicHolidays.reduce((sum, h) => sum + h.days, 0);
   const totalProjectDays = filteredProjectHolidays.reduce((sum, h) => sum + h.days, 0);
@@ -316,12 +405,41 @@ export function TimeOffView({
     [filteredPtoEntries, inactiveNamesNorm],
   );
 
-  // Per-person PTO breakdown (clamped to sprint boundaries)
+  // Per-person PTO breakdown clamped to the active window. In sprint mode
+  // we use the standard sprint clamp; in project mode we sum the
+  // overlapping business days against the project window.
   const ptoByPerson = useMemo(() => {
-    if (!selectedSprint) return [];
-    return computePtoByPerson(selectedSprint, ptoEntries, isPtoInactive);
+    if (!activeWindow) return [];
+    if (scopeMode === "sprint" && selectedSprint) {
+      return computePtoByPerson(selectedSprint, ptoEntries, isPtoInactive)
+        .filter((p) => matchesOrg(p.who) && matchesStream(p.who));
+    }
+    // Project-end mode — synthesise a sprint-shaped object so the helper
+    // can clamp dates without further code paths.
+    const synthetic: Sprint = {
+      id: "__project_window__",
+      name: "Project",
+      startDate: activeWindow.start,
+      endDate: activeWindow.end,
+      durationWeeks: 0,
+      workingDays: 0,
+      focusFactor: 0.9,
+      velocityProven: null,
+      velocityTarget: null,
+      isCurrent: false,
+      isDemo: false,
+      progressFactor: 0,
+      status: "future",
+      isActive: true,
+      storyCount: null,
+      storyPoints: null,
+      commitmentSP: null,
+      completedSP: null,
+    };
+    return computePtoByPerson(synthetic, ptoEntries, isPtoInactive)
+      .filter((p) => matchesOrg(p.who) && matchesStream(p.who));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSprint, ptoEntries, inactiveNamesNorm]);
+  }, [activeWindow, scopeMode, selectedSprint, ptoEntries, inactiveNamesNorm, matchesOrg, matchesStream]);
 
   // Total PTO days — derived from the clamped per-person breakdown
   const totalPtoDays = useMemo(
@@ -415,22 +533,27 @@ export function TimeOffView({
     }
   }
 
-  const scopeLabel = selectedSprint
-    ? `in ${selectedSprint.name}`
-    : "(select a sprint in the top bar)";
+  const scopeLabel = scopeMode === "project"
+    ? "from today through end of project"
+    : selectedSprint
+      ? `in ${selectedSprint.name}`
+      : "(select a sprint in the top bar)";
+
+  const scopeRange =
+    scopeMode === "project"
+      ? activeWindow
+        ? `${formatDate(activeWindow.start)} – ${formatDate(activeWindow.end)}`
+        : ""
+      : selectedSprint?.startDate && selectedSprint?.endDate
+        ? `${formatDate(selectedSprint.startDate)} – ${formatDate(selectedSprint.endDate)}`
+        : "";
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-2 text-[12px] text-slate-500">
         <span>Showing time off</span>
         <span className="text-slate-200 font-medium">{scopeLabel}</span>
-        {selectedSprint && (
-          <span className="text-slate-600">
-            · {selectedSprint.startDate && selectedSprint.endDate
-              ? `${formatDate(selectedSprint.startDate)} – ${formatDate(selectedSprint.endDate)}`
-              : ""}
-          </span>
-        )}
+        {scopeRange && <span className="text-slate-600">· {scopeRange}</span>}
       </div>
 
       <StatStrip
@@ -463,7 +586,15 @@ export function TimeOffView({
       <div className="flex items-center flex-wrap gap-3">
         <SegmentedControl
           options={[
-            { value: "all",      label: "All" },
+            { value: "sprint",  label: "By sprint" },
+            { value: "project", label: "End of project" },
+          ]}
+          value={scopeMode}
+          onChange={(v) => setScopeMode(v as "sprint" | "project")}
+        />
+        <SegmentedControl
+          options={[
+            { value: "all",      label: "All teams" },
             { value: "Deloitte", label: "Deloitte" },
             { value: "York",     label: "York" },
           ]}
@@ -479,6 +610,40 @@ export function TimeOffView({
           value={activeTab as "public" | "project" | "personal"}
           onChange={(v) => setActiveTab(v)}
         />
+
+        {/* Stream chips — applies only to PTO. Multi-select; empty = all. */}
+        {activeTab === "personal" && (
+          <div className="flex items-center gap-1.5">
+            <span className="code-label mr-1">streams</span>
+            {(["REF", "DES", "DEV", "QA"] as StreamKey[]).map((k) => {
+              const active = streamFilter.has(k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => toggleStream(k)}
+                  title={STREAM_LABEL[k]}
+                  className={`h-7 px-2.5 rounded-md border text-[11px] font-mono tracking-wider transition-colors ${
+                    active
+                      ? "border-[color:var(--coral)] bg-[color:var(--coral-soft)] text-[color:var(--coral)]"
+                      : "border-[color:var(--line)] text-[color:var(--muted-fg)] hover:text-[color:var(--ink)] hover:bg-[color:var(--ink)]/[0.03]"
+                  }`}
+                >
+                  {k}
+                </button>
+              );
+            })}
+            {streamFilter.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setStreamFilter(new Set())}
+                className="ml-1 text-[10px] text-[color:var(--faint-fg)] hover:text-[color:var(--ink)] tracking-wide"
+              >
+                clear
+              </button>
+            )}
+          </div>
+        )}
         <div className="ml-auto">
           <Button
             variant="outline"
