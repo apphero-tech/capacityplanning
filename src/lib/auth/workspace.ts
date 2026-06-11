@@ -1,38 +1,21 @@
 import { cache } from "react";
 import { headers } from "next/headers";
-import { redirect, notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Resolve the active workspace for the current request.
+ * Resolve the active workspace — local, single-user, no auth.
  *
  * Slug resolution order:
- *   1. Explicit `slug` argument (used by `[slug]/layout.tsx` to validate
- *      the URL parameter).
- *   2. `x-workspace-slug` request header (set by middleware from the URL).
- *      This is what every `data.ts` query reads — no plumbing needed.
- *   3. Fallback: the user's first workspace (lowest createdAt on
- *      Membership). Only hit by routes that aren't workspace-scoped, like
- *      the post-login redirect.
+ *   1. Explicit `slug` argument (used by `[slug]/layout.tsx`).
+ *   2. `x-workspace-slug` request header (set by middleware from the URL) —
+ *      this is what every `data.ts` query reads.
+ *   3. Fallback: the first workspace in the DB.
  *
- * 404s when the workspace exists but the user has no membership for it
- * (treated like "doesn't exist" — never leak existence cross-tenant).
- *
- * Cached per request via React's `cache()` so several callers within the
- * same render share one DB lookup.
+ * There is no membership/auth check: this app runs entirely on the local
+ * machine for a single person.
  */
 export const getCurrentWorkspace = cache(async (slug?: string) => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  // Resolve the slug source.
   let resolvedSlug = slug;
   if (!resolvedSlug) {
     const h = await headers();
@@ -40,43 +23,16 @@ export const getCurrentWorkspace = cache(async (slug?: string) => {
   }
 
   if (resolvedSlug) {
-    const workspace = await prisma.workspace.findUnique({
-      where: { slug: resolvedSlug },
-    });
+    const workspace = await prisma.workspace.findUnique({ where: { slug: resolvedSlug } });
     if (!workspace) notFound();
-
-    const membership = await prisma.membership.findUnique({
-      where: {
-        userId_workspaceId: { userId: user.id, workspaceId: workspace.id },
-      },
-    });
-    if (!membership) notFound();
-
-    return {
-      userId: user.id,
-      email: user.email ?? null,
-      workspace,
-      role: membership.role,
-    };
+    return { userId: "local", email: null as string | null, workspace, role: "OWNER" };
   }
 
-  // No slug context — fall back to the user's first workspace.
-  const membership = await prisma.membership.findFirst({
-    where: { userId: user.id },
-    include: { workspace: true },
-    orderBy: { createdAt: "asc" },
-  });
-
-  if (!membership) {
-    redirect("/no-workspace");
+  const workspace = await prisma.workspace.findFirst({ orderBy: { createdAt: "asc" } });
+  if (!workspace) {
+    throw new Error("No workspace found — run `npm run setup` to create the local workspace.");
   }
-
-  return {
-    userId: user.id,
-    email: user.email ?? null,
-    workspace: membership.workspace,
-    role: membership.role,
-  };
+  return { userId: "local", email: null as string | null, workspace, role: "OWNER" };
 });
 
 export async function getCurrentWorkspaceId(slug?: string): Promise<string> {

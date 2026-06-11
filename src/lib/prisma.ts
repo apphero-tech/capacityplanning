@@ -1,16 +1,12 @@
 import { PrismaClient } from "@/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 /**
- * Prisma Client singleton.
+ * Prisma Client singleton — local-only, backed by a SQLite file
+ * (`DATABASE_URL=file:./prisma/dev.db`). No cloud, nothing leaves the machine.
  *
- * Prisma 7 requires a driver adapter — we use `@prisma/adapter-pg` so the
- * client speaks Postgres over the same node-pg driver we use everywhere
- * else (consistent connection behaviour, IPv6 / pooler aware).
- *
- * In development, Next.js hot-reloads server modules — without this guard
- * we'd leak a fresh client per reload and exhaust Postgres connections in
- * minutes. The `globalThis` cache survives reloads.
+ * Prisma 7 requires a driver adapter; we use the better-sqlite3 adapter.
+ * The `globalThis` cache survives Next.js hot reloads in dev.
  */
 declare global {
   // eslint-disable-next-line no-var
@@ -18,11 +14,8 @@ declare global {
 }
 
 function makeClient() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DATABASE_URL missing — Prisma client cannot connect.");
-  }
-  const adapter = new PrismaPg({ connectionString });
+  const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
+  const adapter = new PrismaBetterSqlite3({ url });
   return new PrismaClient({ adapter });
 }
 

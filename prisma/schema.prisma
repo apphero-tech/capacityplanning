@@ -13,13 +13,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ─── Tenancy ──────────────────────────────────────────────────────────────
 
 model Workspace {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid())
   slug        String   @unique
   name        String
   // Brand accent colour — used wherever the app would otherwise use the
@@ -44,20 +44,13 @@ model Workspace {
   phases           Phase[]
 }
 
-enum Role {
-  OWNER
-  ADMIN
-  MEMBER
-  VIEWER
-}
-
 model Membership {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid())
   // Supabase auth user id — kept as UUID, no FK because auth.users lives in
   // a separate schema. We trust the auth layer.
-  userId      String   @db.Uuid
-  workspaceId String   @db.Uuid
-  role        Role     @default(MEMBER)
+  userId      String
+  workspaceId String
+  role        String   @default("MEMBER")
   createdAt   DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -70,8 +63,8 @@ model Membership {
 // ─── Project data — every model is workspace-scoped ───────────────────────
 
 model Sprint {
-  id              String   @id @default(uuid()) @db.Uuid
-  workspaceId     String   @db.Uuid
+  id              String   @id @default(uuid())
+  workspaceId     String
   name            String
   startDate       String?
   endDate         String?
@@ -87,7 +80,7 @@ model Sprint {
   storyPoints     Float?
   commitmentSP    Float?
   completedSP     Float?
-  phaseId         String?  @db.Uuid
+  phaseId         String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -100,8 +93,8 @@ model Sprint {
 }
 
 model TeamMember {
-  id           String   @id @default(uuid()) @db.Uuid
-  workspaceId  String   @db.Uuid
+  id           String   @id @default(uuid())
+  workspaceId  String
   lastName     String
   firstName    String
   role         String
@@ -123,8 +116,8 @@ model TeamMember {
 // Story — Jira issues. Key is unique per workspace (same Jira project key
 // can exist in two workspaces if two clients share a numbering scheme).
 model Story {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @db.Uuid
+  id          String   @id @default(uuid())
+  workspaceId String
   key         String
   summary     String
   status      String
@@ -143,8 +136,8 @@ model Story {
 }
 
 model PublicHoliday {
-  id          String  @id @default(uuid()) @db.Uuid
-  workspaceId String  @db.Uuid
+  id          String  @id @default(uuid())
+  workspaceId String
   date        String
   name        String
   country     String
@@ -157,8 +150,8 @@ model PublicHoliday {
 }
 
 model ProjectHoliday {
-  id          String  @id @default(uuid()) @db.Uuid
-  workspaceId String  @db.Uuid
+  id          String  @id @default(uuid())
+  workspaceId String
   date        String
   name        String
   sprint      String?
@@ -170,8 +163,8 @@ model ProjectHoliday {
 }
 
 model PtoEntry {
-  id          String  @id @default(uuid()) @db.Uuid
-  workspaceId String  @db.Uuid
+  id          String  @id @default(uuid())
+  workspaceId String
   who         String
   location    String  @default("")
   team        String?
@@ -184,8 +177,8 @@ model PtoEntry {
 }
 
 model InitialCapacity {
-  id           String  @id @default(uuid()) @db.Uuid
-  workspaceId  String  @db.Uuid
+  id           String  @id @default(uuid())
+  workspaceId  String
   lastName     String
   firstName    String
   role         String
@@ -213,8 +206,8 @@ model InitialCapacity {
 }
 
 model GuideEntry {
-  id          String  @id @default(uuid()) @db.Uuid
-  workspaceId String  @db.Uuid
+  id          String  @id @default(uuid())
+  workspaceId String
   section     String
   term        String
   defaultVal  String?
@@ -226,9 +219,9 @@ model GuideEntry {
 }
 
 model SprintStory {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @db.Uuid
-  sprintId    String   @db.Uuid
+  id          String   @id @default(uuid())
+  workspaceId String
+  sprintId    String
   key         String
   summary     String
   status      String
@@ -248,8 +241,8 @@ model SprintStory {
 }
 
 model Phase {
-  id           String   @id @default(uuid()) @db.Uuid
-  workspaceId  String   @db.Uuid
+  id           String   @id @default(uuid())
+  workspaceId  String
   name         String
   displayOrder Int
   color        String   @default("#E31837")
@@ -261,4 +254,29 @@ model Phase {
   sprints   Sprint[]
 
   @@index([workspaceId])
+}
+
+// --- Jira Flow snapshots (app-internal telemetry; written via better-sqlite3) ---
+
+model StreamSnapshot {
+  id           String   @id @default(uuid())
+  takenAt      String
+  windowDays   Int      @default(7)
+  countsJson   String
+  pointsJson   String
+  dailyJson    String
+  rowsJson     String
+  unclassified Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+model AgingSnapshot {
+  id           String   @id @default(uuid())
+  takenAt      String
+  sprintId     Int
+  threshold    Float    @default(5)
+  rowsJson     String
+  staleCount   Int      @default(0)
+  blockedCount Int      @default(0)
+  createdAt    DateTime @default(now())
 }

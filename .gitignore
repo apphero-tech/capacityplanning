@@ -34,8 +34,11 @@ yarn-error.log*
 .env*
 !.env.example
 
-# local SQLite databases (may contain client data — never commit)
+# local SQLite database. dev.db IS committed on purpose — it's how the data
+# syncs between the two machines (one at a time: pull before, push after).
+# The transient WAL/SHM sidecars are never committed.
 *.db
+!prisma/dev.db
 *.db-shm
 *.db-wal
 

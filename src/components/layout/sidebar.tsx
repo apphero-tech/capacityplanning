@@ -10,6 +10,8 @@ import {
   Users,
   CalendarOff,
   BarChart3,
+  ArrowRightLeft,
+  Hourglass,
   Settings,
   PanelLeftClose,
   PanelLeft,
@@ -45,6 +47,8 @@ const sections: NavItem[] = [
   { path: "/team",            label: "Team",              icon: Users },
   { path: "/time-off",        label: "Time Off",          icon: CalendarOff },
   { path: "/capacity",        label: "Capacity Planning", icon: BarChart3 },
+  { path: "/transitions",     label: "Transitions",       icon: ArrowRightLeft },
+  { path: "/aging",           label: "Aging",             icon: Hourglass },
 ]
 
 const colophon: NavItem[] = [
