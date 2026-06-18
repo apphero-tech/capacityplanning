@@ -171,19 +171,21 @@ export function AgingView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sprintId]);
 
-  // Charlie's rule: for a future sprint the Development stream isn't "in
-  // season" yet — the work is still being refined/designed upstream, so those
-  // stories sitting still is normal and shouldn't be flagged as aged/stuck.
-  // Drop Development from the Aging view (tables, stats, export) for future
-  // sprints; current and past sprints keep every stream.
+  // Charlie's rule: for a future sprint only the upstream streams are in
+  // season — the work is still being refined/designed, so Development and
+  // Testing stories sitting still is normal and shouldn't be flagged as
+  // aged/stuck. Drop Development + Testing from the Aging view (tables, stats,
+  // export) for future sprints; current and past sprints keep every stream.
   const isFutureSprint = React.useMemo(() => {
     const s = SPRINTS.find((x) => x.id === sprintId);
     return !!s && s.start > today;
   }, [sprintId, today]);
 
-  // Development is hidden for future sprints — don't leave it selected.
+  // Development & Testing are hidden for future sprints — don't leave them selected.
   React.useEffect(() => {
-    if (isFutureSprint && streamView === "Development") setStreamView("all");
+    if (isFutureSprint && (streamView === "Development" || streamView === "Testing")) {
+      setStreamView("all");
+    }
   }, [isFutureSprint, streamView]);
 
   // One point per calendar day = the last snapshot of that day. History is
@@ -200,9 +202,14 @@ export function AgingView() {
   // the stats, AND now filters the table (only stories aged ≥ threshold show).
   const dataThreshold = threshold;
 
+  // For a future sprint only the upstream streams are in season — keep
+  // Refining and Design, drop Development AND Testing (nobody builds or tests
+  // a sprint that hasn't started).
   const baseRows = React.useMemo(() => {
     const rows = data?.rows ?? [];
-    return isFutureSprint ? rows.filter((r) => r.stream !== "Development") : rows;
+    return isFutureSprint
+      ? rows.filter((r) => r.stream !== "Development" && r.stream !== "Testing")
+      : rows;
   }, [data, isFutureSprint]);
 
   // Track filter first, then demo filter, then the age threshold. The summary
@@ -483,7 +490,7 @@ export function AgingView() {
               <span className="text-muted-fg">{demoCount} in demo (not counted late)</span>
             )}
             {isFutureSprint && (
-              <span className="text-faint-fg">Development hidden — future sprint (not in season)</span>
+              <span className="text-faint-fg">Development &amp; QA hidden — future sprint (refining &amp; design only)</span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -505,9 +512,13 @@ export function AgingView() {
                 { value: "all", label: "All streams" },
                 { value: "Refining", label: "REF" },
                 { value: "Design", label: "DES" },
-                // Development isn't in season for a future sprint — hide it.
-                ...(isFutureSprint ? [] : [{ value: "Development" as const, label: "DEV" }]),
-                { value: "Testing", label: "QA" },
+                // Development & Testing aren't in season for a future sprint — hide them.
+                ...(isFutureSprint
+                  ? []
+                  : [
+                      { value: "Development" as const, label: "DEV" },
+                      { value: "Testing" as const, label: "QA" },
+                    ]),
               ]}
             />
             <SegmentedControl
