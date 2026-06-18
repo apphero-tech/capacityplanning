@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useSprint } from "@/contexts/sprint-context";
 import { useWorkspace } from "@/contexts/workspace-context";
+import { SPRINTS } from "@/lib/jira/constants";
 import type { ProjectOverview } from "@/lib/project-overview";
+
+const normName = (n: string) => n.trim().toLowerCase().replace(/\s+/g, " ");
+const CLOSED_SPRINT_NAMES = new Set(
+  SPRINTS.filter((s) => s.state === "closed").map((s) => normName(s.name)),
+);
 
 function fmt(n: number | null | undefined, decimals = 0): string {
   if (n === null || n === undefined) return "—";
@@ -162,11 +168,14 @@ export function ProjectView({ overview }: Props) {
         </div>
       </section>
 
-      {/* Sprint-by-sprint ledger */}
+      {/* Sprint-by-sprint ledger — open + future only; closed sprints are
+          frozen history (their delivered SP is already in the totals above). */}
       <section>
         <h3 className="text-[13px] font-medium text-slate-300 mb-3">Per sprint</h3>
         <div className="rounded-2xl border border-white/[0.04] divide-y divide-white/[0.04]">
-          {overview.bySprint.map((s) => {
+          {overview.bySprint
+            .filter((s) => !CLOSED_SPRINT_NAMES.has(normName(s.sprintName)))
+            .map((s) => {
             const isCurrent = s.sprintStatus === "current";
             const isPast = s.delivered.sp > 0 && !isCurrent;
             const valueLabel = isPast

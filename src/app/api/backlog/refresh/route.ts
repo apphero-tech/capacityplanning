@@ -42,7 +42,10 @@ function streamFromOrder(order: number): BacklogStream {
  */
 export async function POST() {
   try {
-    const jiraIdByName = new Map(SPRINTS.map((s) => [norm(s.name), s.id] as const));
+    // Map each sprint name to its Jira id + state. Closed sprints are frozen
+    // history (their delivered SP lives in Sprint.completedSP) — the tool only
+    // manages open + future sprints, so closed ones are never re-pulled.
+    const jiraByName = new Map(SPRINTS.map((s) => [norm(s.name), s] as const));
     const dbSprints = await getAllSprints();
 
     const perSprint: { sprintName: string; imported: number; replaced: number }[] = [];
@@ -51,13 +54,17 @@ export async function POST() {
     let total = 0;
 
     for (const sp of dbSprints) {
-      const jiraId = jiraIdByName.get(norm(sp.name));
-      if (!jiraId) {
+      const jira = jiraByName.get(norm(sp.name));
+      if (!jira) {
         skipped.push({ sprintName: sp.name, reason: "no matching Jira sprint" });
         continue;
       }
+      if (jira.state === "closed") {
+        skipped.push({ sprintName: sp.name, reason: "closed (frozen)" });
+        continue;
+      }
 
-      const issues = await fetchSprintStories(jiraId);
+      const issues = await fetchSprintStories(jira.id);
       const rows = issues
         .map((iss) => {
           const f = (iss.fields ?? {}) as JiraIssueFields;
