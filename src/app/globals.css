@@ -32,12 +32,18 @@
 
   --color-ink: var(--ink);
   --color-paper: var(--paper);
+  --color-paper-elev: var(--paper-elev);
   --color-coral: var(--coral);
   --color-coral-soft: var(--coral-soft);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-muted-fg: var(--muted-fg);
   --color-faint-fg: var(--faint-fg);
+  /* Status hues — flip with the theme (see :root / .dark). */
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+  --color-danger: var(--danger);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -77,24 +83,32 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/*
+ * Two themes, one York identity. The accent (--coral, cyan by default,
+ * overridden per-workspace with the brand colour e.g. York red #E31837) is
+ * shared; only the ink/paper/line scale and the status hues flip between
+ * light (:root, default) and dark (.dark). Components reference tokens only —
+ * never raw slate/white — so the flip is total and free.
+ */
 :root {
   --radius: 0.375rem;
 
-  /* Palette
-     ---
-     The "coral" variable holds the active accent. Default is apphero's
-     cyan #01cafd — used on workspace-less surfaces like the generic
-     /login page. Inside a workspace subtree it's overridden via inline
-     style with the workspace's brand colour (e.g. York red #E31837). */
-  --ink:        #f4efe6;
-  --paper:      #0c0c10;
-  --paper-elev: #14141a;
   --coral:      #01cafd;
   --coral-soft: #01cafd1f;
-  --line:       rgba(244, 239, 230, 0.06);
-  --line-strong:rgba(244, 239, 230, 0.14);
-  --muted-fg:   rgba(244, 239, 230, 0.58);
-  --faint-fg:   rgba(244, 239, 230, 0.36);
+
+  /* ── LIGHT ── ink on warm paper */
+  --ink:        #17171d;
+  --paper:      #f6f4ef;
+  --paper-elev: #ffffff;
+  --line:       rgba(23, 23, 29, 0.10);
+  --line-strong:rgba(23, 23, 29, 0.18);
+  --muted-fg:   rgba(23, 23, 29, 0.62);
+  --faint-fg:   rgba(23, 23, 29, 0.42);
+  /* Status hues tuned for a light surface. */
+  --ok:     #047857;
+  --warn:   #b45309;
+  --info:   #1d4ed8;
+  --danger: #dc2626;
 
   --background: var(--paper);
   --foreground: var(--ink);
@@ -103,12 +117,12 @@
   --popover: var(--paper-elev);
   --popover-foreground: var(--ink);
   --primary: var(--coral);
-  --primary-foreground: #1a0f0d;
-  --secondary: rgba(244, 239, 230, 0.06);
+  --primary-foreground: #06222d;
+  --secondary: rgba(23, 23, 29, 0.05);
   --secondary-foreground: var(--ink);
-  --muted: rgba(244, 239, 230, 0.04);
+  --muted: rgba(23, 23, 29, 0.04);
   --muted-foreground: var(--muted-fg);
-  --accent: rgba(244, 239, 230, 0.06);
+  --accent: rgba(23, 23, 29, 0.05);
   --accent-foreground: var(--ink);
   --destructive: var(--coral);
   --border: var(--line);
@@ -116,23 +130,35 @@
   --ring: var(--coral);
 
   --chart-1: var(--coral);
-  --chart-2: #6ec6b8;
-  --chart-3: #c8a86a;
-  --chart-4: #8c8c8c;
-  --chart-5: #d6c7a8;
-  /* Soft pre-mixed tints derived from --coral for hover/halo states. */
+  --chart-2: #2a9d8f;
+  --chart-3: #b07d2b;
+  --chart-4: #6b7280;
+  --chart-5: #9a7b3f;
 
   --sidebar: var(--paper);
   --sidebar-foreground: var(--ink);
   --sidebar-primary: var(--coral);
   --sidebar-primary-foreground: var(--ink);
-  --sidebar-accent: rgba(244, 239, 230, 0.06);
+  --sidebar-accent: rgba(23, 23, 29, 0.05);
   --sidebar-accent-foreground: var(--ink);
   --sidebar-border: var(--line);
   --sidebar-ring: var(--coral);
 }
 
 .dark {
+  /* ── DARK ── warm ink on charcoal */
+  --ink:        #f4efe6;
+  --paper:      #0c0c10;
+  --paper-elev: #14141a;
+  --line:       rgba(244, 239, 230, 0.06);
+  --line-strong:rgba(244, 239, 230, 0.14);
+  --muted-fg:   rgba(244, 239, 230, 0.58);
+  --faint-fg:   rgba(244, 239, 230, 0.36);
+  --ok:     #34d399;
+  --warn:   #fbbf24;
+  --info:   #60a5fa;
+  --danger: #f87171;
+
   --background: var(--paper);
   --foreground: var(--ink);
   --card: var(--paper-elev);
@@ -151,6 +177,11 @@
   --border: var(--line);
   --input: var(--line);
   --ring: var(--coral);
+
+  --chart-2: #6ec6b8;
+  --chart-3: #c8a86a;
+  --chart-4: #8c8c8c;
+  --chart-5: #d6c7a8;
 }
 
 @layer base {
