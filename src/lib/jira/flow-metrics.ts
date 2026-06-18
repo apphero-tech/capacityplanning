@@ -431,3 +431,148 @@ export function computeAging(
     threshold,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Historical reconstruction (trend backfill)
+// ---------------------------------------------------------------------------
+
+interface TimedChange { t: number; from: string; to: string; fromStr: string; toStr: string; }
+
+/** Ordered status changes for an issue, oldest→newest. */
+function statusChanges(iss: JiraIssue): TimedChange[] {
+  const out: TimedChange[] = [];
+  histories(iss).forEach((h) => {
+    const t = new Date(h.created).getTime();
+    (h.items ?? []).forEach((it) => {
+      if (!isStatusItem(it)) return;
+      out.push({
+        t,
+        from: String(it.from ?? ""),
+        to: String(it.to ?? ""),
+        fromStr: it.fromString ?? "",
+        toStr: it.toString ?? "",
+      });
+    });
+  });
+  return out.sort((a, b) => a.t - b.t);
+}
+
+/** Ordered Blocked-field changes for an issue, oldest→newest. */
+function blockedChanges(iss: JiraIssue): TimedChange[] {
+  const out: TimedChange[] = [];
+  histories(iss).forEach((h) => {
+    const t = new Date(h.created).getTime();
+    (h.items ?? []).forEach((it) => {
+      const fid = String(it.fieldId ?? "");
+      const fname = String(it.field ?? "").toLowerCase();
+      if (fid !== BLOCKED_FIELD && fname !== "blocked") return;
+      out.push({
+        t,
+        from: String(it.from ?? ""),
+        to: String(it.to ?? ""),
+        fromStr: it.fromString ?? "",
+        toStr: it.toString ?? "",
+      });
+    });
+  });
+  return out.sort((a, b) => a.t - b.t);
+}
+
+/**
+ * Reconstruct the aging numbers as they would have been at a past instant
+ * `atMs`, by replaying each issue's changelog. Lets us backfill the trend for
+ * days before snapshot capture began (capture started 2026-06-11).
+ *
+ * Only the trend aggregates are faithful — status, days-in-status, demo/stale,
+ * and the Blocked flag are all reconstructed from the changelog. The live-only
+ * signals (assignee aging, activity/comments, blocker links) are NOT historical
+ * and are left empty; the daily trend chart does not use them.
+ */
+export function computeAgingAt(
+  issues: JiraIssue[],
+  threshold: number,
+  atMs: number,
+): AgingResult {
+  let excluded = 0;
+  const rows: AgingRow[] = [];
+
+  for (const iss of issues) {
+    const f = iss.fields ?? {};
+    const createdMs = f.created ? new Date(f.created).getTime() : null;
+    // The issue didn't exist yet at `atMs`.
+    if (createdMs !== null && createdMs > atMs) continue;
+
+    const isStory = !f.issuetype || (f.issuetype.name ?? "").toLowerCase() === "story";
+
+    // --- status (and when it was entered) as of atMs ---
+    const sc = statusChanges(iss);
+    const applied = sc.filter((c) => c.t <= atMs);
+    let statusId: string;
+    let statusName: string;
+    let enterMs: number;
+    if (applied.length) {
+      const last = applied[applied.length - 1];
+      statusId = last.to;
+      statusName = last.toStr || "?";
+      enterMs = last.t;
+    } else if (sc.length) {
+      // Before the first recorded change → the original status.
+      statusId = sc[0].from;
+      statusName = sc[0].fromStr || "?";
+      enterMs = createdMs ?? sc[0].t;
+    } else {
+      // No status changes ever → current status, held since creation.
+      statusId = String(f.status?.id ?? "");
+      statusName = f.status?.name ?? "?";
+      enterMs = createdMs ?? atMs;
+    }
+
+    if (!(isStory && WORKFLOW_IDS.has(statusId))) { excluded++; continue; }
+
+    const days = (atMs - enterMs) / DAY_MS;
+    const isDemo = DEMO_STATUS_IDS.has(statusId);
+    const { stream, order } = statusStream(statusId);
+    const { pod, track } = podTrack(f); // pod rarely changes; current value is a fair proxy
+
+    // --- Blocked flag as of atMs ---
+    const bc = blockedChanges(iss);
+    const bApplied = bc.filter((c) => c.t <= atMs);
+    let blockedValue: string;
+    if (bApplied.length) blockedValue = bApplied[bApplied.length - 1].toStr;
+    else if (bc.length) blockedValue = bc[0].fromStr; // value before the first change
+    else blockedValue = blockedInfo(f).state === "yes" ? "Blocked" : ""; // never changed
+    const isBlocked = blockedValue.trim().toLowerCase() === "blocked";
+
+    rows.push({
+      key: iss.key ?? "—",
+      summary: f.summary ?? "",
+      status: statusName,
+      enteredAt: new Date(enterMs).toISOString(),
+      days,
+      isDemo,
+      stream,
+      streamOrder: order,
+      pod,
+      track,
+      blockedState: isBlocked ? "yes" : "no",
+      blockedLabels: isBlocked ? ["Blocked"] : [],
+      blockers: [],
+      assigneeName: null,
+      assignedAt: null,
+      daysWithAssignee: null,
+      lastMoveAt: null,
+    });
+  }
+
+  rows.sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
+
+  return {
+    rows,
+    staleCount: rows.filter(
+      (r) => !r.isDemo && r.days !== null && threshold > 0 && r.days >= threshold,
+    ).length,
+    blockedCount: rows.filter((r) => r.blockedState === "yes").length,
+    excluded,
+    threshold,
+  };
+}

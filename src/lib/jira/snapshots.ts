@@ -118,8 +118,10 @@ export interface AgingHistoryPoint {
   blockedCount: number;
 }
 
-/** Aging trend for one sprint, chronological (oldest→newest). */
-export function getAgingHistory(sprintId: number, limit = 30): AgingHistoryPoint[] {
+/** Aging trend for one sprint, chronological (oldest→newest). The trend
+ *  collapses to one point per day, and backfilled history can span weeks, so
+ *  the row limit is generous (snapshots are tiny). */
+export function getAgingHistory(sprintId: number, limit = 120): AgingHistoryPoint[] {
   const rows = getDb()
     .prepare(`SELECT takenAt, threshold, staleCount, blockedCount, rowsJson
               FROM AgingSnapshot WHERE sprintId = ? ORDER BY takenAt DESC LIMIT ?`)
