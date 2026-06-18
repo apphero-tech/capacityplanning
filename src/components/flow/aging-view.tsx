@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/table";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { cn } from "@/lib/utils";
-import { SPRINTS, defaultSprintId, DEFAULT_AGING_THRESHOLD } from "@/lib/jira/constants";
+import { SPRINTS, defaultSprintId, DEFAULT_AGING_THRESHOLD, sprintPhaseFromState } from "@/lib/jira/constants";
 import type { AgingResult, AgingRow } from "@/lib/jira/flow-metrics";
 import { momentum } from "@/lib/jira/flow-metrics";
 import type { AgingHistoryPoint } from "@/lib/jira/snapshots";
@@ -444,7 +444,7 @@ export function AgingView() {
             >
               {SPRINTS.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} — {s.state}
+                  {s.name} — {sprintPhaseFromState(s.state, s.start, s.end, today)}
                 </option>
               ))}
             </select>

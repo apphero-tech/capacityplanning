@@ -13,6 +13,7 @@ import {
 import type { ProjectOverview } from "@/lib/project-overview";
 import type { SprintStory } from "@/types";
 import { PageHeader } from "@/components/layout/page-header";
+import { sprintPhase } from "@/lib/jira/constants";
 
 /**
  * Two independent dimensions drive the verdict math:
@@ -89,6 +90,7 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
     useProjectionSettings();
   const activeScenario =
     SCENARIO_OPTIONS.find((s) => s.growth === growthPct)?.key ?? null;
+  const today = new Date().toISOString().slice(0, 10);
 
   /* ----- target = the NEXT sprint to plan, not the one already in flight.
      The dashboard answers "can we deliver the upcoming sprint with the team
@@ -494,7 +496,7 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
                       {sprint.name}
                     </span>
                     <span className="code-label">
-                      {s.sprintStatus}
+                      {sprintPhase(sprint.name, today) ?? s.sprintStatus}
                     </span>
                   </div>
                   <div className="col-span-3 text-[12px] text-[color:var(--muted-fg)] font-mono tabular-nums">

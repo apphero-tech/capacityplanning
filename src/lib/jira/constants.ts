@@ -207,7 +207,7 @@ export const SPRINTS: ReadonlyArray<SprintRef> = [
   { id: 480, name: "Sprint 13B | Product Demo 3", state: "future", start: "2026-11-02", end: "2026-11-13" },
   { id: 479, name: "Sprint 13", state: "future", start: "2026-10-05", end: "2026-10-30" },
   { id: 412, name: "Sprint 12", state: "future", start: "2026-09-07", end: "2026-10-02" },
-  { id: 379, name: "Sprint 11", state: "future", start: "2026-08-10", end: "2026-09-04" },
+  { id: 379, name: "Sprint 11", state: "active", start: "2026-08-10", end: "2026-09-04" },
   { id: 378, name: "Sprint 10", state: "active", start: "2026-07-13", end: "2026-08-07" },
   { id: 377, name: "Sprint 9B | Product Demo 2", state: "future", start: "2026-06-22", end: "2026-07-10" },
   { id: 376, name: "Sprint 9", state: "active", start: "2026-05-25", end: "2026-06-19" },
@@ -222,6 +222,35 @@ export const SPRINTS: ReadonlyArray<SprintRef> = [
   { id: 235, name: "AP Sprint 1", state: "closed", start: "2025-07-28", end: "2025-09-05" },
   { id: 234, name: "AP Sprint 0", state: "closed", start: "2025-07-07", end: "2025-07-25" },
 ];
+
+/**
+ * Sprint phase — the single clear status shown everywhere. Combines the Jira
+ * open-state with the calendar position so it's unambiguous that exactly ONE
+ * sprint is in flight:
+ *   - Active   : Jira-open AND today is inside its dates (the build sprint).
+ *   - Upcoming : Jira-open but starts in the future (refining/design ahead).
+ *   - Planned  : not opened in Jira yet (pending).
+ *   - Closed   : completed / past.
+ */
+export type SprintPhase = "Active" | "Upcoming" | "Planned" | "Closed";
+
+export function sprintPhaseFromState(
+  state: "active" | "closed" | "future",
+  start: string,
+  end: string,
+  today: string,
+): SprintPhase {
+  if (state === "closed" || (end && end < today)) return "Closed";
+  if (state === "future") return "Planned";
+  // state === "active" (open in Jira)
+  return start && start > today ? "Upcoming" : "Active";
+}
+
+/** Phase for a sprint name, resolved via the SPRINTS reference list. */
+export function sprintPhase(name: string, today: string): SprintPhase | null {
+  const s = SPRINTS.find((x) => x.name === name);
+  return s ? sprintPhaseFromState(s.state, s.start, s.end, today) : null;
+}
 
 /**
  * Pick the default sprint, matching the rest of the app: the sprint we're
