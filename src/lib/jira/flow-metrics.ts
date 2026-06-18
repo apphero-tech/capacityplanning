@@ -155,6 +155,87 @@ export function computeStream(
   };
 }
 
+/**
+ * Build the stream result from PER-FILTER issue sets so the counts match the
+ * saved Jira filters (and their CSV export) exactly. Each issuesByMetric[i] is
+ * the issues returned by metric i's filter — Jira already guarantees the
+ * transition, so count[i] = issuesByMetric[i].length. The changelog is read
+ * only to date each transition for the per-day breakdown.
+ *
+ * This avoids the boundary drift of re-deriving counts from the changelog of a
+ * merged fetch (a story transitioning exactly `windowDays` ago flips in/out
+ * depending on the exact query instant).
+ */
+export function computeStreamFromFilters(
+  issuesByMetric: JiraIssue[][],
+  windowDays: number = DEFAULT_WINDOW_DAYS,
+  now: number = Date.now(),
+): StreamResult {
+  const cutoff = now - windowDays * DAY_MS;
+  const counts = METRICS.map(() => 0);
+  const points = METRICS.map(() => 0);
+
+  const dayKeys: string[] = [];
+  const seenDay = new Set<string>();
+  for (let t = cutoff; t <= now; t += DAY_MS) {
+    const k = dayKey(t);
+    if (!seenDay.has(k)) { seenDay.add(k); dayKeys.push(k); }
+  }
+  const todayKey = dayKey(now);
+  if (!seenDay.has(todayKey)) { seenDay.add(todayKey); dayKeys.push(todayKey); }
+  const daily: Record<string, Array<{ stories: number; points: number }>> = {};
+  dayKeys.forEach((k) => { daily[k] = METRICS.map(() => ({ stories: 0, points: 0 })); });
+
+  // A story can satisfy more than one filter — merge into one row, many hits.
+  const rowByKey = new Map<string, StreamRow>();
+
+  issuesByMetric.forEach((issues, mi) => {
+    counts[mi] = issues.length;
+    issues.forEach((iss) => {
+      const sp = storyPoints(iss);
+      points[mi] += sp;
+      // Date this metric's transition = the latest changelog item matching it.
+      let whenMs: number | null = null;
+      histories(iss).forEach((h) =>
+        (h.items ?? []).forEach((it) => {
+          if (!isStatusItem(it)) return;
+          if (!STREAM_RULES[mi](it)) return;
+          const t = new Date(h.created).getTime();
+          if (whenMs === null || t > whenMs) whenMs = t;
+        }),
+      );
+      const when = new Date(whenMs ?? now).toISOString();
+      const dk = dayKey(when);
+      if (daily[dk]) { daily[dk][mi].stories++; daily[dk][mi].points += sp; }
+
+      const key = iss.key ?? "—";
+      const row = rowByKey.get(key) ?? {
+        key,
+        summary: iss.fields?.summary ?? "",
+        status: iss.fields?.status?.name ?? "?",
+        storyPoints: sp,
+        hits: [],
+      };
+      row.hits.push({ metric: mi, when });
+      rowByKey.set(key, row);
+    });
+  });
+
+  const rows = [...rowByKey.values()];
+  const latest = (r: StreamRow) =>
+    r.hits.length ? Math.max(...r.hits.map((x) => new Date(x.when).getTime())) : 0;
+  rows.sort((a, b) => latest(b) - latest(a));
+
+  return {
+    counts,
+    points,
+    daily: dayKeys.map((k) => ({ day: k, perMetric: daily[k] })),
+    rows,
+    unclassified: 0,
+    windowDays,
+  };
+}
+
 export { STREAM_LABELS };
 
 // ---------------------------------------------------------------------------

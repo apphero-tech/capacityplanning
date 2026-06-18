@@ -85,8 +85,10 @@ export interface StreamHistoryPoint {
   unclassified: number;
 }
 
-/** Chronological (oldest→newest) — ready to plot on a time axis. */
-export function getStreamHistory(limit = 30): StreamHistoryPoint[] {
+/** Chronological (oldest→newest) — ready to plot on a time axis. The weekly
+ *  trend keeps one point per Thursday but daily snapshots also accumulate, so
+ *  the row limit is generous to cover several months of backfilled history. */
+export function getStreamHistory(limit = 200): StreamHistoryPoint[] {
   const rows = getDb()
     .prepare(`SELECT takenAt, windowDays, countsJson, pointsJson, unclassified
               FROM StreamSnapshot ORDER BY takenAt DESC LIMIT ?`)
