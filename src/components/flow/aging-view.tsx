@@ -27,7 +27,7 @@ import {
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { cn } from "@/lib/utils";
 import { SPRINTS, defaultSprintId, DEFAULT_AGING_THRESHOLD } from "@/lib/jira/constants";
-import type { AgingResult } from "@/lib/jira/flow-metrics";
+import type { AgingResult, AgingRow } from "@/lib/jira/flow-metrics";
 import { momentum } from "@/lib/jira/flow-metrics";
 import type { AgingHistoryPoint } from "@/lib/jira/snapshots";
 import { ErrorBanner, RefreshButton, IssueLink, fmtDateTime } from "./shared";
@@ -37,6 +37,52 @@ type AgingResponse = AgingResult & { sprintId: number; takenAt: string };
 
 /** Table section order. */
 const STREAM_GROUPS = ["Refining", "Design", "Development", "Testing"] as const;
+
+// --- Click-to-sort -------------------------------------------------------
+type SortKey =
+  | "key" | "summary" | "assignee" | "daysWith" | "activity"
+  | "idle" | "blocked" | "daysBlocked" | "blockedBy" | "daysInStatus";
+type SortDir = "asc" | "desc";
+
+/** Columns that read best high-first → default to descending on first click. */
+const NUMERIC_SORT_KEYS = new Set<SortKey>([
+  "daysWith", "activity", "idle", "blocked", "daysBlocked", "blockedBy", "daysInStatus",
+]);
+
+const MOMENTUM_RANK: Record<string, number> = { moving: 0, quiet: 1, stuck: 2, unknown: -1 };
+const BLOCKED_RANK: Record<string, number> = { yes: 3, other: 2, no: 1, unknown: 0 };
+
+/** The comparable value for a column; null sorts last regardless of direction. */
+function sortValue(r: AgingRow, key: SortKey): string | number | null {
+  switch (key) {
+    case "key": return r.key;
+    case "summary": return r.summary.toLowerCase();
+    case "assignee": return r.assigneeName?.toLowerCase() ?? null;
+    case "daysWith": return r.daysWithAssignee ?? null;
+    case "activity": return MOMENTUM_RANK[momentum(r)] ?? -1;
+    case "idle": return r.daysSinceActivity ?? null;
+    case "blocked": return BLOCKED_RANK[r.blockedState] ?? 0;
+    case "daysBlocked": return r.daysBlocked ?? null;
+    case "blockedBy": return r.blockers.filter((b) => b.blockState !== "resolved").length || null;
+    case "daysInStatus": return r.days ?? null;
+  }
+}
+
+function sortRows(rows: AgingRow[], key: SortKey, dir: SortDir): AgingRow[] {
+  const sign = dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const va = sortValue(a, key);
+    const vb = sortValue(b, key);
+    if (va === null && vb === null) return 0;
+    if (va === null) return 1; // nulls last
+    if (vb === null) return -1;
+    const c =
+      typeof va === "number" && typeof vb === "number"
+        ? va - vb
+        : String(va).localeCompare(String(vb));
+    return sign * c;
+  });
+}
 
 export function AgingView() {
   const today = new Date().toISOString().slice(0, 10);
@@ -53,6 +99,29 @@ export function AgingView() {
   // Activity focus: "stuck" hides stories that are moving — leaves the real
   // problems (aged AND no activity ≥ 3 business days).
   const [activityView, setActivityView] = React.useState<"all" | "stuck">("all");
+  // Click-to-sort. key=null → default grouped-by-status view; a key → flat sort.
+  const [sort, setSort] = React.useState<{ key: SortKey | null; dir: SortDir }>({
+    key: null,
+    dir: "desc",
+  });
+  const toggleSort = (key: SortKey) =>
+    setSort((p) =>
+      p.key === key
+        ? { key, dir: p.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: NUMERIC_SORT_KEYS.has(key) ? "desc" : "asc" },
+    );
+  /** A clickable, sort-aware column header cell. */
+  const th = (key: SortKey, label: string, align?: "right") => (
+    <TableHead
+      onClick={() => toggleSort(key)}
+      className={cn("cursor-pointer select-none hover:text-foreground", align === "right" && "text-right")}
+    >
+      <span className={cn("inline-flex items-center gap-1", align === "right" && "flex-row-reverse")}>
+        {label}
+        <span className="text-[9px] text-muted-fg">{sort.key === key ? (sort.dir === "asc" ? "▲" : "▼") : ""}</span>
+      </span>
+    </TableHead>
+  );
 
   const loadHistory = React.useCallback(async (sid: number) => {
     try {
@@ -381,6 +450,16 @@ export function AgingView() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {sort.key && (
+              <button
+                type="button"
+                onClick={() => setSort({ key: null, dir: "desc" })}
+                className="rounded-md border border-line-strong px-2 py-1 text-xs text-muted-fg hover:text-foreground"
+                title="Return to the status-grouped view"
+              >
+                ⤺ Group by status
+              </button>
+            )}
             <SegmentedControl
               size="sm"
               value={streamView}
@@ -479,51 +558,54 @@ export function AgingView() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Key</TableHead>
-                      <TableHead>Summary</TableHead>
-                      <TableHead>Assignee</TableHead>
-                      <TableHead className="text-right">Days w/ them</TableHead>
-                      <TableHead>Activity</TableHead>
-                      <TableHead className="text-right">Idle (days)</TableHead>
-                      <TableHead>Blocked</TableHead>
-                      <TableHead className="text-right">Days blocked</TableHead>
-                      <TableHead>Blocked by</TableHead>
-                      <TableHead className="text-right">Days in status</TableHead>
+                      {th("key", "Key")}
+                      {th("summary", "Summary")}
+                      {th("assignee", "Assignee")}
+                      {th("daysWith", "Days w/ them", "right")}
+                      {th("activity", "Activity")}
+                      {th("idle", "Idle (days)", "right")}
+                      {th("blocked", "Blocked")}
+                      {th("daysBlocked", "Days blocked", "right")}
+                      {th("blockedBy", "Blocked by")}
+                      {th("daysInStatus", "Days in status", "right")}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(() => {
-                      // Sub-group by status (ordered by the numeric prefix),
-                      // rows within each status by days descending.
-                      const byStatus = new Map<string, AgingResponse["rows"]>();
-                      groupRows.forEach((r) => {
-                        const arr = byStatus.get(r.status) ?? [];
-                        arr.push(r);
-                        byStatus.set(r.status, arr);
-                      });
-                      const ord = (s: string) => {
-                        const m = s.match(/^(\d+)/);
-                        return m ? Number(m[1]) : 999;
-                      };
-                      return [...byStatus.keys()]
-                        .sort((a, b) => ord(a) - ord(b))
-                        .map((st) => {
-                          const rows = (byStatus.get(st) ?? []).sort(
-                            (a, b) => (b.days ?? -1) - (a.days ?? -1),
-                          );
-                          return (
-                            <React.Fragment key={st}>
-                              <TableRow className="border-y border-line bg-muted/40 hover:bg-muted/40">
-                                <TableCell colSpan={10} className="py-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                                  {st.replace(/​/g, "")}
-                                  <span className="ml-2 text-faint-fg">· {rows.length}</span>
-                                </TableCell>
-                              </TableRow>
-                              {rows.map((r) => renderRow(r))}
-                            </React.Fragment>
-                          );
-                        });
-                    })()}
+                    {sort.key
+                      ? // Flat sort on the chosen column (status grouping dropped).
+                        sortRows(groupRows, sort.key, sort.dir).map((r) => renderRow(r))
+                      : (() => {
+                          // Default view: sub-group by status (numeric prefix
+                          // order), rows within each status by days descending.
+                          const byStatus = new Map<string, AgingResponse["rows"]>();
+                          groupRows.forEach((r) => {
+                            const arr = byStatus.get(r.status) ?? [];
+                            arr.push(r);
+                            byStatus.set(r.status, arr);
+                          });
+                          const ord = (s: string) => {
+                            const m = s.match(/^(\d+)/);
+                            return m ? Number(m[1]) : 999;
+                          };
+                          return [...byStatus.keys()]
+                            .sort((a, b) => ord(a) - ord(b))
+                            .map((st) => {
+                              const rows = (byStatus.get(st) ?? []).sort(
+                                (a, b) => (b.days ?? -1) - (a.days ?? -1),
+                              );
+                              return (
+                                <React.Fragment key={st}>
+                                  <TableRow className="border-y border-line bg-muted/40 hover:bg-muted/40">
+                                    <TableCell colSpan={10} className="py-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                                      {st.replace(/​/g, "")}
+                                      <span className="ml-2 text-faint-fg">· {rows.length}</span>
+                                    </TableCell>
+                                  </TableRow>
+                                  {rows.map((r) => renderRow(r))}
+                                </React.Fragment>
+                              );
+                            });
+                        })()}
                   </TableBody>
                 </Table>
               </Card>
