@@ -1,5 +1,6 @@
 import { SprintsView } from "@/components/sprints/sprints-view";
 import { AddSprintDialog } from "@/components/sprints/add-sprint-dialog";
+import { PageHeader } from "@/components/layout/page-header";
 import { getAllSprints } from "@/lib/data";
 import { getProjectOverview } from "@/lib/project-overview";
 
@@ -31,13 +32,11 @@ export default async function SprintsPage() {
 
   return (
     <div className="flex flex-col gap-8" data-stagger>
-      <header className="flex items-end justify-between flex-wrap gap-4 pb-4 border-b hairline">
-        <p className="text-[13px] text-[color:var(--muted-fg)]">
-          {subtitle}. Edit any name, range or focus inline.
-        </p>
-        <AddSprintDialog />
-      </header>
-
+      <PageHeader
+        title="Sprint Plan"
+        subtitle={`${subtitle}. Edit any name, range or focus inline.`}
+        actions={<AddSprintDialog />}
+      />
       <SprintsView scopeBySprint={scopeBySprint} />
     </div>
   );

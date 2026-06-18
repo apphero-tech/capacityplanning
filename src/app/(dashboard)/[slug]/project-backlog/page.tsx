@@ -4,6 +4,7 @@ import { getProjectOverview } from "@/lib/project-overview";
 import { ProjectView } from "@/components/project/project-view";
 import { BacklogTable } from "@/components/backlog/backlog-table";
 import { BacklogAutoImportButton } from "@/components/backlog/auto-import-button";
+import { PageHeader } from "@/components/layout/page-header";
 import type { SprintStory } from "@/types";
 
 /**
@@ -38,14 +39,11 @@ export default async function ProjectBacklogPage() {
 
   return (
     <div className="flex flex-col gap-10" data-stagger>
-      <header className="flex items-end justify-between flex-wrap gap-4 pb-4 border-b hairline">
-        <p className="text-[13px] text-[color:var(--muted-fg)] max-w-xl">
-          End-to-end scope. Import the Jira backlog here to refresh every
-          sprint in one motion — every other tab reads from this source.
-        </p>
-        <BacklogAutoImportButton />
-      </header>
-
+      <PageHeader
+        title="Project Backlog"
+        subtitle="End-to-end scope. Import the Jira backlog here to refresh every sprint in one motion — every other tab reads from this source."
+        actions={<BacklogAutoImportButton />}
+      />
       <ProjectView overview={overview} />
 
       <section>

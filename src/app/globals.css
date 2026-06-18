@@ -8,16 +8,14 @@
  * York Capacity — design system
  *
  * Direction:
- *   Software-first, calm and airy. One typographic moment lives in the
- *   dashboard hero (Fraunces serif on a single question) — everything else
- *   is sans-serif, monospaced for data, aligned to a strict grid. Not a
- *   magazine, not an art piece — a precise instrument that's pleasant to
- *   touch every day.
+ *   Software-first, dense, tech — not editorial. No serif anywhere; the
+ *   whole surface is sans-serif with monospaced data, aligned to a strict
+ *   grid. A precise instrument that's pleasant to touch every day. Every
+ *   tab shares one header idiom (see components/layout/page-header).
  *
  * Type:
  *   • Inter Tight — body & UI (300/400/500/600/700)
- *   • JetBrains Mono — every number, every label, every status code
- *   • Fraunces — hero question, verdict word, two-line section openers ONLY
+ *   • JetBrains Mono — every number, every label, status code, and lettermark
  *
  * Color:
  *   • Ink #f4efe6 on charcoal #0e0d0b — high contrast but warm.
@@ -29,7 +27,6 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-display: var(--font-display);
   --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
 
@@ -178,12 +175,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  .font-display {
-    font-family: var(--font-display);
-    font-optical-sizing: auto;
-    letter-spacing: -0.022em;
-  }
-
   .font-mono,
   .num,
   .tabular-nums {
@@ -216,15 +207,6 @@
     font-size: 10px;
     letter-spacing: 0.04em;
     color: var(--faint-fg);
-  }
-
-  /* A single "moment" — italic display reserved for the hero verdict and
-     the cover question. Used sparingly. */
-  .display-italic {
-    font-family: var(--font-display);
-    font-style: italic;
-    font-weight: 300;
-    letter-spacing: -0.025em;
   }
 
   /* Reset focus rings except on real inputs */

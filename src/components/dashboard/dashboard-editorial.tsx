@@ -12,6 +12,7 @@ import {
 } from "@/lib/capacity-engine";
 import type { ProjectOverview } from "@/lib/project-overview";
 import type { SprintStory } from "@/types";
+import { PageHeader } from "@/components/layout/page-header";
 
 /**
  * Two independent dimensions drive the verdict math:
@@ -61,19 +62,17 @@ interface Props {
 }
 
 /**
- * Dashboard — editorial cover.
+ * Dashboard — the landing surface, in the tech idiom shared with every tab.
  *
- * The page reads top-to-bottom like an opening spread:
+ * Top to bottom:
+ *   1. Verdict panel — the answer for the next sprint ("Fits" / "Tight" /
+ *      "Overflow") in mono/coral with the calculation chain, no serif.
+ *   2. Tune — velocity basis + scenario controls.
+ *   3. Project overview — scope split into Delivered / In flight / Remaining /
+ *      Out of scope as mono measurements on hairlines.
+ *   4. Look-ahead — the next sprints as a table of scope vs. forecast.
  *
- *   1. Cover statement — a verdict for the next sprint, set in display serif,
- *      with the answer ("Fits" / "Tight" / "Overflow") as a single coral
- *      word and the supporting evidence in a left-aligned column.
- *   2. Project at-a-glance — total scope split into Delivered / In flight /
- *      Remaining / Excluded as four large measurements, separated by hairlines.
- *   3. Look-ahead — the next four sprints as a horizontal table with scope
- *      vs. forecast on each row, the way an editor would lay out a calendar.
- *
- * No card chrome. No coloured tiles. Numbers do the heavy lifting.
+ * Numbers do the heavy lifting. Mono for data, coral as the single accent.
  */
 export function DashboardEditorial({ overview, storiesBySprint }: Props) {
   const {
@@ -206,68 +205,60 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
   }, [overview]);
 
   return (
-    <div className="flex flex-col gap-16" data-stagger>
-      {/* ─── HERO ─── one moment of typographic personality */}
-      <section>
-        {verdict ? (
-          <div className="grid grid-cols-12 gap-x-8 gap-y-8 items-start">
-            {/* Headline question — Fraunces, the only place it's used. */}
-            <div className="col-span-12 lg:col-span-8">
-              <p className="eyebrow">The question</p>
-              <h2 className="mt-3 font-display text-[clamp(40px,5.5vw,72px)] leading-[1.0] font-light tracking-[-0.022em] text-[color:var(--ink)]">
-                Can the team deliver{" "}
-                <span className="text-[color:var(--ink)]">
-                  {verdict.target.name}
-                </span>
-                <span className="text-[color:var(--coral)]">?</span>
-              </h2>
-              <p className="mt-6 max-w-2xl text-[14px] leading-relaxed text-[color:var(--muted-fg)]">
-                Scope is <span className="text-[color:var(--ink)] font-mono tabular-nums">{fmt(verdict.scopeSP)}</span> SP across{" "}
-                <span className="font-mono tabular-nums">{verdict.stories}</span> stories.
-                With <span className="font-mono tabular-nums">{fmt(verdict.hours)}</span> net hours at a velocity of{" "}
-                <span className="font-mono tabular-nums">{verdict.velocity.toFixed(2)}</span> SP/hr,
-                projection is <span className="text-[color:var(--ink)] font-mono tabular-nums">{fmt(verdict.projection)}</span> SP.
-              </p>
-            </div>
+    <div className="flex flex-col gap-10" data-stagger>
+      <PageHeader
+        title="Dashboard"
+        subtitle={
+          verdict
+            ? `Can the team deliver ${verdict.target.name}? The verdict and the math.`
+            : "Project health at a glance."
+        }
+      />
 
-            {/* Verdict block — coral word, delta, link */}
-            <div className="col-span-12 lg:col-span-4 lg:pl-8 lg:border-l hairline">
-              <p className="eyebrow">Verdict</p>
-              <p className="mt-3 display-italic text-[72px] leading-none text-[color:var(--coral)]">
-                {verdict.label}
-              </p>
-              <p className="mt-5 text-[13px] text-[color:var(--muted-fg)]">
-                {verdict.delta >= 0 ? (
-                  <>
-                    <span className="text-[color:var(--ink)] font-mono tabular-nums">+{fmt(verdict.delta)} SP</span>{" "}
-                    of room.
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[color:var(--ink)] font-mono tabular-nums">{fmt(Math.abs(verdict.delta))} SP</span>{" "}
-                    over the ceiling.
-                  </>
-                )}
-              </p>
-              <Link
-                href={`/${slug}/capacity`}
-                onClick={() => {
-                  const idx = activeSprints.findIndex((s) => s.id === verdict.target.id);
-                  if (idx >= 0) setSelectedIndex(idx);
-                }}
-                className="mt-6 inline-flex items-center gap-1.5 text-[12px] tracking-tight text-[color:var(--ink)] hover:text-[color:var(--coral)] transition-colors"
-              >
-                Open capacity plan
-                <span aria-hidden>→</span>
-              </Link>
+      {/* ─── VERDICT ─── the answer in the data idiom: mono, coral, no serif. */}
+      {verdict ? (
+        <section className="rounded-md border hairline bg-[color:var(--paper-elev)]/30 p-5">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="code-label">VERDICT · {verdict.target.name.toUpperCase()}</p>
+              <div className="mt-2.5 flex items-baseline gap-3">
+                <span className="font-mono text-[40px] leading-none font-medium tabular-nums text-[color:var(--coral)]">
+                  {verdict.label}
+                </span>
+                <span className="text-[13px] text-[color:var(--muted-fg)]">
+                  {verdict.delta >= 0 ? (
+                    <>
+                      <span className="font-mono tabular-nums text-[color:var(--ink)]">+{fmt(verdict.delta)} SP</span> of room
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-mono tabular-nums text-[color:var(--ink)]">{fmt(Math.abs(verdict.delta))} SP</span> over the ceiling
+                    </>
+                  )}
+                </span>
+              </div>
             </div>
+            <Link
+              href={`/${slug}/capacity`}
+              onClick={() => {
+                const idx = activeSprints.findIndex((s) => s.id === verdict.target.id);
+                if (idx >= 0) setSelectedIndex(idx);
+              }}
+              className="inline-flex items-center gap-1.5 text-[12px] tracking-tight text-[color:var(--ink)] transition-colors hover:text-[color:var(--coral)]"
+            >
+              Open capacity plan
+              <span aria-hidden>→</span>
+            </Link>
           </div>
-        ) : (
-          <p className="text-[15px] text-[color:var(--muted-fg)]">
-            No upcoming sprint configured. Define dates in <Link href={`/${slug}/sprints`} className="underline">Sprint Plan</Link>.
+          <p className="mt-4 font-mono text-[12px] leading-relaxed tabular-nums text-[color:var(--muted-fg)]">
+            {fmt(verdict.scopeSP)} SP scope · {verdict.stories} stories · {fmt(verdict.hours)} net hrs · {verdict.velocity.toFixed(2)} SP/hr → <span className="text-[color:var(--ink)]">{fmt(verdict.projection)} SP projected</span>
           </p>
-        )}
-      </section>
+        </section>
+      ) : (
+        <p className="text-[15px] text-[color:var(--muted-fg)]">
+          No upcoming sprint configured. Define dates in <Link href={`/${slug}/sprints`} className="underline">Sprint Plan</Link>.
+        </p>
+      )}
 
       {/* ─── TUNE ─── velocity basis + scenario, software-first */}
       {verdict && (

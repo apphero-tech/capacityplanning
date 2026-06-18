@@ -5,6 +5,7 @@ import {
   getInitialCapacities,
 } from "@/lib/data";
 import { TimeOffView } from "@/components/time-off/time-off-view";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function TimeOffPage() {
   const [publicHolidays, projectHolidays, ptoEntries, initialCapacities] =
@@ -38,10 +39,7 @@ export default async function TimeOffPage() {
 
   return (
     <div className="flex flex-col gap-8" data-stagger>
-      <header className="pb-4 border-b hairline">
-        <p className="text-[13px] text-[color:var(--muted-fg)]">{subtitle}.</p>
-      </header>
-
+      <PageHeader title="Time Off" subtitle={`${subtitle}.`} />
       <TimeOffView
         publicHolidays={publicHolidays}
         projectHolidays={projectHolidays}

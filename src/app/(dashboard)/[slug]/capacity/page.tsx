@@ -4,6 +4,7 @@ import {
 } from "@/lib/data";
 import { isExcludedStory } from "@/lib/capacity-engine";
 import { CapacityView } from "@/components/capacity/capacity-view";
+import { PageHeader } from "@/components/layout/page-header";
 import type { SprintStory } from "@/types";
 
 export default async function CapacityPage() {
@@ -31,13 +32,10 @@ export default async function CapacityPage() {
 
   return (
     <div className="flex flex-col gap-8" data-stagger>
-      <header className="pb-4 border-b hairline">
-        <p className="text-[13px] text-[color:var(--muted-fg)] max-w-xl">
-          Can the team fit the selected sprint&rsquo;s scope into its hours?
-          Adjust the velocity basis and scenario to see how the verdict moves.
-        </p>
-      </header>
-
+      <PageHeader
+        title="Capacity Planning"
+        subtitle="Can the team fit the selected sprint's scope into its hours? Adjust the velocity basis and scenario to see how the verdict moves."
+      />
       <CapacityView storiesBySprint={storiesBySprint} />
     </div>
   );

@@ -1,5 +1,6 @@
 import { getInitialCapacities } from "@/lib/data";
 import { AllocationsView } from "@/components/allocations/allocations-view";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function TeamPage() {
   const capacities = await getInitialCapacities();
@@ -15,10 +16,7 @@ export default async function TeamPage() {
 
   return (
     <div className="flex flex-col gap-8" data-stagger>
-      <header className="pb-4 border-b hairline">
-        <p className="text-[13px] text-[color:var(--muted-fg)]">{subtitle}.</p>
-      </header>
-
+      <PageHeader title="Team" subtitle={`${subtitle}.`} />
       <AllocationsView capacities={capacities} />
     </div>
   );

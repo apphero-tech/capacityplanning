@@ -77,7 +77,7 @@ export function Sidebar() {
       <div className="px-4 h-14 flex items-center border-b hairline">
         <Link href={`/${slug}`} className="flex items-center gap-2.5 group">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-[color:var(--ink)]/[0.04] border hairline">
-            <span className="font-display text-[16px] leading-none font-light text-[color:var(--ink)] tracking-tight">
+            <span className="font-mono text-[15px] leading-none font-medium text-[color:var(--ink)] tracking-tight">
               Y
             </span>
           </span>
