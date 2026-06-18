@@ -258,7 +258,7 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
 
   function SortIcon({ field }: { field: SortField }) {
     if (sortField !== field) {
-      return <ArrowUpDown className="ml-1 inline size-3 text-slate-600" />;
+      return <ArrowUpDown className="ml-1 inline size-3 text-faint-fg" />;
     }
     return sortDirection === "asc" ? (
       <ArrowUp className="ml-1 inline size-3 text-[#E31837]" />
@@ -300,19 +300,19 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
       {stories.length > 0 && (
         <div className="flex items-center flex-wrap gap-x-3 gap-y-3">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-faint-fg" />
             <Input
               placeholder="Search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8 w-56 pl-8 border-white/10 bg-slate-900/60 text-[13px] text-slate-300 placeholder:text-slate-600"
+              className="h-8 w-56 pl-8 border-line bg-card text-[13px] text-foreground placeholder:text-faint-fg"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 w-[200px] border-white/10 bg-slate-900/60 text-[13px] text-slate-300">
+            <SelectTrigger className="h-8 w-[200px] border-line bg-card text-[13px] text-foreground">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
-            <SelectContent className="border-white/[0.06] bg-slate-900">
+            <SelectContent className="border-line bg-card">
               <SelectItem value="all">All statuses</SelectItem>
               {statuses.map((status) => (
                 <SelectItem key={status} value={status}>
@@ -322,10 +322,10 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
             </SelectContent>
           </Select>
           <Select value={podFilter} onValueChange={setPodFilter}>
-            <SelectTrigger className="h-8 w-[120px] border-white/10 bg-slate-900/60 text-[13px] text-slate-300">
+            <SelectTrigger className="h-8 w-[120px] border-line bg-card text-[13px] text-foreground">
               <SelectValue placeholder="All pods" />
             </SelectTrigger>
-            <SelectContent className="border-white/[0.06] bg-slate-900">
+            <SelectContent className="border-line bg-card">
               <SelectItem value="all">All pods</SelectItem>
               <SelectItem value="none">No pod</SelectItem>
               {pods.map((pod) => (
@@ -339,8 +339,8 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
             onClick={() => setShowExcluded(!showExcluded)}
             className={`h-8 flex items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium transition-colors ${
               showExcluded
-                ? "bg-white/[0.06] text-slate-50"
-                : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.03]"
+                ? "bg-[color:var(--muted)] text-foreground"
+                : "text-faint-fg hover:text-foreground hover:bg-[color:var(--muted)]"
             }`}
           >
             {showExcluded ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
@@ -360,13 +360,13 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
 
       {/* Empty state */}
       {stories.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.08] bg-slate-900/30 py-16">
-          <FileSpreadsheet className="size-10 text-slate-600 mb-4" />
-          <h3 className="text-base font-medium text-slate-300 mb-1">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-card py-16">
+          <FileSpreadsheet className="size-10 text-faint-fg mb-4" />
+          <h3 className="text-base font-medium text-foreground mb-1">
             No backlog for {selectedSprint?.name ?? "this sprint"}
           </h3>
-          <p className="text-sm text-slate-500">
-            Use <span className="text-slate-300 font-medium">Import All Sprints</span> at the top of the page to load your Jira CSV.
+          <p className="text-sm text-faint-fg">
+            Use <span className="text-foreground font-medium">Import All Sprints</span> at the top of the page to load your Jira CSV.
           </p>
         </div>
       )}
@@ -376,45 +376,45 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
         <div>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/[0.06] hover:bg-transparent">
+              <TableRow className="border-line hover:bg-transparent">
                 <TableHead
-                  className="w-28 cursor-pointer select-none text-slate-400"
+                  className="w-28 cursor-pointer select-none text-muted-fg"
                   onClick={() => handleSort("key")}
                 >
                   Key <SortIcon field="key" />
                 </TableHead>
                 <TableHead
-                  className="cursor-pointer select-none text-slate-400"
+                  className="cursor-pointer select-none text-muted-fg"
                   onClick={() => handleSort("summary")}
                 >
                   Summary <SortIcon field="summary" />
                 </TableHead>
                 <TableHead
-                  className="w-48 cursor-pointer select-none text-slate-400"
+                  className="w-48 cursor-pointer select-none text-muted-fg"
                   onClick={() => handleSort("status")}
                 >
                   Status <SortIcon field="status" />
                 </TableHead>
                 <TableHead
-                  className="w-16 cursor-pointer select-none text-right text-slate-400"
+                  className="w-16 cursor-pointer select-none text-right text-muted-fg"
                   onClick={() => handleSort("storyPoints")}
                 >
                   SP <SortIcon field="storyPoints" />
                 </TableHead>
                 <TableHead
-                  className="w-24 cursor-pointer select-none text-slate-400"
+                  className="w-24 cursor-pointer select-none text-muted-fg"
                   onClick={() => handleSort("pod")}
                 >
                   Pod <SortIcon field="pod" />
                 </TableHead>
                 <TableHead
-                  className="w-24 cursor-pointer select-none text-slate-400"
+                  className="w-24 cursor-pointer select-none text-muted-fg"
                   onClick={() => handleSort("stream")}
                 >
                   Stream <SortIcon field="stream" />
                 </TableHead>
                 <TableHead
-                  className="w-36 cursor-pointer select-none text-slate-400"
+                  className="w-36 cursor-pointer select-none text-muted-fg"
                   onClick={() => handleSort("groupName")}
                 >
                   Group <SortIcon field="groupName" />
@@ -427,17 +427,17 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
                 return (
                   <TableRow
                     key={s.id}
-                    className={`border-white/[0.06] ${
+                    className={`border-line ${
                       isGrayed
                         ? "opacity-40 hover:opacity-60"
-                        : "hover:bg-white/[0.02]"
+                        : "hover:bg-[color:var(--muted)]"
                     }`}
                   >
                     <TableCell className="font-mono text-sm font-medium text-[#E31837]">
                       {s.key}
                     </TableCell>
                     <TableCell
-                      className="max-w-md truncate text-slate-300"
+                      className="max-w-md truncate text-foreground"
                       title={s.summary}
                     >
                       {s.summary}
@@ -453,10 +453,10 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
                         {s.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium text-slate-200">
+                    <TableCell className="text-right tabular-nums font-medium text-foreground">
                       {s.storyPoints ?? "\u2014"}
                     </TableCell>
-                    <TableCell className="text-slate-400 text-sm">
+                    <TableCell className="text-muted-fg text-sm">
                       {s.pod ?? "\u2014"}
                     </TableCell>
                     <TableCell>
@@ -470,17 +470,17 @@ export function BacklogTable({ storiesBySprint }: BacklogTableProps) {
                         {s.stream}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">
+                    <TableCell className="text-xs text-faint-fg">
                       {s.groupName ?? "\u2014"}
                     </TableCell>
                   </TableRow>
                 );
               })}
               {sorted.length === 0 && stories.length > 0 && (
-                <TableRow className="border-white/[0.06]">
+                <TableRow className="border-line">
                   <TableCell
                     colSpan={7}
-                    className="h-24 text-center text-slate-500"
+                    className="h-24 text-center text-faint-fg"
                   >
                     No stories match the current filters.
                   </TableCell>

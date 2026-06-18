@@ -654,10 +654,10 @@ export function TimeOffView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-2 text-[12px] text-slate-500">
+      <div className="flex items-center gap-2 text-[12px] text-faint-fg">
         <span>Showing time off</span>
-        <span className="text-slate-200 font-medium">{scopeLabel}</span>
-        {scopeRange && <span className="text-slate-600">· {scopeRange}</span>}
+        <span className="text-foreground font-medium">{scopeLabel}</span>
+        {scopeRange && <span className="text-faint-fg">· {scopeRange}</span>}
       </div>
 
       <StatStrip
@@ -752,7 +752,7 @@ export function TimeOffView({
           <Button
             variant="outline"
             size="sm"
-            className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+            className="border-line bg-[color:var(--paper-elev)] text-foreground hover:bg-[color:var(--paper-elev)]"
             onClick={handleExportCsv}
             title="Export the currently filtered rows to CSV"
           >
@@ -762,7 +762,7 @@ export function TimeOffView({
           <Button
             variant="outline"
             size="sm"
-            className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+            className="border-line bg-[color:var(--paper-elev)] text-foreground hover:bg-[color:var(--paper-elev)]"
             onClick={() => ptoCsvFileRef.current?.click()}
             disabled={ptoCsvImporting}
           >
@@ -787,27 +787,27 @@ export function TimeOffView({
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         {/* Public Holidays Tab */}
         <TabsContent value="public">
-          <Card className="border-white/[0.06] bg-slate-900/50">
+          <Card className="border-line bg-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-slate-100">
+                  <CardTitle className="text-foreground">
                     Public Holidays
                   </CardTitle>
-                  <CardDescription className="text-slate-400">
+                  <CardDescription className="text-muted-fg">
                     {filteredPublicHolidays.length} holidays
                     {countryFilter !== "all" && ` for ${countryFilter}`}
                     {" "}&mdash; {uniquePublicCalendarDays} calendar day
                     {uniquePublicCalendarDays === 1 ? "" : "s"}
                     {filteredPublicHolidays.length > uniquePublicCalendarDays && (
-                      <span className="text-slate-500">
+                      <span className="text-faint-fg">
                         {" "}
                         ({filteredPublicHolidays.length - uniquePublicCalendarDays}{" "}
                         overlap{filteredPublicHolidays.length - uniquePublicCalendarDays === 1 ? "" : "s"})
                       </span>
                     )}
                     {windowSuffix && (
-                      <span className="text-slate-500"> {windowSuffix}</span>
+                      <span className="text-faint-fg"> {windowSuffix}</span>
                     )}
                   </CardDescription>
                 </div>
@@ -815,10 +815,10 @@ export function TimeOffView({
                   value={countryFilter}
                   onValueChange={setCountryFilter}
                 >
-                  <SelectTrigger className="w-[160px] border-white/[0.06] bg-slate-800/50 text-slate-300">
+                  <SelectTrigger className="w-[160px] border-line bg-[color:var(--paper-elev)] text-foreground">
                     <SelectValue placeholder="Filter by country" />
                   </SelectTrigger>
-                  <SelectContent className="border-white/[0.06] bg-slate-900">
+                  <SelectContent className="border-line bg-card">
                     <SelectItem value="all">All Countries</SelectItem>
                     {countries.map((c) => (
                       <SelectItem key={c} value={c}>
@@ -832,20 +832,20 @@ export function TimeOffView({
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/[0.06] hover:bg-transparent">
-                    <TableHead className="text-slate-400">Date</TableHead>
-                    <TableHead className="text-slate-400">Holiday Name</TableHead>
-                    <TableHead className="text-slate-400">Country</TableHead>
-                    <TableHead className="text-slate-400">Sprint</TableHead>
-                    <TableHead className="text-right text-slate-400">Days</TableHead>
+                  <TableRow className="border-line hover:bg-transparent">
+                    <TableHead className="text-muted-fg">Date</TableHead>
+                    <TableHead className="text-muted-fg">Holiday Name</TableHead>
+                    <TableHead className="text-muted-fg">Country</TableHead>
+                    <TableHead className="text-muted-fg">Sprint</TableHead>
+                    <TableHead className="text-right text-muted-fg">Days</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPublicHolidays.length === 0 ? (
-                    <TableRow className="border-white/[0.06]">
+                    <TableRow className="border-line">
                       <TableCell
                         colSpan={5}
-                        className="text-center text-slate-500 py-8"
+                        className="text-center text-faint-fg py-8"
                       >
                         No public holidays
                         {countryFilter !== "all" && ` for ${countryFilter}`}
@@ -858,15 +858,15 @@ export function TimeOffView({
                       return (
                         <TableRow
                           key={h.id}
-                          className="border-white/[0.06] hover:bg-white/[0.02]"
+                          className="border-line hover:bg-[color:var(--muted)]"
                         >
-                          <TableCell className="text-slate-300">
+                          <TableCell className="text-foreground">
                             <div className="flex items-center gap-2">
-                              <CalendarDays className="size-3.5 text-slate-500" />
+                              <CalendarDays className="size-3.5 text-faint-fg" />
                               {formatDate(h.date)}
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium text-slate-200">
+                          <TableCell className="font-medium text-foreground">
                             {h.name}
                           </TableCell>
                           <TableCell>
@@ -880,14 +880,14 @@ export function TimeOffView({
                               {h.country || "N/A"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-slate-400 text-xs">
+                          <TableCell className="text-muted-fg text-xs">
                             {matchedSprint ? (
                               <span>{matchedSprint.name}</span>
                             ) : (
-                              <span className="text-slate-600">&mdash;</span>
+                              <span className="text-faint-fg">&mdash;</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right text-slate-300">
+                          <TableCell className="text-right text-foreground">
                             {h.days}
                           </TableCell>
                         </TableRow>
@@ -902,34 +902,34 @@ export function TimeOffView({
 
         {/* Project Closures Tab */}
         <TabsContent value="project">
-          <Card className="border-white/[0.06] bg-slate-900/50">
+          <Card className="border-line bg-card">
             <CardHeader>
-              <CardTitle className="text-slate-100">Project Closures</CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardTitle className="text-foreground">Project Closures</CardTitle>
+              <CardDescription className="text-muted-fg">
                 {filteredProjectHolidays.length} closures &mdash;{" "}
                 {uniqueProjectCalendarDays} calendar day
                 {uniqueProjectCalendarDays === 1 ? "" : "s"}
                 {windowSuffix && (
-                  <span className="text-slate-500"> {windowSuffix}</span>
+                  <span className="text-faint-fg"> {windowSuffix}</span>
                 )}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/[0.06] hover:bg-transparent">
-                    <TableHead className="text-slate-400">Date</TableHead>
-                    <TableHead className="text-slate-400">Name</TableHead>
-                    <TableHead className="text-slate-400">Sprint</TableHead>
-                    <TableHead className="text-right text-slate-400">Days</TableHead>
+                  <TableRow className="border-line hover:bg-transparent">
+                    <TableHead className="text-muted-fg">Date</TableHead>
+                    <TableHead className="text-muted-fg">Name</TableHead>
+                    <TableHead className="text-muted-fg">Sprint</TableHead>
+                    <TableHead className="text-right text-muted-fg">Days</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProjectHolidays.length === 0 ? (
-                    <TableRow className="border-white/[0.06]">
+                    <TableRow className="border-line">
                       <TableCell
                         colSpan={4}
-                        className="text-center text-slate-500 py-8"
+                        className="text-center text-faint-fg py-8"
                       >
                         No project closures{selectedSprint && ` in ${selectedSprint.name}`}.
                       </TableCell>
@@ -940,25 +940,25 @@ export function TimeOffView({
                       return (
                         <TableRow
                           key={h.id}
-                          className="border-white/[0.06] hover:bg-white/[0.02]"
+                          className="border-line hover:bg-[color:var(--muted)]"
                         >
-                          <TableCell className="text-slate-300">
+                          <TableCell className="text-foreground">
                             <div className="flex items-center gap-2">
-                              <CalendarDays className="size-3.5 text-slate-500" />
+                              <CalendarDays className="size-3.5 text-faint-fg" />
                               {formatDate(h.date)}
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium text-slate-200">
+                          <TableCell className="font-medium text-foreground">
                             {h.name}
                           </TableCell>
-                          <TableCell className="text-slate-400 text-xs">
+                          <TableCell className="text-muted-fg text-xs">
                             {matchedSprint ? (
                               <span>{matchedSprint.name}</span>
                             ) : (
-                              <span className="text-slate-600">&mdash;</span>
+                              <span className="text-faint-fg">&mdash;</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right text-slate-300">
+                          <TableCell className="text-right text-foreground">
                             {h.days}
                           </TableCell>
                         </TableRow>
@@ -973,50 +973,50 @@ export function TimeOffView({
 
         {/* Personal Holidays (PTO) Tab */}
         <TabsContent value="personal">
-          <Card className="border-white/[0.06] bg-slate-900/50">
+          <Card className="border-line bg-card">
             <CardHeader>
-              <CardTitle className="text-slate-100">
+              <CardTitle className="text-foreground">
                 Personal Time Off (PTO)
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted-fg">
                 {filteredPtoEntries.length}{" "}
                 {filteredPtoEntries.length === 1 ? "entry" : "entries"} &mdash;{" "}
                 {totalPtoDays} total business days
                 {windowSuffix && (
-                  <span className="text-slate-500"> {windowSuffix}</span>
+                  <span className="text-faint-fg"> {windowSuffix}</span>
                 )}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-6">
               {/* CSV import result (when present — non-blocking banner) */}
               {ptoCsvResult && ptoCsvResult.success && (
-                <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-[12px] text-emerald-300">
+                <div className="flex items-center justify-between rounded-lg border border-ok/20 bg-ok/5 px-3 py-2 text-[12px] text-ok">
                   <span>
                     {ptoCsvResult.imported} PTO {ptoCsvResult.imported === 1 ? "entry" : "entries"} imported
                     {ptoCsvResult.detectedColumns && (
-                      <span className="text-slate-500"> · {ptoCsvResult.detectedColumns.join(", ")}</span>
+                      <span className="text-faint-fg"> · {ptoCsvResult.detectedColumns.join(", ")}</span>
                     )}
                     {ptoCsvResult.warnings && ptoCsvResult.warnings.length > 0 && (
-                      <span className="text-amber-300"> · {ptoCsvResult.warnings.length} skipped</span>
+                      <span className="text-warn"> · {ptoCsvResult.warnings.length} skipped</span>
                     )}
                   </span>
                   <button
                     onClick={() => setPtoCsvResult(null)}
-                    className="text-slate-500 hover:text-slate-300"
+                    className="text-faint-fg hover:text-foreground"
                   >
                     <X className="size-3.5" />
                   </button>
                 </div>
               )}
               {ptoCsvResult && !ptoCsvResult.success && (
-                <div className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-[12px] text-red-300">
+                <div className="flex items-center justify-between rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-[12px] text-danger">
                   <span className="flex items-center gap-2">
                     <AlertCircle className="size-3.5" />
                     {ptoCsvResult.error}
                   </span>
                   <button
                     onClick={() => setPtoCsvResult(null)}
-                    className="text-slate-500 hover:text-slate-300"
+                    className="text-faint-fg hover:text-foreground"
                   >
                     <X className="size-3.5" />
                   </button>
@@ -1026,22 +1026,22 @@ export function TimeOffView({
               {/* PTO Table */}
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/[0.06] hover:bg-transparent">
-                    <TableHead className="text-slate-400">Who</TableHead>
-                    <TableHead className="text-slate-400">Location</TableHead>
-                    <TableHead className="text-slate-400">Start</TableHead>
-                    <TableHead className="text-slate-400">End</TableHead>
-                    <TableHead className="text-slate-400">Sprint</TableHead>
-                    <TableHead className="text-right text-slate-400">Duration</TableHead>
+                  <TableRow className="border-line hover:bg-transparent">
+                    <TableHead className="text-muted-fg">Who</TableHead>
+                    <TableHead className="text-muted-fg">Location</TableHead>
+                    <TableHead className="text-muted-fg">Start</TableHead>
+                    <TableHead className="text-muted-fg">End</TableHead>
+                    <TableHead className="text-muted-fg">Sprint</TableHead>
+                    <TableHead className="text-right text-muted-fg">Duration</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPtoEntries.length === 0 ? (
-                    <TableRow className="border-white/[0.06]">
+                    <TableRow className="border-line">
                       <TableCell
                         colSpan={7}
-                        className="text-center text-slate-500 py-8"
+                        className="text-center text-faint-fg py-8"
                       >
                         No personal time off
                         {selectedSprint && ` in ${selectedSprint.name}`}.
@@ -1059,13 +1059,13 @@ export function TimeOffView({
                       return (
                         <TableRow
                           key={entry.id}
-                          className={`border-white/[0.06] hover:bg-white/[0.02] ${isEditing ? "bg-white/[0.03]" : ""} ${inactive ? "opacity-40" : ""}`}
+                          className={`border-line hover:bg-[color:var(--muted)] ${isEditing ? "bg-[color:var(--muted)]" : ""} ${inactive ? "opacity-40" : ""}`}
                         >
-                          <TableCell className="font-medium text-slate-200">
+                          <TableCell className="font-medium text-foreground">
                             <div className="flex items-center gap-2">
                               {entry.who}
                               {inactive && (
-                                <Badge variant="outline" className="text-[9px] px-1 py-0 border-slate-600 text-slate-500">
+                                <Badge variant="outline" className="text-[9px] px-1 py-0 border-line text-faint-fg">
                                   Inactive
                                 </Badge>
                               )}
@@ -1082,38 +1082,38 @@ export function TimeOffView({
                               {entry.location || "N/A"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-slate-300">
+                          <TableCell className="text-foreground">
                             {isEditing ? (
                               <Input
                                 type="date"
                                 value={editPtoStart}
                                 onChange={(e) => setEditPtoStart(e.target.value)}
-                                className="h-7 w-[140px] border-white/[0.06] bg-slate-800/50 text-slate-300 text-xs"
+                                className="h-7 w-[140px] border-line bg-[color:var(--paper-elev)] text-foreground text-xs"
                               />
                             ) : (
                               <div className="flex items-center gap-2">
-                                <CalendarDays className="size-3.5 text-slate-500" />
+                                <CalendarDays className="size-3.5 text-faint-fg" />
                                 {formatDate(entry.startDate)}
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className="text-slate-300">
+                          <TableCell className="text-foreground">
                             {isEditing ? (
                               <Input
                                 type="date"
                                 value={editPtoEnd}
                                 onChange={(e) => setEditPtoEnd(e.target.value)}
-                                className="h-7 w-[140px] border-white/[0.06] bg-slate-800/50 text-slate-300 text-xs"
+                                className="h-7 w-[140px] border-line bg-[color:var(--paper-elev)] text-foreground text-xs"
                               />
                             ) : (
                               formatDate(entry.endDate)
                             )}
                           </TableCell>
-                          <TableCell className="text-slate-400 text-xs">
+                          <TableCell className="text-muted-fg text-xs">
                             {matchedSprint ? (
                               <span>{matchedSprint.name}</span>
                             ) : (
-                              <span className="text-slate-600">&mdash;</span>
+                              <span className="text-faint-fg">&mdash;</span>
                             )}
                           </TableCell>
                           <TableCell className="text-right">
@@ -1131,7 +1131,7 @@ export function TimeOffView({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="size-7 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                                    className="size-7 text-ok hover:text-ok hover:bg-ok/10"
                                     onClick={handleSaveEditPto}
                                     disabled={editPtoSaving || !editPtoStart || !editPtoEnd}
                                   >
@@ -1144,7 +1144,7 @@ export function TimeOffView({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="size-7 text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                                    className="size-7 text-faint-fg hover:text-foreground hover:bg-[color:var(--muted)]"
                                     onClick={handleCancelEditPto}
                                     disabled={editPtoSaving}
                                   >
@@ -1156,7 +1156,7 @@ export function TimeOffView({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="size-7 text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                                    className="size-7 text-faint-fg hover:text-foreground hover:bg-[color:var(--muted)]"
                                     onClick={() => handleStartEditPto(entry)}
                                     disabled={isPending}
                                   >
@@ -1165,7 +1165,7 @@ export function TimeOffView({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="size-7 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                                    className="size-7 text-faint-fg hover:text-danger hover:bg-danger/10"
                                     onClick={() => handleDeletePto(entry.id)}
                                     disabled={isPending}
                                   >

@@ -64,7 +64,7 @@ export function EditableCell({
         type="number"
         min="0"
         step="1"
-        className="w-16 rounded bg-slate-800 border border-slate-600 text-right text-xs px-1.5 py-0.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#E31837]"
+        className="w-16 rounded bg-[color:var(--paper-elev)] border border-line text-right text-xs px-1.5 py-0.5 text-foreground focus:outline-none focus:ring-1 focus:ring-[#E31837]"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={save}
@@ -80,8 +80,8 @@ export function EditableCell({
 
   if (!canEdit) {
     return (
-      <span className="text-slate-400 tabular-nums">
-        {value !== null ? fmt(value, 0) : <span className="text-slate-600">&mdash;</span>}
+      <span className="text-muted-fg tabular-nums">
+        {value !== null ? fmt(value, 0) : <span className="text-faint-fg">&mdash;</span>}
       </span>
     );
   }
@@ -89,10 +89,10 @@ export function EditableCell({
   return (
     <button
       onClick={startEdit}
-      className="text-slate-300 tabular-nums hover:text-slate-100 hover:underline decoration-dotted cursor-pointer"
+      className="text-foreground tabular-nums hover:text-foreground hover:underline decoration-dotted cursor-pointer"
       title={`Click to edit ${field === "commitmentSP" ? "commitment" : "completed"} SP`}
     >
-      {value !== null ? fmt(value, 0) : <span className="text-slate-600">—</span>}
+      {value !== null ? fmt(value, 0) : <span className="text-faint-fg">—</span>}
     </button>
   );
 }

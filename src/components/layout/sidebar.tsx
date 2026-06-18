@@ -24,6 +24,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ThemeToggle } from "./theme-toggle"
 
 /**
  * Sidebar — software product.
@@ -188,6 +189,10 @@ export function Sidebar() {
             return <li key={item.path}>{inner}</li>
           })}
         </ul>
+
+        <div className="mt-2">
+          <ThemeToggle collapsed={collapsed} />
+        </div>
 
         <button
           type="button"

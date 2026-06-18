@@ -484,7 +484,7 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
                         s.sprintStatus === "current"
                           ? "bg-[color:var(--coral)] pulse-soft"
                           : s.sprintStatus === "next"
-                            ? "bg-amber-300/80"
+                            ? "bg-warn/80"
                             : s.sprintStatus === "planning"
                               ? "bg-violet-300/70"
                               : "bg-[color:var(--faint-fg)]"

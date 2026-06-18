@@ -79,54 +79,54 @@ export function AddSprintDialog() {
         <Button
           variant="outline"
           size="sm"
-          className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+          className="border-line bg-[color:var(--paper-elev)] text-foreground hover:bg-[color:var(--muted)]"
         >
           <Plus className="size-4 mr-1.5" />
           Add Sprint
         </Button>
       </DialogTrigger>
-      <DialogContent className="border-white/[0.06] bg-slate-900 text-slate-100">
+      <DialogContent className="border-line bg-card text-foreground">
         <DialogHeader>
           <DialogTitle>Add Sprint</DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-muted-fg">
             Define a new sprint. Dates use the format YYYY-MM-DD (e.g. 2026-04-21).
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Name</label>
+            <label className="text-xs text-muted-fg mb-1 block">Name</label>
             <Input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="Sprint 8"
               required
-              className="border-white/10 bg-slate-800 text-slate-200"
+              className="border-line bg-[color:var(--paper-elev)] text-foreground"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Start date</label>
+              <label className="text-xs text-muted-fg mb-1 block">Start date</label>
               <Input
                 type="date"
                 value={form.startDate}
                 onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                className="border-white/10 bg-slate-800 text-slate-200"
+                className="border-line bg-[color:var(--paper-elev)] text-foreground"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">End date</label>
+              <label className="text-xs text-muted-fg mb-1 block">End date</label>
               <Input
                 type="date"
                 value={form.endDate}
                 onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                className="border-white/10 bg-slate-800 text-slate-200"
+                className="border-line bg-[color:var(--paper-elev)] text-foreground"
               />
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               checked={form.isDemo}
@@ -136,7 +136,7 @@ export function AddSprintDialog() {
             Demo sprint (excluded from planning and projections)
           </label>
 
-          <p className="text-[11px] text-slate-500 leading-relaxed">
+          <p className="text-[11px] text-faint-fg leading-relaxed">
             Working days are counted automatically from the date range (Mon–Fri).
             The sprint is marked as <em>current</em> whenever today falls inside its
             dates. Public holidays and PTO are subtracted from effective capacity
@@ -144,7 +144,7 @@ export function AddSprintDialog() {
           </p>
 
           {error && (
-            <div className="flex items-start gap-2 rounded-md border border-red-900/50 bg-red-950/30 p-2 text-xs text-red-300">
+            <div className="flex items-start gap-2 rounded-md border border-danger/50 bg-danger/30 p-2 text-xs text-danger">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -155,14 +155,14 @@ export function AddSprintDialog() {
               type="button"
               variant="ghost"
               onClick={() => setOpen(false)}
-              className="text-slate-400"
+              className="text-muted-fg"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={saving}
-              className="bg-[#E31837] hover:bg-[#c01530] text-white"
+              className="bg-[#E31837] hover:bg-[#c01530] text-[color:var(--primary-foreground)]"
             >
               {saving ? (
                 <Loader2 className="size-4 animate-spin mr-1.5" />

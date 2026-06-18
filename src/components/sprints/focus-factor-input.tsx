@@ -41,7 +41,7 @@ export function FocusFactorInput({ initial }: { initial: number }) {
 
   return (
     <div
-      className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-slate-800/50 px-2.5 py-1 text-xs text-slate-400"
+      className="flex items-center gap-2 rounded-md border border-line bg-[color:var(--paper-elev)] px-2.5 py-1 text-xs text-muted-fg"
       title="Global focus factor — applied to every sprint's capacity projection"
     >
       <Target className="size-3.5" />
@@ -57,10 +57,10 @@ export function FocusFactorInput({ initial }: { initial: number }) {
           if (e.key === "Enter") e.currentTarget.blur();
         }}
         disabled={saving}
-        className="h-6 w-14 border-white/10 bg-slate-900 px-1.5 py-0 text-center text-xs text-slate-200"
+        className="h-6 w-14 border-line bg-card px-1.5 py-0 text-center text-xs text-foreground"
       />
       <span>%</span>
-      {saving && <Loader2 className="size-3 animate-spin text-slate-500" />}
+      {saving && <Loader2 className="size-3 animate-spin text-faint-fg" />}
     </div>
   );
 }

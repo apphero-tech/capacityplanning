@@ -29,7 +29,7 @@ export function SegmentedControl<T extends string>({
 
   return (
     <div
-      className={`inline-flex items-center rounded-lg bg-slate-900/80 ring-1 ring-inset ring-white/[0.06] p-0.5 ${className}`}
+      className={`inline-flex items-center rounded-lg bg-card ring-1 ring-inset ring-white/[0.06] p-0.5 ${className}`}
       role="tablist"
     >
       {options.map((opt) => {
@@ -43,8 +43,8 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(opt.value)}
             className={`relative rounded-[7px] font-medium transition-all duration-150 ${sizing} ${
               selected
-                ? "bg-white/[0.08] text-slate-50 shadow-[0_1px_0_rgba(255,255,255,0.04)]"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-[color:var(--muted)] text-foreground shadow-[0_1px_0_rgba(128,128,128,0.12)]"
+                : "text-muted-fg hover:text-foreground"
             }`}
           >
             {opt.label}
@@ -91,8 +91,8 @@ export function ChipFilter<T extends string>({
             onClick={() => onChange(opt.value)}
             className={`h-7 rounded-md px-2.5 text-[12px] font-medium transition-colors ${
               selected
-                ? "bg-white/[0.06] text-slate-50"
-                : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.03]"
+                ? "bg-[color:var(--muted)] text-foreground"
+                : "text-faint-fg hover:text-foreground hover:bg-[color:var(--muted)]"
             }`}
           >
             {opt.label}

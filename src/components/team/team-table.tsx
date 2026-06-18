@@ -144,7 +144,7 @@ function AllocationBar({ member }: { member: ComputedMember }) {
     }))
     .filter((s) => s.pct > 0);
 
-  if (segments.length === 0) return <span className="text-slate-600">—</span>;
+  if (segments.length === 0) return <span className="text-faint-fg">—</span>;
 
   return (
     <div className="flex items-center gap-1.5">
@@ -164,7 +164,7 @@ function AllocationBar({ member }: { member: ComputedMember }) {
         ))}
       </div>
       {/* Labels */}
-      <span className="text-xs text-slate-500 whitespace-nowrap">
+      <span className="text-xs text-faint-fg whitespace-nowrap">
         {segments.map((s) => `${s.label} ${Math.round(s.pct * 100)}%`).join(" · ")}
       </span>
     </div>
@@ -188,11 +188,11 @@ function EditableTextCell({
   if (!editing) {
     return (
       <span
-        className="cursor-pointer rounded px-1 -mx-1 hover:bg-white/[0.06] transition-colors"
+        className="cursor-pointer rounded px-1 -mx-1 hover:bg-[color:var(--muted)] transition-colors"
         onClick={() => { setDraft(value); setEditing(true); }}
         title="Click to edit"
       >
-        {value || <span className="text-slate-600">—</span>}
+        {value || <span className="text-faint-fg">—</span>}
       </span>
     );
   }
@@ -207,7 +207,7 @@ function EditableTextCell({
         if (e.key === "Enter") { if (draft !== value) onSave(draft); setEditing(false); }
         if (e.key === "Escape") setEditing(false);
       }}
-      className="h-7 w-32 border-white/[0.06] bg-slate-800/80 text-slate-200 text-sm px-2"
+      className="h-7 w-32 border-line bg-[color:var(--paper-elev)] text-foreground text-sm px-2"
     />
   );
 }
@@ -244,10 +244,10 @@ function EditableSelectCell({
       onValueChange={(v) => { if (v !== value) onSave(v); setEditing(false); }}
       onOpenChange={(open) => { if (!open) setEditing(false); }}
     >
-      <SelectTrigger className="h-7 w-32 border-white/[0.06] bg-slate-800/80 text-slate-200 text-sm px-2">
+      <SelectTrigger className="h-7 w-32 border-line bg-[color:var(--paper-elev)] text-foreground text-sm px-2">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent className="border-white/[0.06] bg-slate-900">
+      <SelectContent className="border-line bg-card">
         {options.map((opt) => (
           <SelectItem key={opt} value={opt}>{opt}</SelectItem>
         ))}
@@ -269,7 +269,7 @@ function EditableNumberCell({
   if (!editing) {
     return (
       <span
-        className="cursor-pointer rounded px-1 -mx-1 hover:bg-white/[0.06] transition-colors"
+        className="cursor-pointer rounded px-1 -mx-1 hover:bg-[color:var(--muted)] transition-colors"
         onClick={() => { setDraft(String(value)); setEditing(true); }}
         title="Click to edit"
       >
@@ -298,7 +298,7 @@ function EditableNumberCell({
         }
         if (e.key === "Escape") setEditing(false);
       }}
-      className="h-7 w-20 border-white/[0.06] bg-slate-800/80 text-slate-200 text-sm px-2 text-right"
+      className="h-7 w-20 border-line bg-[color:var(--paper-elev)] text-foreground text-sm px-2 text-right"
     />
   );
 }
@@ -320,7 +320,7 @@ function EditableNameCell({
   if (!editing) {
     return (
       <span
-        className="cursor-pointer rounded px-1 -mx-1 hover:bg-white/[0.06] transition-colors"
+        className="cursor-pointer rounded px-1 -mx-1 hover:bg-[color:var(--muted)] transition-colors"
         onClick={() => {
           setDraftFirst(firstName);
           setDraftLast(lastName);
@@ -353,7 +353,7 @@ function EditableNameCell({
           if (e.key === "Escape") setEditing(false);
         }}
         placeholder="First"
-        className="h-7 w-24 border-white/[0.06] bg-slate-800/80 text-slate-200 text-sm px-2"
+        className="h-7 w-24 border-line bg-[color:var(--paper-elev)] text-foreground text-sm px-2"
       />
       <Input
         ref={lastRef}
@@ -365,7 +365,7 @@ function EditableNameCell({
           if (e.key === "Escape") setEditing(false);
         }}
         placeholder="Last"
-        className="h-7 w-24 border-white/[0.06] bg-slate-800/80 text-slate-200 text-sm px-2"
+        className="h-7 w-24 border-line bg-[color:var(--paper-elev)] text-foreground text-sm px-2"
       />
     </div>
   );
@@ -475,7 +475,7 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
 
   function SortIcon({ field }: { field: SortField }) {
     if (sortField !== field) {
-      return <ArrowUpDown className="ml-1 inline size-3 text-slate-600" />;
+      return <ArrowUpDown className="ml-1 inline size-3 text-faint-fg" />;
     }
     return sortDirection === "asc" ? (
       <ArrowUp className="ml-1 inline size-3 text-[#E31837]" />
@@ -498,20 +498,20 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-faint-fg" />
           <Input
             placeholder="Search by name or role..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-56 pl-9 border-white/[0.06] bg-slate-900/50 text-slate-300 placeholder:text-slate-600"
+            className="w-56 pl-9 border-line bg-card text-foreground placeholder:text-faint-fg"
           />
         </div>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-32 border-white/[0.06] bg-slate-900/50 text-slate-300">
+          <SelectTrigger className="w-32 border-line bg-card text-foreground">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
-          <SelectContent className="border-white/[0.06] bg-slate-900">
+          <SelectContent className="border-line bg-card">
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
@@ -519,10 +519,10 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
         </Select>
 
         <Select value={teamFilter} onValueChange={setTeamFilter}>
-          <SelectTrigger className="w-36 border-white/[0.06] bg-slate-900/50 text-slate-300">
+          <SelectTrigger className="w-36 border-line bg-card text-foreground">
             <SelectValue placeholder="All Teams" />
           </SelectTrigger>
-          <SelectContent className="border-white/[0.06] bg-slate-900">
+          <SelectContent className="border-line bg-card">
             <SelectItem value="all">All Teams</SelectItem>
             <SelectItem value="Refinement">Refinement</SelectItem>
             <SelectItem value="Design">Design</SelectItem>
@@ -533,10 +533,10 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
         </Select>
 
         <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-40 border-white/[0.06] bg-slate-900/50 text-slate-300">
+          <SelectTrigger className="w-40 border-line bg-card text-foreground">
             <SelectValue placeholder="All Roles" />
           </SelectTrigger>
-          <SelectContent className="border-white/[0.06] bg-slate-900 max-h-64">
+          <SelectContent className="border-line bg-card max-h-64">
             <SelectItem value="all">All Roles</SelectItem>
             {roles.map((role) => (
               <SelectItem key={role} value={role}>
@@ -547,10 +547,10 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
         </Select>
 
         <Select value={locationFilter} onValueChange={setLocationFilter}>
-          <SelectTrigger className="w-36 border-white/[0.06] bg-slate-900/50 text-slate-300">
+          <SelectTrigger className="w-36 border-line bg-card text-foreground">
             <SelectValue placeholder="All Locations" />
           </SelectTrigger>
-          <SelectContent className="border-white/[0.06] bg-slate-900">
+          <SelectContent className="border-line bg-card">
             <SelectItem value="all">All Locations</SelectItem>
             {locations.map((loc) => (
               <SelectItem key={loc} value={loc}>
@@ -561,10 +561,10 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
         </Select>
 
         <Select value={ftPtFilter} onValueChange={setFtPtFilter}>
-          <SelectTrigger className="w-28 border-white/[0.06] bg-slate-900/50 text-slate-300">
+          <SelectTrigger className="w-28 border-line bg-card text-foreground">
             <SelectValue placeholder="FT / PT" />
           </SelectTrigger>
-          <SelectContent className="border-white/[0.06] bg-slate-900">
+          <SelectContent className="border-line bg-card">
             <SelectItem value="all">FT / PT</SelectItem>
             <SelectItem value="FT">Full-Time</SelectItem>
             <SelectItem value="PT">Part-Time</SelectItem>
@@ -574,7 +574,7 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
         {activeFilterCount > 0 && (
           <button
             onClick={clearAllFilters}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded hover:bg-white/[0.04]"
+            className="flex items-center gap-1 text-xs text-faint-fg hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-[color:var(--muted)]"
             title="Clear all filters"
           >
             <X className="size-3" />
@@ -582,57 +582,57 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
           </button>
         )}
 
-        <span className="ml-auto text-xs text-slate-500">
+        <span className="ml-auto text-xs text-faint-fg">
           {totals.activeCount} active of {filtered.length} members
         </span>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-white/[0.06] bg-slate-900/50 overflow-hidden">
+      <div className="rounded-xl border border-line bg-card overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-white/[0.06] hover:bg-transparent">
+            <TableRow className="border-line hover:bg-transparent">
               <TableHead
-                className="cursor-pointer select-none text-slate-400"
+                className="cursor-pointer select-none text-muted-fg"
                 onClick={() => handleSort("name")}
               >
                 Name <SortIcon field="name" />
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none text-slate-400"
+                className="cursor-pointer select-none text-muted-fg"
                 onClick={() => handleSort("role")}
               >
                 Role <SortIcon field="role" />
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none text-slate-400"
+                className="cursor-pointer select-none text-muted-fg"
                 onClick={() => handleSort("team")}
               >
                 Team <SortIcon field="team" />
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none text-slate-400"
+                className="cursor-pointer select-none text-muted-fg"
                 onClick={() => handleSort("location")}
               >
                 Location <SortIcon field="location" />
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none text-slate-400"
+                className="cursor-pointer select-none text-muted-fg"
                 onClick={() => handleSort("ftPt")}
               >
                 FT/PT <SortIcon field="ftPt" />
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none text-right text-slate-400"
+                className="cursor-pointer select-none text-right text-muted-fg"
                 onClick={() => handleSort("hrsPerWeek")}
               >
                 Hrs/Wk <SortIcon field="hrsPerWeek" />
               </TableHead>
-              <TableHead className="text-slate-400">
+              <TableHead className="text-muted-fg">
                 Allocation
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none text-right text-slate-400"
+                className="cursor-pointer select-none text-right text-muted-fg"
                 onClick={() => handleSort("netHrs")}
               >
                 {netHrsLabel} <SortIcon field="netHrs" />
@@ -643,16 +643,16 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
             {sorted.map((m) => {
               const teams = getTeams(m);
               return (
-                <TableRow key={m.id} className={`border-white/[0.06] hover:bg-white/[0.02] ${!m.isActive ? "opacity-40" : ""}`}>
-                  <TableCell className="font-medium text-slate-200">
+                <TableRow key={m.id} className={`border-line hover:bg-[color:var(--muted)] ${!m.isActive ? "opacity-40" : ""}`}>
+                  <TableCell className="font-medium text-foreground">
                     <div className="flex items-center gap-2">
                       {onUpdate && (
                         <button
                           onClick={() => onUpdate(m.id, "isActive", !m.isActive)}
                           className={`size-2.5 shrink-0 rounded-full border transition-colors ${
                             m.isActive
-                              ? "bg-emerald-400 border-emerald-400/50"
-                              : "bg-transparent border-slate-600 hover:border-slate-400"
+                              ? "bg-ok border-ok/50"
+                              : "bg-transparent border-line hover:border-line-strong"
                           }`}
                           title={m.isActive ? "Active — click to deactivate" : "Inactive — click to activate"}
                         />
@@ -672,7 +672,7 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-slate-400">
+                  <TableCell className="text-muted-fg">
                     {onUpdate ? (
                       <EditableTextCell value={m.role} onSave={(v) => onUpdate(m.id, "role", v)} />
                     ) : m.role}
@@ -720,7 +720,7 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-slate-400">
+                  <TableCell className="text-muted-fg">
                     {onUpdate ? (
                       <EditableSelectCell
                         value={m.ftPt}
@@ -729,7 +729,7 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
                       />
                     ) : m.ftPt}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums text-slate-300">
+                  <TableCell className="text-right tabular-nums text-foreground">
                     {onUpdate ? (
                       <EditableNumberCell value={m.hrsPerWeek} onSave={(v) => onUpdate(m.id, "hrsPerWeek", v)} />
                     ) : formatNumber(m.hrsPerWeek)}
@@ -737,31 +737,31 @@ export function TeamTable({ members, onUpdate }: TeamTableProps) {
                   <TableCell>
                     <AllocationBar member={m} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums font-semibold text-slate-100">
+                  <TableCell className="text-right tabular-nums font-semibold text-foreground">
                     {formatNumber(getWeightedNetHrs(m, teamFilter))}
                   </TableCell>
                 </TableRow>
               );
             })}
             {sorted.length === 0 && (
-              <TableRow className="border-white/[0.06]">
-                <TableCell colSpan={8} className="h-24 text-center text-slate-500">
+              <TableRow className="border-line">
+                <TableCell colSpan={8} className="h-24 text-center text-faint-fg">
                   No team members found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
           {sorted.length > 0 && (
-            <TableFooter className="border-white/[0.06] bg-white/[0.02]">
-              <TableRow className="border-white/[0.06] hover:bg-transparent">
-                <TableCell className="font-bold text-slate-100">
+            <TableFooter className="border-line bg-[color:var(--muted)]">
+              <TableRow className="border-line hover:bg-transparent">
+                <TableCell className="font-bold text-foreground">
                   TOTAL ({totals.activeCount} active)
                 </TableCell>
                 <TableCell />
                 <TableCell />
                 <TableCell />
                 <TableCell />
-                <TableCell className="text-right tabular-nums font-bold text-slate-100">
+                <TableCell className="text-right tabular-nums font-bold text-foreground">
                   {formatNumber(totals.hrsPerWeek)}
                 </TableCell>
                 <TableCell />

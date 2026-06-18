@@ -7,10 +7,10 @@ export default async function SettingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-100">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">
           Settings
         </h2>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm text-muted-fg mt-1">
           Sprint parameters, definitions, and configuration reference.
         </p>
       </div>

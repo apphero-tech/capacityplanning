@@ -54,7 +54,7 @@ export function ProjectView({ overview }: Props) {
 
   if (bucketsSum === 0) {
     return (
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-muted-fg">
         No stories yet — import the Jira backlog to populate project totals.
       </p>
     );
@@ -84,59 +84,59 @@ export function ProjectView({ overview }: Props) {
   return (
     <div className="flex flex-col gap-8">
       {/* Headline total + stacked progress bar */}
-      <section className="rounded-2xl border border-white/[0.06] bg-slate-900/40 p-6">
-        <p className="text-[12px] text-slate-500">Total scope</p>
-        <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-100">
+      <section className="rounded-2xl border border-line bg-card p-6">
+        <p className="text-[12px] text-faint-fg">Total scope</p>
+        <p className="mt-1 text-3xl font-semibold tabular-nums text-foreground">
           {fmt(headlineSP)}{" "}
-          <span className="text-base font-normal text-slate-500">SP</span>
-          <span className="ml-3 text-base font-normal text-slate-500 tabular-nums">
+          <span className="text-base font-normal text-faint-fg">SP</span>
+          <span className="ml-3 text-base font-normal text-faint-fg tabular-nums">
             {fmt(headlineStories)} stories
           </span>
         </p>
-        <p className="mt-1 text-[12px] text-slate-500">
+        <p className="mt-1 text-[12px] text-faint-fg">
           {fmt(deliveredSP)} delivered · {fmt(inProgress.sp)} in progress ·{" "}
           {fmt(remaining.sp)} remaining
           {excluded.sp > 0 && <> · {fmt(excluded.sp)} descoped/split</>}
         </p>
 
         {/* Stacked progress bar */}
-        <div className="mt-5 flex h-2 w-full overflow-hidden rounded-full bg-white/[0.04]">
+        <div className="mt-5 flex h-2 w-full overflow-hidden rounded-full bg-[color:var(--muted)]">
           <div
-            className="bg-emerald-400/80"
+            className="bg-ok/80"
             style={{ width: `${pctDelivered}%` }}
             title={`${fmt(deliveredSP)} SP delivered`}
           />
           <div
-            className="bg-amber-400/80"
+            className="bg-warn/80"
             style={{ width: `${pctInProgress}%` }}
             title={`${fmt(inProgress.sp)} SP in progress`}
           />
           <div
-            className="bg-blue-400/60"
+            className="bg-info/60"
             style={{ width: `${pctRemaining}%` }}
             title={`${fmt(remaining.sp)} SP remaining`}
           />
           {excluded.sp > 0 && (
             <div
-              className="bg-red-400/70"
+              className="bg-danger/70"
               style={{ width: `${pctExcluded}%` }}
               title={`${fmt(excluded.sp)} SP descoped/split`}
             />
           )}
         </div>
         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[11px]">
-          <LegendDot color="bg-emerald-400" label="Delivered" pct={pctDelivered} />
-          <LegendDot color="bg-amber-400" label="In progress" pct={pctInProgress} />
-          <LegendDot color="bg-blue-400" label="Remaining" pct={pctRemaining} />
+          <LegendDot color="bg-ok" label="Delivered" pct={pctDelivered} />
+          <LegendDot color="bg-warn" label="In progress" pct={pctInProgress} />
+          <LegendDot color="bg-info" label="Remaining" pct={pctRemaining} />
           {excluded.sp > 0 && (
-            <LegendDot color="bg-red-400" label="Descoped/split" pct={pctExcluded} />
+            <LegendDot color="bg-danger" label="Descoped/split" pct={pctExcluded} />
           )}
         </div>
       </section>
 
       {/* KPI tiles */}
       <section>
-        <h3 className="text-[13px] font-medium text-slate-300 mb-3">Breakdown</h3>
+        <h3 className="text-[13px] font-medium text-foreground mb-3">Breakdown</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
             label="Delivered"
@@ -171,8 +171,8 @@ export function ProjectView({ overview }: Props) {
       {/* Sprint-by-sprint ledger — open + future only; closed sprints are
           frozen history (their delivered SP is already in the totals above). */}
       <section>
-        <h3 className="text-[13px] font-medium text-slate-300 mb-3">Per sprint</h3>
-        <div className="rounded-2xl border border-white/[0.04] divide-y divide-white/[0.04]">
+        <h3 className="text-[13px] font-medium text-foreground mb-3">Per sprint</h3>
+        <div className="rounded-2xl border border-line divide-y divide-[color:var(--line)]">
           {overview.bySprint
             .filter((s) => !CLOSED_SPRINT_NAMES.has(normName(s.sprintName)))
             .map((s) => {
@@ -186,12 +186,12 @@ export function ProjectView({ overview }: Props) {
                   ? `${fmt(s.remaining.sp)} planned`
                   : "empty";
             const toneClass = isPast
-              ? "text-emerald-300"
+              ? "text-ok"
               : isCurrent
-                ? "text-amber-300"
+                ? "text-warn"
                 : s.remaining.sp > 0
-                  ? "text-blue-300"
-                  : "text-slate-600";
+                  ? "text-info"
+                  : "text-faint-fg";
             const activeIdx = sprints.findIndex((a) => a.id === s.sprintId);
             const clickable = activeIdx >= 0;
             const handleClick = () => {
@@ -207,13 +207,13 @@ export function ProjectView({ overview }: Props) {
                 disabled={!clickable}
                 className={`flex w-full items-baseline justify-between gap-4 px-5 py-3 text-left transition-colors ${
                   clickable
-                    ? "cursor-pointer hover:bg-white/[0.03]"
+                    ? "cursor-pointer hover:bg-[color:var(--muted)]"
                     : "cursor-default opacity-70"
                 }`}
               >
                 <div>
-                  <p className="text-[13px] text-slate-200 font-medium">{s.sprintName}</p>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[13px] text-foreground font-medium">{s.sprintName}</p>
+                  <p className="text-[11px] text-faint-fg">
                     {s.totalStories} stor{s.totalStories === 1 ? "y" : "ies"} in scope
                     {s.excluded.sp > 0 && (
                       <> · {s.excluded.stories} descoped/split</>
@@ -245,19 +245,19 @@ function Kpi({
 }) {
   const toneClass =
     tone === "emerald"
-      ? "text-emerald-300"
+      ? "text-ok"
       : tone === "amber"
-        ? "text-amber-300"
+        ? "text-warn"
         : tone === "blue"
-          ? "text-blue-300"
-          : "text-slate-100";
+          ? "text-info"
+          : "text-foreground";
   return (
-    <div className="rounded-xl border border-white/[0.04] bg-slate-900/30 px-4 py-3">
-      <p className="text-[11px] font-medium text-slate-500">{label}</p>
+    <div className="rounded-xl border border-line bg-card px-4 py-3">
+      <p className="text-[11px] font-medium text-faint-fg">{label}</p>
       <p className={`mt-1 text-xl font-semibold tabular-nums ${toneClass}`}>
         {value}
       </p>
-      {hint && <p className="text-[11px] text-slate-500 mt-0.5">{hint}</p>}
+      {hint && <p className="text-[11px] text-faint-fg mt-0.5">{hint}</p>}
     </div>
   );
 }
@@ -272,10 +272,10 @@ function LegendDot({
   pct: number;
 }) {
   return (
-    <span className="flex items-center gap-1.5 text-slate-400">
+    <span className="flex items-center gap-1.5 text-muted-fg">
       <span className={`size-2 rounded-full ${color}`} />
       {label}{" "}
-      <span className="text-slate-600 tabular-nums">{pct.toFixed(1)}%</span>
+      <span className="text-faint-fg tabular-nums">{pct.toFixed(1)}%</span>
     </span>
   );
 }

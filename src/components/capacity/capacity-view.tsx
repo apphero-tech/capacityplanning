@@ -188,14 +188,14 @@ export function CapacityView({ storiesBySprint }: Props) {
 
   if (!sprint) {
     return (
-      <p className="text-sm text-slate-400">Select a sprint in the top bar.</p>
+      <p className="text-sm text-muted-fg">Select a sprint in the top bar.</p>
     );
   }
 
   if (!plan) return null;
 
   const fits = plan.defaultProjection - plan.scopeSP >= 0;
-  const verdictColor = fits ? "text-emerald-300" : "text-red-300";
+  const verdictColor = fits ? "text-ok" : "text-danger";
   const VerdictIcon = fits ? Check : AlertTriangle;
   const verdictText = fits
     ? `Fits — ${fmt(plan.defaultProjection - plan.scopeSP)} SP of room`
@@ -219,11 +219,11 @@ export function CapacityView({ storiesBySprint }: Props) {
   return (
     <div className="flex flex-col gap-8">
       {/* Hero verdict */}
-      <section className="rounded-2xl border border-white/[0.06] bg-slate-900/40 p-6">
+      <section className="rounded-2xl border border-line bg-card p-6">
         <div className="flex items-baseline justify-between flex-wrap gap-2">
-          <p className="text-[12px] text-slate-500">
+          <p className="text-[12px] text-faint-fg">
             Can we deliver{" "}
-            <span className="text-slate-200 font-medium">{sprint.name}</span>?
+            <span className="text-foreground font-medium">{sprint.name}</span>?
           </p>
           <div className="flex items-center gap-3">
             {canReconcile && (
@@ -232,7 +232,7 @@ export function CapacityView({ storiesBySprint }: Props) {
                 sprintName={sprint.name}
               />
             )}
-            <p className="text-[12px] text-slate-500">
+            <p className="text-[12px] text-faint-fg">
               {formatDateRangeShort(sprint.startDate, sprint.endDate)}
             </p>
           </div>
@@ -249,8 +249,8 @@ export function CapacityView({ storiesBySprint }: Props) {
             value={`${fmt(plan.scopeSP)} SP`}
             hint={`${plan.stories} stor${plan.stories === 1 ? "y" : "ies"}`}
           />
-          <div className="border-t border-white/[0.06] pt-3 flex items-baseline justify-between">
-            <p className="text-[13px] font-medium text-slate-300">Verdict</p>
+          <div className="border-t border-line pt-3 flex items-baseline justify-between">
+            <p className="text-[13px] font-medium text-foreground">Verdict</p>
             <p className={`text-xl font-semibold tabular-nums flex items-center gap-2 ${verdictColor}`}>
               <VerdictIcon className="size-4" />
               {verdictText}
@@ -261,12 +261,12 @@ export function CapacityView({ storiesBySprint }: Props) {
         {/* Inline projection knobs — basis + growth side-by-side right under
             the verdict so the user can tweak and see the number move without
             scrolling. */}
-        <div className="mt-5 border-t border-white/[0.06] pt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="mt-5 border-t border-line pt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase tracking-wide text-slate-500">
+            <span className="text-[10px] uppercase tracking-wide text-faint-fg">
               Velocity
             </span>
-            <div className="flex rounded-lg border border-white/[0.06] bg-slate-950/40 p-0.5">
+            <div className="flex rounded-lg border border-line bg-background p-0.5">
               {(
                 [
                   { value: "last1" as VelocityBasis, label: "Last" },
@@ -284,8 +284,8 @@ export function CapacityView({ storiesBySprint }: Props) {
                     onClick={() => setBasis(o.value)}
                     className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors ${
                       active
-                        ? "bg-slate-100 text-slate-900"
-                        : "text-slate-400 hover:text-slate-200"
+                        ? "bg-foreground text-background"
+                        : "text-muted-fg hover:text-foreground"
                     }`}
                   >
                     {o.label}
@@ -296,10 +296,10 @@ export function CapacityView({ storiesBySprint }: Props) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase tracking-wide text-slate-500">
+            <span className="text-[10px] uppercase tracking-wide text-faint-fg">
               Growth
             </span>
-            <div className="flex rounded-lg border border-white/[0.06] bg-slate-950/40 p-0.5">
+            <div className="flex rounded-lg border border-line bg-background p-0.5">
               {[0, 3, 5, 10, 20].map((p) => {
                 const active = p === growthPct;
                 return (
@@ -309,8 +309,8 @@ export function CapacityView({ storiesBySprint }: Props) {
                     onClick={() => setGrowthPct(p)}
                     className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors tabular-nums ${
                       active
-                        ? "bg-slate-100 text-slate-900"
-                        : "text-slate-400 hover:text-slate-200"
+                        ? "bg-foreground text-background"
+                        : "text-muted-fg hover:text-foreground"
                     }`}
                   >
                     {p === 0 ? "0%" : `+${p}%`}
@@ -318,13 +318,13 @@ export function CapacityView({ storiesBySprint }: Props) {
                 );
               })}
             </div>
-            <div className="flex items-center gap-1 text-[12px] text-slate-500">
+            <div className="flex items-center gap-1 text-[12px] text-faint-fg">
               <input
                 type="number"
                 value={growthPct}
                 onChange={(e) => setGrowthPct(Number(e.target.value) || 0)}
                 step={1}
-                className="w-14 h-7 rounded-md border border-white/[0.06] bg-slate-950/40 px-2 text-[12px] text-slate-200 tabular-nums focus:border-white/20"
+                className="w-14 h-7 rounded-md border border-line bg-background px-2 text-[12px] text-foreground tabular-nums focus:border-line-strong"
               />
               <span>%</span>
             </div>
@@ -334,25 +334,25 @@ export function CapacityView({ storiesBySprint }: Props) {
 
       {/* Capacity breakdown */}
       <section>
-        <h3 className="text-[13px] font-medium text-slate-300 mb-3">
+        <h3 className="text-[13px] font-medium text-foreground mb-3">
           Hours available
         </h3>
-        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 divide-y divide-white/[0.04]">
+        <div className="rounded-2xl border border-line bg-card divide-y divide-[color:var(--line)]">
           <BreakdownRow
             label="Developers"
             value={plan.developers.toString()}
             hint="active Deloitte members with DEV allocation"
             explain={
               <>
-                <p className="font-medium text-slate-200 mb-1.5">
+                <p className="font-medium text-foreground mb-1.5">
                   {plan.developers} active Deloitte developer
                   {plan.developers === 1 ? "" : "s"}
                 </p>
-                <ul className="space-y-1 text-slate-400">
+                <ul className="space-y-1 text-muted-fg">
                   {plan.devCaps.map((d) => (
                     <li key={d.name} className="flex justify-between gap-4">
-                      <span className="text-slate-200">{d.name}</span>
-                      <span className="text-slate-500 tabular-nums">
+                      <span className="text-foreground">{d.name}</span>
+                      <span className="text-faint-fg tabular-nums">
                         {Math.round(d.devPercent * 100)}% DEV
                       </span>
                     </li>
@@ -367,31 +367,31 @@ export function CapacityView({ storiesBySprint }: Props) {
             hint={`${plan.developers} devs × hrs/wk × DEV % × ${sprint.durationWeeks} weeks`}
             explain={
               <>
-                <p className="font-medium text-slate-200 mb-1.5">
+                <p className="font-medium text-foreground mb-1.5">
                   Theoretical hours by developer
                 </p>
-                <ul className="space-y-1 text-slate-400">
+                <ul className="space-y-1 text-muted-fg">
                   {plan.devCaps.map((d) => (
                     <li key={d.name} className="flex justify-between gap-4">
-                      <span className="text-slate-200">
+                      <span className="text-foreground">
                         {d.name}
-                        <span className="text-slate-500 ml-1.5">
+                        <span className="text-faint-fg ml-1.5">
                           {d.hrsPerWeek} hrs/wk · {Math.round(d.devPercent * 100)}%
                         </span>
                       </span>
-                      <span className="text-slate-200 tabular-nums">
+                      <span className="text-foreground tabular-nums">
                         {fmt(d.grossHrs)} hrs
                       </span>
                     </li>
                   ))}
-                  <li className="flex justify-between gap-4 border-t border-white/10 pt-1 mt-1 text-slate-200">
+                  <li className="flex justify-between gap-4 border-t border-line pt-1 mt-1 text-foreground">
                     <span className="font-medium">Total</span>
                     <span className="font-semibold tabular-nums">
                       {fmt(plan.theoreticalHrs)} hrs
                     </span>
                   </li>
                 </ul>
-                <p className="mt-2 text-[11px] text-slate-600">
+                <p className="mt-2 text-[11px] text-faint-fg">
                   No PTO, no holidays, no focus factor applied yet.
                 </p>
               </>
@@ -403,23 +403,23 @@ export function CapacityView({ storiesBySprint }: Props) {
             hint="PTO + public holidays + project closures"
             explain={
               <>
-                <p className="font-medium text-slate-200 mb-1.5">
+                <p className="font-medium text-foreground mb-1.5">
                   Days off per developer
                 </p>
-                <ul className="space-y-1 text-slate-400">
+                <ul className="space-y-1 text-muted-fg">
                   {plan.devCaps.map((d) => (
                     <li key={d.name} className="flex justify-between gap-4">
-                      <span className="text-slate-200">{d.name}</span>
-                      <span className="tabular-nums text-slate-300">
+                      <span className="text-foreground">{d.name}</span>
+                      <span className="tabular-nums text-foreground">
                         {d.holidays} day{d.holidays === 1 ? "" : "s"}{" "}
-                        <span className="text-slate-500">
+                        <span className="text-faint-fg">
                           (−{fmt(d.holidayHrs)} hrs)
                         </span>
                       </span>
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-[11px] text-slate-600">
+                <p className="mt-2 text-[11px] text-faint-fg">
                   PTO + public holidays + project closures, per member
                   location.
                 </p>
@@ -432,19 +432,19 @@ export function CapacityView({ storiesBySprint }: Props) {
             emphasis
             explain={
               <>
-                <p className="font-medium text-slate-200 mb-1.5">
+                <p className="font-medium text-foreground mb-1.5">
                   Net DEV hours per developer
                 </p>
-                <ul className="space-y-1 text-slate-400">
+                <ul className="space-y-1 text-muted-fg">
                   {plan.devCaps.map((d) => (
                     <li key={d.name} className="flex justify-between gap-4">
-                      <span className="text-slate-200">{d.name}</span>
-                      <span className="text-slate-200 tabular-nums">
+                      <span className="text-foreground">{d.name}</span>
+                      <span className="text-foreground tabular-nums">
                         {fmt(d.netDevHrs)} hrs
                       </span>
                     </li>
                   ))}
-                  <li className="flex justify-between gap-4 border-t border-white/10 pt-1 mt-1 text-slate-200">
+                  <li className="flex justify-between gap-4 border-t border-line pt-1 mt-1 text-foreground">
                     <span className="font-medium">Total</span>
                     <span className="font-semibold tabular-nums">
                       {fmt(plan.netDevHrs)} hrs
@@ -460,30 +460,30 @@ export function CapacityView({ storiesBySprint }: Props) {
       {/* Projection scenarios — one per basis, click to make it active. */}
       <section>
         <div className="flex items-baseline justify-between mb-1">
-          <h3 className="text-[13px] font-medium text-slate-300">
+          <h3 className="text-[13px] font-medium text-foreground">
             Compare velocity bases
           </h3>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-faint-fg">
             Click a row to change the basis
           </p>
         </div>
-        <p className="text-[11px] text-slate-500 mb-3">
+        <p className="text-[11px] text-faint-fg mb-3">
           Same {fmt(plan.netDevHrs)} net DEV hours, different historical
-          windows. The <span className="text-emerald-300">active</span> row
+          windows. The <span className="text-ok">active</span> row
           drives the verdict above.
         </p>
-        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 divide-y divide-white/[0.04] overflow-hidden">
+        <div className="rounded-2xl border border-line bg-card divide-y divide-[color:var(--line)] overflow-hidden">
           {/* In-flight current sprint — context only, not a selectable basis. */}
           {currentVelocity && (
-            <div className="flex items-baseline justify-between px-5 py-3 bg-amber-500/[0.04]">
+            <div className="flex items-baseline justify-between px-5 py-3 bg-warn/[0.04]">
               <div>
-                <p className="text-[13px] flex items-center gap-2 text-slate-200">
+                <p className="text-[13px] flex items-center gap-2 text-foreground">
                   {currentVelocity.sprintName} so far
-                  <span className="text-[10px] font-medium uppercase tracking-wide text-amber-300">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-warn">
                     in progress
                   </span>
                 </p>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-faint-fg">
                   {fmt(currentVelocity.completedSP)} SP in{" "}
                   {fmt(currentVelocity.elapsedHrs)} of{" "}
                   {fmt(currentVelocity.fullHrs)} hrs (
@@ -494,9 +494,9 @@ export function CapacityView({ storiesBySprint }: Props) {
                   )}
                 </p>
               </div>
-              <p className="text-xl font-semibold tabular-nums text-slate-300">
+              <p className="text-xl font-semibold tabular-nums text-foreground">
                 {fmt(plan.netDevHrs * currentVelocity.velocity * effectiveMultiplier)}{" "}
-                <span className="text-sm font-normal text-slate-500">SP</span>
+                <span className="text-sm font-normal text-faint-fg">SP</span>
               </p>
             </div>
           )}
@@ -517,9 +517,9 @@ export function CapacityView({ storiesBySprint }: Props) {
                 onClick={() => setBasis(p.basis)}
                 className={`flex w-full items-baseline justify-between px-5 py-3 text-left transition-colors ${
                   active
-                    ? "bg-white/[0.04]"
+                    ? "bg-[color:var(--muted)]"
                     : hasData
-                      ? "hover:bg-white/[0.02] cursor-pointer"
+                      ? "hover:bg-[color:var(--muted)] cursor-pointer"
                       : "cursor-default opacity-60"
                 }`}
                 disabled={!hasData}
@@ -527,26 +527,26 @@ export function CapacityView({ storiesBySprint }: Props) {
                 <div>
                   <p
                     className={`text-[13px] flex items-center gap-2 ${
-                      active ? "text-slate-100 font-medium" : "text-slate-200"
+                      active ? "text-foreground font-medium" : "text-foreground"
                     }`}
                   >
                     {p.label}
                     {active && (
-                      <span className="text-[10px] font-medium uppercase tracking-wide text-emerald-300">
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-ok">
                         active
                       </span>
                     )}
                   </p>
-                  <p className="text-[11px] text-slate-500">{hint}</p>
+                  <p className="text-[11px] text-faint-fg">{hint}</p>
                 </div>
-                <p className="text-xl font-semibold tabular-nums text-slate-100">
+                <p className="text-xl font-semibold tabular-nums text-foreground">
                   {p.projected != null ? (
                     <>
                       {fmt(p.projected)}{" "}
-                      <span className="text-sm font-normal text-slate-500">SP</span>
+                      <span className="text-sm font-normal text-faint-fg">SP</span>
                     </>
                   ) : (
-                    <span className="text-slate-600">—</span>
+                    <span className="text-faint-fg">—</span>
                   )}
                 </p>
               </button>
@@ -569,10 +569,10 @@ function Line({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <p className="text-[13px] text-slate-400">{label}</p>
+      <p className="text-[13px] text-muted-fg">{label}</p>
       <div className="text-right">
-        <p className="text-xl font-semibold tabular-nums text-slate-100">{value}</p>
-        {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
+        <p className="text-xl font-semibold tabular-nums text-foreground">{value}</p>
+        {hint && <p className="text-[11px] text-faint-fg">{hint}</p>}
       </div>
     </div>
   );
@@ -596,7 +596,7 @@ function BreakdownRow({
   return (
     <div
       className={`relative flex items-baseline justify-between gap-4 px-5 py-3 ${
-        explain ? "hover:bg-white/[0.03]" : ""
+        explain ? "hover:bg-[color:var(--muted)]" : ""
       }`}
       onMouseEnter={() => explain && setShowExplain(true)}
       onMouseLeave={() => setShowExplain(false)}
@@ -604,19 +604,19 @@ function BreakdownRow({
       <div>
         <p
           className={`text-[13px] flex items-center gap-1.5 ${
-            emphasis ? "font-medium text-slate-100" : "text-slate-300"
+            emphasis ? "font-medium text-foreground" : "text-foreground"
           }`}
         >
           {label}
-          {explain && <Info className="size-3 text-slate-600" />}
+          {explain && <Info className="size-3 text-faint-fg" />}
         </p>
-        {hint && <p className="text-[11px] text-slate-500 mt-0.5">{hint}</p>}
+        {hint && <p className="text-[11px] text-faint-fg mt-0.5">{hint}</p>}
       </div>
       <p
         className={`tabular-nums ${
           emphasis
-            ? "text-xl font-semibold text-slate-100"
-            : "text-[15px] text-slate-300"
+            ? "text-xl font-semibold text-foreground"
+            : "text-[15px] text-foreground"
         }`}
       >
         {value}
@@ -625,7 +625,7 @@ function BreakdownRow({
       {explain && showExplain && (
         <span
           role="tooltip"
-          className="absolute z-50 right-4 top-full mt-1 w-80 rounded-lg border border-white/10 bg-slate-950/95 backdrop-blur p-3 text-[12px] text-slate-300 shadow-2xl pointer-events-none"
+          className="absolute z-50 right-4 top-full mt-1 w-80 rounded-lg border border-line bg-card backdrop-blur p-3 text-[12px] text-foreground shadow-2xl pointer-events-none"
         >
           {explain}
         </span>
@@ -733,7 +733,7 @@ function ReconcileSprintButton({
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:bg-white/[0.06] hover:text-slate-100 transition-colors"
+        className="flex items-center gap-1.5 rounded-md border border-line bg-[color:var(--muted)] px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-[color:var(--muted)] hover:text-foreground transition-colors"
       >
         <Upload className="size-3" />
         Re-import scope CSV
@@ -758,14 +758,14 @@ function ReconcileSprintButton({
 
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             {loading && (
-              <div className="flex items-center gap-2 text-sm text-slate-400 py-8 justify-center">
+              <div className="flex items-center gap-2 text-sm text-muted-fg py-8 justify-center">
                 <Loader2 className="size-4 animate-spin" />
                 Parsing & comparing…
               </div>
             )}
 
             {error && (
-              <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+              <div className="rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
                 {error}
               </div>
             )}
@@ -779,7 +779,7 @@ function ReconcileSprintButton({
                   <SummaryTile label="Changed" value={report.totals.changed} tone={report.totals.changed > 0 ? "amber" : "muted"} />
                 </div>
 
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-faint-fg">
                   CSV: {report.totals.csvRows} rows · {report.totals.inScope} match{" "}
                   {sprintName} · {report.totals.ignoredRows} ignored (other sprints) ·
                   DB has {report.totals.existing} stor
@@ -788,12 +788,12 @@ function ReconcileSprintButton({
 
                 {report.added.length > 0 && (
                   <DiffSection title="Added" tone="emerald">
-                    <ul className="divide-y divide-white/[0.04]">
+                    <ul className="divide-y divide-[color:var(--line)]">
                       {report.added.map((s) => (
                         <li key={s.key} className="py-1.5 flex items-baseline justify-between gap-3 text-[12px]">
-                          <span className="font-mono text-slate-400 w-20 shrink-0">{s.key}</span>
-                          <span className="flex-1 truncate text-slate-200">{s.summary}</span>
-                          <span className="text-emerald-300 tabular-nums">
+                          <span className="font-mono text-muted-fg w-20 shrink-0">{s.key}</span>
+                          <span className="flex-1 truncate text-foreground">{s.summary}</span>
+                          <span className="text-ok tabular-nums">
                             {s.storyPoints ?? "—"} SP
                           </span>
                         </li>
@@ -804,12 +804,12 @@ function ReconcileSprintButton({
 
                 {report.removed.length > 0 && (
                   <DiffSection title="Removed" tone="red">
-                    <ul className="divide-y divide-white/[0.04]">
+                    <ul className="divide-y divide-[color:var(--line)]">
                       {report.removed.map((s) => (
                         <li key={s.key} className="py-1.5 flex items-baseline justify-between gap-3 text-[12px]">
-                          <span className="font-mono text-slate-400 w-20 shrink-0">{s.key}</span>
-                          <span className="flex-1 truncate text-slate-200">{s.summary}</span>
-                          <span className="text-red-300 tabular-nums">
+                          <span className="font-mono text-muted-fg w-20 shrink-0">{s.key}</span>
+                          <span className="flex-1 truncate text-foreground">{s.summary}</span>
+                          <span className="text-danger tabular-nums">
                             {s.storyPoints ?? "—"} SP
                           </span>
                         </li>
@@ -824,18 +824,18 @@ function ReconcileSprintButton({
                       {report.changed.map((s) => (
                         <li key={s.key} className="text-[12px]">
                           <div className="flex items-baseline gap-3">
-                            <span className="font-mono text-slate-400 w-20 shrink-0">{s.key}</span>
-                            <span className="flex-1 truncate text-slate-200">{s.summary}</span>
+                            <span className="font-mono text-muted-fg w-20 shrink-0">{s.key}</span>
+                            <span className="flex-1 truncate text-foreground">{s.summary}</span>
                           </div>
-                          <ul className="mt-1 ml-23 pl-23 space-y-0.5 text-[11px] text-slate-400">
+                          <ul className="mt-1 ml-23 pl-23 space-y-0.5 text-[11px] text-muted-fg">
                             {s.diffs.map((d, i) => (
                               <li key={i} className="ml-23">
-                                <span className="text-slate-500">{d.field}:</span>{" "}
-                                <span className="line-through text-red-300/80">
+                                <span className="text-faint-fg">{d.field}:</span>{" "}
+                                <span className="line-through text-danger/80">
                                   {String(d.before ?? "—")}
                                 </span>{" "}
-                                <span className="text-slate-500">→</span>{" "}
-                                <span className="text-emerald-300">
+                                <span className="text-faint-fg">→</span>{" "}
+                                <span className="text-ok">
                                   {String(d.after ?? "—")}
                                 </span>
                               </li>
@@ -850,7 +850,7 @@ function ReconcileSprintButton({
                 {report.totals.added === 0 &&
                   report.totals.removed === 0 &&
                   report.totals.changed === 0 && (
-                    <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm text-emerald-300 flex items-center gap-2">
+                    <div className="rounded-md border border-ok/20 bg-ok/5 p-3 text-sm text-ok flex items-center gap-2">
                       <Check className="size-4" />
                       Perfect match — nothing to apply.
                     </div>
@@ -859,11 +859,11 @@ function ReconcileSprintButton({
             )}
           </div>
 
-          <DialogFooter className="border-t border-white/[0.06] pt-3">
+          <DialogFooter className="border-t border-line pt-3">
             <button
               type="button"
               onClick={reset}
-              className="rounded-md border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[12px] font-medium text-slate-300 hover:bg-white/[0.06]"
+              className="rounded-md border border-line bg-[color:var(--muted)] px-3 py-1.5 text-[12px] font-medium text-foreground hover:bg-[color:var(--muted)]"
             >
               Cancel
             </button>
@@ -877,7 +877,7 @@ function ReconcileSprintButton({
                     report.totals.removed === 0 &&
                     report.totals.changed === 0)
                 }
-                className="rounded-md bg-emerald-500/90 px-3 py-1.5 text-[12px] font-medium text-emerald-50 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                className="rounded-md bg-ok/90 px-3 py-1.5 text-[12px] font-medium text-foreground hover:bg-ok disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
                 {applying && <Loader2 className="size-3 animate-spin" />}
                 Apply changes
@@ -900,14 +900,14 @@ function SummaryTile({
   tone: "muted" | "emerald" | "red" | "amber";
 }) {
   const colorByTone: Record<typeof tone, string> = {
-    muted: "text-slate-300",
-    emerald: "text-emerald-300",
-    red: "text-red-300",
-    amber: "text-amber-300",
+    muted: "text-foreground",
+    emerald: "text-ok",
+    red: "text-danger",
+    amber: "text-warn",
   };
   return (
-    <div className="rounded-md border border-white/[0.06] bg-slate-900/40 px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
+    <div className="rounded-md border border-line bg-card px-3 py-2">
+      <p className="text-[10px] uppercase tracking-wide text-faint-fg">{label}</p>
       <p className={`text-lg font-semibold tabular-nums ${colorByTone[tone]}`}>{value}</p>
     </div>
   );
@@ -923,13 +923,13 @@ function DiffSection({
   children: React.ReactNode;
 }) {
   const dotByTone: Record<typeof tone, string> = {
-    emerald: "bg-emerald-400",
-    red: "bg-red-400",
-    amber: "bg-amber-400",
+    emerald: "bg-ok",
+    red: "bg-danger",
+    amber: "bg-warn",
   };
   return (
-    <details open className="rounded-md border border-white/[0.06] bg-slate-950/30 px-3 py-2">
-      <summary className="cursor-pointer text-[12px] font-medium text-slate-200 flex items-center gap-2">
+    <details open className="rounded-md border border-line bg-background px-3 py-2">
+      <summary className="cursor-pointer text-[12px] font-medium text-foreground flex items-center gap-2">
         <span className={`size-1.5 rounded-full ${dotByTone[tone]}`} />
         {title}
       </summary>

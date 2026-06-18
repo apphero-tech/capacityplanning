@@ -74,7 +74,7 @@ export function BacklogRefreshButton() {
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="size-5 text-emerald-400" />
+                  <CheckCircle2 className="size-5 text-ok" />
                   Backlog refreshed
                 </>
               )}
@@ -124,16 +124,16 @@ export function BacklogRefreshButton() {
 
               {result.unmapped.length > 0 && (
                 <section>
-                  <h4 className="mb-1.5 font-medium text-amber-400">
+                  <h4 className="mb-1.5 font-medium text-warn">
                     {result.unmapped.length} stor{result.unmapped.length !== 1 ? "ies" : "y"} with an
                     unmapped status — fix the workflow status in Jira
                   </h4>
-                  <ul className="max-h-40 divide-y divide-amber-500/10 overflow-auto rounded-md border border-amber-500/20 bg-amber-500/5">
+                  <ul className="max-h-40 divide-y divide-warn/10 overflow-auto rounded-md border border-warn/20 bg-warn/5">
                     {result.unmapped.map((s) => (
-                      <li key={s.key} className="px-3 py-1.5 text-amber-200">
+                      <li key={s.key} className="px-3 py-1.5 text-warn">
                         <span className="font-mono">{s.key}</span>
-                        <span className="ml-2 text-amber-100">{s.summary}</span>
-                        <span className="ml-2 text-amber-400/70">({s.status})</span>
+                        <span className="ml-2 text-warn">{s.summary}</span>
+                        <span className="ml-2 text-warn">({s.status})</span>
                       </li>
                     ))}
                   </ul>

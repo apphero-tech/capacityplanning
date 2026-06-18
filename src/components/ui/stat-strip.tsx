@@ -22,24 +22,24 @@ export type Stat = {
 export function StatStrip({ stats, className = "" }: { stats: Stat[]; className?: string }) {
   return (
     <div
-      className={`flex flex-wrap items-stretch gap-x-8 gap-y-4 rounded-2xl border border-white/[0.04] bg-slate-900/30 px-5 py-4 ${className}`}
+      className={`flex flex-wrap items-stretch gap-x-8 gap-y-4 rounded-2xl border border-line bg-card px-5 py-4 ${className}`}
     >
       {stats.map((s, i) => (
         <Fragment key={i}>
           {i > 0 && (
-            <span className="hidden sm:block w-px self-stretch bg-white/[0.04]" aria-hidden />
+            <span className="hidden sm:block w-px self-stretch bg-[color:var(--muted)]" aria-hidden />
           )}
           <div className="min-w-0">
-            <p className="text-[11px] font-medium text-slate-500">{s.label}</p>
+            <p className="text-[11px] font-medium text-faint-fg">{s.label}</p>
             <p className="mt-1 flex items-baseline gap-2">
               <span
                 className={`text-xl font-semibold tabular-nums ${
-                  s.muted ? "text-slate-500" : "text-slate-100"
+                  s.muted ? "text-faint-fg" : "text-foreground"
                 }`}
               >
                 {s.value}
               </span>
-              {s.hint && <span className="text-[12px] text-slate-500">{s.hint}</span>}
+              {s.hint && <span className="text-[12px] text-faint-fg">{s.hint}</span>}
             </p>
           </div>
         </Fragment>

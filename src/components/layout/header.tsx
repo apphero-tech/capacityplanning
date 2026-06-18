@@ -26,9 +26,9 @@ const SPRINT_SELECTOR_ROUTES = new Set([
 
 const STATUS_DOT: Record<SprintStatus, string> = {
   past:     "bg-[color:var(--faint-fg)]",
-  previous: "bg-sky-300/70",
+  previous: "bg-info/70",
   current:  "bg-[color:var(--coral)]",
-  next:     "bg-amber-300/80",
+  next:     "bg-warn/80",
   planning: "bg-violet-300/70",
   future:   "bg-[color:var(--faint-fg)]",
 }

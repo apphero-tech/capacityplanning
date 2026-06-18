@@ -37,45 +37,45 @@ export function OnboardingProgress({
   const completed = steps.filter((s) => s.done).length;
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-slate-900/40">
+    <div className="rounded-2xl border border-line bg-card">
       <div className="flex items-center justify-between px-5 pt-4 pb-3">
-        <h3 className="text-[13px] font-medium text-slate-300">Project setup</h3>
-        <span className="text-[12px] text-slate-500">
+        <h3 className="text-[13px] font-medium text-foreground">Project setup</h3>
+        <span className="text-[12px] text-faint-fg">
           {completed === 4 ? "Ready" : `${completed} of 4`}
         </span>
       </div>
 
-      <div className="divide-y divide-white/[0.04]">
+      <div className="divide-y divide-[color:var(--line)]">
         {steps.map((step) => (
           <Link
             key={step.label}
             href={step.href}
-            className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-white/[0.02]"
+            className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[color:var(--muted)]"
           >
             <div
               className={`flex size-5 shrink-0 items-center justify-center rounded-full ${
                 step.done
-                  ? "bg-emerald-500/20 text-emerald-300"
-                  : "ring-1 ring-white/15"
+                  ? "bg-ok/20 text-ok"
+                  : "ring-1 ring-[color:var(--line)]"
               }`}
             >
               {step.done && <Check className="size-3" strokeWidth={3} />}
             </div>
             <p
               className={`flex-1 text-[13px] ${
-                step.done ? "text-slate-200" : "text-slate-400"
+                step.done ? "text-foreground" : "text-muted-fg"
               }`}
             >
               {step.label}
               {!step.done && (
-                <span className="text-slate-600 ml-2 text-[12px]">
+                <span className="text-faint-fg ml-2 text-[12px]">
                   — {step.hint}
                 </span>
               )}
             </p>
             <span
               className={`text-[12px] tabular-nums ${
-                step.done ? "text-slate-400" : "text-slate-600"
+                step.done ? "text-muted-fg" : "text-faint-fg"
               }`}
             >
               {step.done

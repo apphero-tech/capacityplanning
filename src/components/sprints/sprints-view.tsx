@@ -212,10 +212,10 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
 
       {/* Sprint Plan — Gantt Timeline */}
       {sprintPlan && (
-        <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-5">
+        <div className="rounded-2xl border border-line bg-card p-5">
           <div className="mb-4">
-            <h3 className="text-[13px] font-medium text-slate-300">Sprint plan</h3>
-            <p className="text-[12px] text-slate-500 mt-0.5">
+            <h3 className="text-[13px] font-medium text-foreground">Sprint plan</h3>
+            <p className="text-[12px] text-faint-fg mt-0.5">
               Timeline with capacity projection
             </p>
           </div>
@@ -228,7 +228,7 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                   {sprintPlan.months.map((m, i) => (
                     <span
                       key={i}
-                      className="absolute bottom-1 -translate-x-1/2 text-[10px] text-slate-500 whitespace-nowrap"
+                      className="absolute bottom-1 -translate-x-1/2 text-[10px] text-faint-fg whitespace-nowrap"
                       style={{ left: `${m.left}%` }}
                     >
                       {m.label}
@@ -247,14 +247,14 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                   <span className="text-[10px] text-cyan-400/70 font-medium w-14 text-right">
                     Scope
                   </span>
-                  <span className="text-[10px] text-emerald-400/60 font-medium w-14 text-right">
+                  <span className="text-[10px] text-ok font-medium w-14 text-right">
                     Forecast
                   </span>
                 </div>
               </div>
 
               {/* Gantt body */}
-              <div className="flex border-t border-white/[0.04]">
+              <div className="flex border-t border-line">
                 {/* Sprint name labels */}
                 <div className="w-28 shrink-0">
                   {sprintPlan.rows.map((s) => (
@@ -264,19 +264,19 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                           s.isCurrent
                             ? "bg-[#E31837] animate-pulse"
                             : s.status === "previous"
-                              ? "bg-blue-400"
+                              ? "bg-info"
                               : s.status === "next"
-                                ? "bg-amber-400"
+                                ? "bg-warn"
                                 : s.status === "planning"
                                   ? "bg-violet-400"
-                                  : "bg-slate-600"
+                                  : "bg-[color:var(--muted)]"
                         }`}
                       />
                       <span
                         className={`text-xs truncate ${
                           s.isActive
-                            ? "text-slate-200 font-medium"
-                            : "text-slate-500"
+                            ? "text-foreground font-medium"
+                            : "text-faint-fg"
                         }`}
                       >
                         {s.name}
@@ -294,7 +294,7 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                   {sprintPlan.months.map((m, i) => (
                     <div
                       key={i}
-                      className="absolute top-0 bottom-0 w-px bg-white/[0.04]"
+                      className="absolute top-0 bottom-0 w-px bg-[color:var(--muted)]"
                       style={{ left: `${m.left}%` }}
                     />
                   ))}
@@ -318,7 +318,7 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                         s.isCurrent
                           ? "bg-[#E31837]/[0.03]"
                           : i % 2 === 1
-                            ? "bg-white/[0.01]"
+                            ? "bg-[color:var(--muted)]"
                             : ""
                       }`}
                       style={{ top: i * 32, height: 32 }}
@@ -340,14 +340,14 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                             s.isCurrent
                               ? "bg-[#E31837] shadow-lg shadow-[#E31837]/20 ring-1 ring-[#E31837]/30"
                               : s.status === "previous"
-                                ? "bg-blue-500/60"
+                                ? "bg-info/60"
                                 : s.status === "next"
-                                  ? "bg-amber-500/50"
+                                  ? "bg-warn/50"
                                   : s.status === "planning"
                                     ? "bg-violet-500/40"
                                     : s.status === "future"
-                                      ? "bg-slate-600/40"
-                                      : "bg-slate-700/50"
+                                      ? "bg-[color:var(--paper-elev)]/40"
+                                      : "bg-[color:var(--paper-elev)]/50"
                           } hover:brightness-125`}
                           style={{
                             left: `${s.left}%`,
@@ -360,8 +360,8 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                             <span
                               className={`absolute inset-0 flex items-center justify-center text-[10px] font-medium ${
                                 s.isCurrent
-                                  ? "text-white/80"
-                                  : "text-slate-300/70"
+                                  ? "text-[color:var(--primary-foreground)]"
+                                  : "text-foreground"
                               }`}
                             >
                               {s.durationWeeks}w
@@ -403,7 +403,7 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                               {fmt(scope, 0)}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-700">—</span>
+                            <span className="text-xs text-faint-fg">—</span>
                           )}
                         </div>
                       );
@@ -432,18 +432,18 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                             <span
                               className={`text-xs tabular-nums font-semibold ${
                                 isActual
-                                  ? "text-blue-300"
+                                  ? "text-info"
                                   : s.isCurrent
-                                    ? "text-emerald-400"
+                                    ? "text-ok"
                                     : s.isActive
-                                      ? "text-emerald-400/70"
-                                      : "text-slate-500"
+                                      ? "text-ok"
+                                      : "text-faint-fg"
                               }`}
                             >
                               {fmt(sp, 0)}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-700">—</span>
+                            <span className="text-xs text-faint-fg">—</span>
                           )}
                         </div>
                       );
@@ -459,40 +459,40 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
       {/* Sprint Table — 7 columns: Name, Dates, Weeks, DEV hrs, Projected SP, Status */}
       <div>
         <div className="mb-3">
-          <h3 className="text-[13px] font-medium text-slate-300">All sprints</h3>
-          <p className="text-[12px] text-slate-500 mt-0.5">
+          <h3 className="text-[13px] font-medium text-foreground">All sprints</h3>
+          <p className="text-[12px] text-faint-fg mt-0.5">
             Click any name, date range or focus cell to edit
           </p>
         </div>
         <div>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/[0.04] hover:bg-transparent">
-                <TableHead className="text-[11px] font-medium text-slate-500">Name</TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500">Dates</TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-center w-16">
+              <TableRow className="border-line hover:bg-transparent">
+                <TableHead className="text-[11px] font-medium text-faint-fg">Name</TableHead>
+                <TableHead className="text-[11px] font-medium text-faint-fg">Dates</TableHead>
+                <TableHead className="text-[11px] font-medium text-faint-fg text-center w-16">
                   Weeks
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+                <TableHead className="text-[11px] font-medium text-faint-fg text-right w-24">
                   DEV hrs
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-28">
+                <TableHead className="text-[11px] font-medium text-faint-fg text-right w-28">
                   Scope
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-28">
+                <TableHead className="text-[11px] font-medium text-faint-fg text-right w-28">
                   Projected SP
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-center w-28">
+                <TableHead className="text-[11px] font-medium text-faint-fg text-center w-28">
                   Status
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sprints.length === 0 ? (
-                <TableRow className="border-white/[0.06]">
+                <TableRow className="border-line">
                   <TableCell
                     colSpan={8}
-                    className="text-center text-slate-500 py-8"
+                    className="text-center text-faint-fg py-8"
                   >
                     No sprints found.
                   </TableCell>
@@ -503,22 +503,22 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                   return (
                     <TableRow
                       key={s.id}
-                      className={`border-white/[0.06] hover:bg-white/[0.02] ${
+                      className={`border-line hover:bg-[color:var(--muted)] ${
                         selectedSprint?.id === s.id
                           ? "bg-[#E31837]/[0.08] ring-1 ring-inset ring-[#E31837]/20"
                           : s.isCurrent
                             ? "bg-[#E31837]/[0.03]"
                             : s.isActive
-                              ? "bg-white/[0.02]"
+                              ? "bg-[color:var(--muted)]"
                               : ""
                       }`}
                     >
                       {/* Name */}
-                      <TableCell className="font-medium text-slate-200">
+                      <TableCell className="font-medium text-foreground">
                         <div className="flex items-center gap-2">
                           {s.isActive && (
                             <span className={`size-2 rounded-full ${
-                              s.isCurrent ? "bg-[#E31837] animate-pulse" : "bg-blue-400"
+                              s.isCurrent ? "bg-[#E31837] animate-pulse" : "bg-info"
                             }`} />
                           )}
                           <EditableText
@@ -529,7 +529,7 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                       </TableCell>
 
                       {/* Dates (compact) */}
-                      <TableCell className="text-slate-400 text-xs">
+                      <TableCell className="text-muted-fg text-xs">
                         <EditableDates
                           startDate={s.startDate}
                           endDate={s.endDate}
@@ -540,18 +540,18 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                       </TableCell>
 
                       {/* Weeks */}
-                      <TableCell className="text-center text-slate-300">
+                      <TableCell className="text-center text-foreground">
                         {s.durationWeeks}w
                       </TableCell>
 
                       {/* DEV hrs (suppressed for demo sprints — not planned) */}
-                      <TableCell className="text-right text-slate-300">
+                      <TableCell className="text-right text-foreground">
                         {s.isDemo ? (
-                          <span className="text-slate-600">&mdash;</span>
+                          <span className="text-faint-fg">&mdash;</span>
                         ) : forecast ? (
                           fmt(forecast.netDevHrs)
                         ) : (
-                          <span className="text-slate-600">&mdash;</span>
+                          <span className="text-faint-fg">&mdash;</span>
                         )}
                       </TableCell>
 
@@ -562,14 +562,14 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                         {(() => {
                           const scope = scopeBySprint[s.id];
                           if (!scope || scope.sp === 0) {
-                            return <span className="text-slate-600">&mdash;</span>;
+                            return <span className="text-faint-fg">&mdash;</span>;
                           }
                           return (
                             <span className="inline-flex items-baseline gap-1.5 justify-end">
                               <span className="font-semibold text-cyan-300 tabular-nums">
                                 {fmt(scope.sp, 0)}
                               </span>
-                              <span className="text-[10px] text-slate-500">
+                              <span className="text-[10px] text-faint-fg">
                                 · {scope.stories} stor{scope.stories === 1 ? "y" : "ies"}
                               </span>
                             </span>
@@ -589,13 +589,13 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                             ? s.completedSP
                             : forecast?.projectedSPProven ?? null;
                           if (s.isDemo || value == null) {
-                            return <span className="text-slate-600">&mdash;</span>;
+                            return <span className="text-faint-fg">&mdash;</span>;
                           }
                           const toneClass = isActual
-                            ? "text-slate-100"
+                            ? "text-foreground"
                             : isInProgress
-                              ? "text-slate-400"
-                              : "text-emerald-400";
+                              ? "text-muted-fg"
+                              : "text-ok";
                           const badgeLabel = isActual
                             ? "delivered"
                             : isInProgress
@@ -606,7 +606,7 @@ export function SprintsView({ scopeBySprint = {} }: SprintsViewProps) {
                               <span className={`font-semibold ${toneClass}`}>
                                 {fmt(value, 0)}
                               </span>
-                              <span className="text-[10px] uppercase tracking-wide text-slate-600">
+                              <span className="text-[10px] uppercase tracking-wide text-faint-fg">
                                 {badgeLabel}
                               </span>
                             </span>
@@ -679,14 +679,14 @@ function EditableText({
   if (!editing) {
     return (
       <span
-        className={`cursor-text hover:underline hover:decoration-slate-600 hover:underline-offset-2 ${className ?? ""}`}
+        className={`cursor-text hover:underline hover:decoration-[color:var(--faint-fg)] hover:underline-offset-2 ${className ?? ""}`}
         onClick={() => {
           setDraft(value);
           setEditing(true);
         }}
         title="Click to edit"
       >
-        {value || <span className="text-slate-600">—</span>}
+        {value || <span className="text-faint-fg">—</span>}
       </span>
     );
   }
@@ -708,7 +708,7 @@ function EditableText({
           setEditing(false);
         }
       }}
-      className="w-full bg-slate-800 border border-white/20 rounded px-1 py-0.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
+      className="w-full bg-[color:var(--paper-elev)] border border-line-strong rounded px-1 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
     />
   );
 }
@@ -730,7 +730,7 @@ function EditableDates({
   if (!editing) {
     return (
       <span
-        className="cursor-text hover:underline hover:decoration-slate-600 hover:underline-offset-2"
+        className="cursor-text hover:underline hover:decoration-[color:var(--faint-fg)] hover:underline-offset-2"
         onClick={() => {
           setS(startDate ?? "");
           setE(endDate ?? "");
@@ -740,7 +740,7 @@ function EditableDates({
       >
         {startDate && endDate
           ? `${formatDateShort(startDate)} – ${formatDateShort(endDate)}`
-          : <span className="text-slate-600">—</span>}
+          : <span className="text-faint-fg">—</span>}
       </span>
     );
   }
@@ -751,17 +751,17 @@ function EditableDates({
         type="date"
         value={s}
         onChange={(ev) => setS(ev.target.value)}
-        className="bg-slate-800 border border-white/20 rounded px-1 py-0.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
+        className="bg-[color:var(--paper-elev)] border border-line-strong rounded px-1 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
       />
-      <span className="text-slate-500 text-xs">–</span>
+      <span className="text-faint-fg text-xs">–</span>
       <input
         type="date"
         value={e}
         onChange={(ev) => setE(ev.target.value)}
-        className="bg-slate-800 border border-white/20 rounded px-1 py-0.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
+        className="bg-[color:var(--paper-elev)] border border-line-strong rounded px-1 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
       />
       <button
-        className="text-[11px] text-emerald-400 hover:text-emerald-300 px-1"
+        className="text-[11px] text-ok hover:text-ok px-1"
         onClick={async () => {
           await onSave(s || null, e || null);
           setEditing(false);
@@ -770,7 +770,7 @@ function EditableDates({
         Save
       </button>
       <button
-        className="text-[11px] text-slate-500 hover:text-slate-400 px-1"
+        className="text-[11px] text-faint-fg hover:text-muted-fg px-1"
         onClick={() => setEditing(false)}
       >
         Cancel
@@ -793,7 +793,7 @@ function EditablePercent({
   if (!editing) {
     return (
       <span
-        className="cursor-text hover:underline hover:decoration-slate-600 hover:underline-offset-2"
+        className="cursor-text hover:underline hover:decoration-[color:var(--faint-fg)] hover:underline-offset-2"
         onClick={() => {
           setDraft(String(Math.round(value * 100)));
           setEditing(true);
@@ -824,7 +824,7 @@ function EditablePercent({
         if (e.key === "Enter") e.currentTarget.blur();
         if (e.key === "Escape") setEditing(false);
       }}
-      className="w-14 bg-slate-800 border border-white/20 rounded px-1 py-0.5 text-xs text-center text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
+      className="w-14 bg-[color:var(--paper-elev)] border border-line-strong rounded px-1 py-0.5 text-xs text-center text-foreground focus:outline-none focus:ring-1 focus:ring-[#E31837]/50"
     />
   );
 }

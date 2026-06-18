@@ -298,7 +298,7 @@ export function DashboardView({ storiesBySprint }: Props) {
 
   if (!sprint || !verdict) {
     return (
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-muted-fg">
         Select a sprint in the top bar.
       </p>
     );
@@ -312,22 +312,22 @@ export function DashboardView({ storiesBySprint }: Props) {
       {/* Verdict hero */}
       <Link
         href={`/${slug}/capacity`}
-        className="group block rounded-2xl border border-white/[0.06] bg-slate-900/40 p-6 transition-colors hover:bg-slate-900/60"
+        className="group block rounded-2xl border border-line bg-card p-6 transition-colors hover:bg-card"
       >
         <div className="flex items-baseline justify-between flex-wrap gap-2">
-          <p className="text-[12px] text-slate-500">Next sprint</p>
-          <p className="text-[12px] text-slate-500">
+          <p className="text-[12px] text-faint-fg">Next sprint</p>
+          <p className="text-[12px] text-faint-fg">
             {formatDateRangeShort(sprint.startDate, sprint.endDate)}
           </p>
         </div>
-        <h3 className="mt-1 text-xl font-semibold text-slate-100">{sprint.name}</h3>
+        <h3 className="mt-1 text-xl font-semibold text-foreground">{sprint.name}</h3>
 
         {verdict.hasVelocity ? (
           <div className="mt-5 flex items-baseline justify-between flex-wrap gap-3">
             <div>
               <p
                 className={`text-3xl font-semibold tabular-nums flex items-center gap-2 ${
-                  fits ? "text-emerald-300" : "text-red-300"
+                  fits ? "text-ok" : "text-danger"
                 }`}
               >
                 <VerdictIcon className="size-5" />
@@ -335,26 +335,26 @@ export function DashboardView({ storiesBySprint }: Props) {
                   ? `Fits — ${fmt(verdict.delta)} SP of room`
                   : `Overflow — ${fmt(Math.abs(verdict.delta))} SP to cut`}
               </p>
-              <p className="mt-1 text-[12px] text-slate-500 flex items-center gap-1.5">
+              <p className="mt-1 text-[12px] text-faint-fg flex items-center gap-1.5">
                 team can deliver{" "}
                 <ExplainTooltip
                   content={
                     <>
-                      <p className="font-medium text-slate-200 mb-1.5">
+                      <p className="font-medium text-foreground mb-1.5">
                         How {fmt(verdict.teamCanDeliver)} SP is computed
                       </p>
-                      <ul className="space-y-1 text-slate-400">
+                      <ul className="space-y-1 text-muted-fg">
                         <li>
-                          <span className="text-slate-200">{verdict.members}</span>{" "}
+                          <span className="text-foreground">{verdict.members}</span>{" "}
                           active Deloitte members in {sprint.name}
                         </li>
                         <li>
-                          <span className="text-slate-200">{fmt(verdict.hours)} hrs</span>{" "}
+                          <span className="text-foreground">{fmt(verdict.hours)} hrs</span>{" "}
                           of net DEV time available (after PTO + holidays)
                         </li>
                         <li>
                           ×{" "}
-                          <span className="text-slate-200">
+                          <span className="text-foreground">
                             {verdict.baseVelocity.toFixed(2)} SP/hr
                           </span>{" "}
                           historical velocity ({VELOCITY_BASIS_LABEL[basis].toLowerCase()}
@@ -366,14 +366,14 @@ export function DashboardView({ storiesBySprint }: Props) {
                         {growthPct !== 0 && (
                           <li>
                             ×{" "}
-                            <span className="text-slate-200">
+                            <span className="text-foreground">
                               {effectiveMultiplier.toFixed(2)}
                             </span>{" "}
                             growth factor ({growthPct > 0 ? "+" : ""}
                             {growthPct}%)
                           </li>
                         )}
-                        <li className="border-t border-white/10 pt-1 mt-1 text-slate-200">
+                        <li className="border-t border-line pt-1 mt-1 text-foreground">
                           ={" "}
                           <span className="font-semibold">
                             {fmt(verdict.teamCanDeliver)} SP
@@ -383,22 +383,22 @@ export function DashboardView({ storiesBySprint }: Props) {
                     </>
                   }
                 >
-                  <span className="text-slate-300 underline decoration-dotted underline-offset-2 cursor-help inline-flex items-center gap-1">
+                  <span className="text-foreground underline decoration-dotted underline-offset-2 cursor-help inline-flex items-center gap-1">
                     {fmt(verdict.teamCanDeliver)} SP
-                    <Info className="size-3 text-slate-500" />
+                    <Info className="size-3 text-faint-fg" />
                   </span>
                 </ExplainTooltip>
                 {" · "}scope{" "}
-                <span className="text-slate-300">{fmt(verdict.scopeSP)} SP</span>
+                <span className="text-foreground">{fmt(verdict.scopeSP)} SP</span>
               </p>
             </div>
-            <span className="text-[12px] text-slate-400 group-hover:text-slate-200 flex items-center gap-1">
+            <span className="text-[12px] text-muted-fg group-hover:text-foreground flex items-center gap-1">
               Open Capacity Planning
               <ArrowRight className="size-3.5" />
             </span>
           </div>
         ) : (
-          <p className="mt-5 text-[13px] text-amber-300">
+          <p className="mt-5 text-[13px] text-warn">
             No velocity data yet — enter past sprints&apos; completed SP on the Capacity Planning page.
           </p>
         )}
@@ -418,10 +418,10 @@ export function DashboardView({ storiesBySprint }: Props) {
       {upcomingSprints.length > 0 && verdict?.hasVelocity && (
         <section>
           <div className="flex items-baseline justify-between mb-3">
-            <h3 className="text-[13px] font-medium text-slate-300">
+            <h3 className="text-[13px] font-medium text-foreground">
               Look ahead
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-faint-fg">
               Toggle sprints to project the current velocity forward
             </p>
           </div>
@@ -444,8 +444,8 @@ export function DashboardView({ storiesBySprint }: Props) {
                   }
                   className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
                     active
-                      ? "bg-slate-100 text-slate-900"
-                      : "bg-slate-900/50 text-slate-400 border border-white/[0.06] hover:text-slate-200"
+                      ? "bg-foreground text-background"
+                      : "bg-card text-muted-fg border border-line hover:text-foreground"
                   }`}
                 >
                   {s.name.replace("| Product Demo ", "PD ")}
@@ -463,19 +463,19 @@ export function DashboardView({ storiesBySprint }: Props) {
                 return (
                   <div
                     key={s.id}
-                    className="rounded-xl border border-white/[0.04] bg-slate-900/30 p-4"
+                    className="rounded-xl border border-line bg-card p-4"
                   >
                     <div className="flex items-baseline justify-between">
-                      <p className="text-[13px] font-medium text-slate-200">
+                      <p className="text-[13px] font-medium text-foreground">
                         {s.name.replace("| Product Demo ", "PD ")}
                       </p>
-                      <p className="text-[11px] text-slate-500 tabular-nums">
+                      <p className="text-[11px] text-faint-fg tabular-nums">
                         {formatDateRangeShort(s.startDate, s.endDate)}
                       </p>
                     </div>
                     <p
                       className={`mt-2 text-sm font-semibold flex items-center gap-1.5 ${
-                        fits ? "text-emerald-300" : "text-red-300"
+                        fits ? "text-ok" : "text-danger"
                       }`}
                     >
                       <Icon className="size-3.5" />
@@ -483,21 +483,21 @@ export function DashboardView({ storiesBySprint }: Props) {
                         ? `Fits — ${fmt(v.delta)} SP of room`
                         : `Overflow — ${fmt(Math.abs(v.delta))} SP to cut`}
                     </p>
-                    <div className="mt-2 flex items-baseline justify-between text-[11px] text-slate-500">
+                    <div className="mt-2 flex items-baseline justify-between text-[11px] text-faint-fg">
                       <span>
                         can deliver{" "}
-                        <span className="text-slate-300 tabular-nums">
+                        <span className="text-foreground tabular-nums">
                           {fmt(v.teamCanDeliver)} SP
                         </span>
                       </span>
                       <span>
                         scope{" "}
-                        <span className="text-slate-300 tabular-nums">
+                        <span className="text-foreground tabular-nums">
                           {fmt(v.scopeSP)} SP
                         </span>
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-600 tabular-nums">
+                    <p className="mt-1 text-[11px] text-faint-fg tabular-nums">
                       {fmt(v.hours)} net DEV hrs · {v.stories} stor
                       {v.stories === 1 ? "y" : "ies"}
                     </p>
@@ -513,14 +513,14 @@ export function DashboardView({ storiesBySprint }: Props) {
       {chartData.length > 0 && (
         <section>
           <div className="flex items-baseline justify-between mb-3">
-            <h3 className="text-[13px] font-medium text-slate-300">
+            <h3 className="text-[13px] font-medium text-foreground">
               Delivery history &amp; next sprint
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-faint-fg">
               Click a bar to jump to that sprint
             </p>
           </div>
-          <div className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-4">
+          <div className="rounded-2xl border border-line bg-card p-4">
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -536,7 +536,7 @@ export function DashboardView({ storiesBySprint }: Props) {
                     if (idx >= 0) setSelectedIndex(idx);
                   }}
                 >
-                  <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <CartesianGrid stroke="rgba(128,128,128,0.12)" vertical={false} />
                   {/* Visual marker on the current-sprint column */}
                   {chartData.some((d) => d.kind === "current") && (
                     <ReferenceArea
@@ -577,7 +577,7 @@ export function DashboardView({ storiesBySprint }: Props) {
                       );
                     }}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.04)" }}
+                    axisLine={{ stroke: "rgba(128,128,128,0.12)" }}
                   />
                   <YAxis
                     tick={{ fill: "#64748b", fontSize: 11 }}
@@ -586,7 +586,7 @@ export function DashboardView({ storiesBySprint }: Props) {
                     width={36}
                   />
                   <Tooltip
-                    cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                    cursor={{ fill: "rgba(128,128,128,0.10)" }}
                     content={<SprintBarTooltip />}
                   />
                   <Legend
@@ -614,7 +614,7 @@ export function DashboardView({ storiesBySprint }: Props) {
 
       {/* Input quick-tiles */}
       <section>
-        <h3 className="text-[13px] font-medium text-slate-300 mb-3">Inputs</h3>
+        <h3 className="text-[13px] font-medium text-foreground mb-3">Inputs</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <InputTile
             href={`/${slug}/sprints`}
@@ -687,30 +687,30 @@ function SprintBarTooltip({
   ].filter((r) => r.value != null && r.value > 0);
 
   return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/95 backdrop-blur p-3 text-[12px] shadow-2xl min-w-[200px]">
-      <p className="font-medium text-slate-100">{p.fullName}</p>
+    <div className="rounded-lg border border-line bg-card/95 backdrop-blur p-3 text-[12px] shadow-2xl min-w-[200px]">
+      <p className="font-medium text-foreground">{p.fullName}</p>
       {p.startDate && p.endDate && (
-        <p className="text-[11px] text-slate-500 mt-0.5">
+        <p className="text-[11px] text-faint-fg mt-0.5">
           {formatDateRangeShort(p.startDate, p.endDate)}
         </p>
       )}
-      <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
+      <p className="text-[11px] text-muted-fg mt-0.5 tabular-nums">
         {p.storyCount} stor{p.storyCount === 1 ? "y" : "ies"}
-        {p.kind === "next" && <span className="text-slate-600"> · upcoming</span>}
-        {p.kind === "current" && <span className="text-emerald-400/80"> · in progress</span>}
+        {p.kind === "next" && <span className="text-faint-fg"> · upcoming</span>}
+        {p.kind === "current" && <span className="text-ok"> · in progress</span>}
       </p>
       <div className="mt-2 space-y-1">
         {rows.map((r) => (
           <div key={r.label} className="flex items-center justify-between gap-4">
-            <span className="flex items-center gap-1.5 text-slate-400">
+            <span className="flex items-center gap-1.5 text-muted-fg">
               <span
                 className="size-2 rounded-sm"
                 style={{ backgroundColor: r.color }}
               />
               {r.label}
             </span>
-            <span className="tabular-nums text-slate-200 font-medium">
-              {r.value} <span className="text-slate-500 font-normal">SP</span>
+            <span className="tabular-nums text-foreground font-medium">
+              {r.value} <span className="text-faint-fg font-normal">SP</span>
             </span>
           </div>
         ))}
@@ -742,7 +742,7 @@ function ExplainTooltip({
       {show && (
         <span
           role="tooltip"
-          className="absolute z-50 left-0 top-full mt-1.5 w-72 rounded-lg border border-white/10 bg-slate-950/95 backdrop-blur p-3 text-[12px] text-slate-300 shadow-2xl pointer-events-none"
+          className="absolute z-50 left-0 top-full mt-1.5 w-72 rounded-lg border border-line bg-card/95 backdrop-blur p-3 text-[12px] text-foreground shadow-2xl pointer-events-none"
         >
           {content}
         </span>
@@ -781,14 +781,14 @@ function ProjectionControls({
   ];
   const growthPresets = [0, 3, 5, 10, 20];
   return (
-    <section className="rounded-2xl border border-white/[0.04] bg-slate-900/30 p-4">
+    <section className="rounded-2xl border border-line bg-card p-4">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         {/* Basis selector */}
         <div className="flex items-center gap-3">
-          <span className="text-[11px] uppercase tracking-wide text-slate-500">
+          <span className="text-[11px] uppercase tracking-wide text-faint-fg">
             Velocity basis
           </span>
-          <div className="flex rounded-lg border border-white/[0.06] bg-slate-900/50 p-0.5">
+          <div className="flex rounded-lg border border-line bg-card p-0.5">
             {basisOptions.map((o) => {
               const active = o.value === basis;
               return (
@@ -798,8 +798,8 @@ function ProjectionControls({
                   onClick={() => onBasisChange(o.value)}
                   className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors ${
                     active
-                      ? "bg-slate-100 text-slate-900"
-                      : "text-slate-400 hover:text-slate-200"
+                      ? "bg-foreground text-background"
+                      : "text-muted-fg hover:text-foreground"
                   }`}
                 >
                   {o.label}
@@ -807,17 +807,17 @@ function ProjectionControls({
               );
             })}
           </div>
-          <span className="text-[11px] text-slate-500 tabular-nums">
+          <span className="text-[11px] text-faint-fg tabular-nums">
             {velocity > 0 ? `${velocity.toFixed(2)} SP/hr` : "no history"}
           </span>
         </div>
 
         {/* Growth factor */}
         <div className="flex items-center gap-3">
-          <span className="text-[11px] uppercase tracking-wide text-slate-500">
+          <span className="text-[11px] uppercase tracking-wide text-faint-fg">
             Growth
           </span>
-          <div className="flex rounded-lg border border-white/[0.06] bg-slate-900/50 p-0.5">
+          <div className="flex rounded-lg border border-line bg-card p-0.5">
             {growthPresets.map((p) => {
               const active = p === growthPct;
               return (
@@ -827,8 +827,8 @@ function ProjectionControls({
                   onClick={() => onGrowthChange(p)}
                   className={`px-3 h-7 rounded-md text-[12px] font-medium transition-colors tabular-nums ${
                     active
-                      ? "bg-slate-100 text-slate-900"
-                      : "text-slate-400 hover:text-slate-200"
+                      ? "bg-foreground text-background"
+                      : "text-muted-fg hover:text-foreground"
                   }`}
                 >
                   {p === 0 ? "0%" : `+${p}%`}
@@ -836,20 +836,20 @@ function ProjectionControls({
               );
             })}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+          <div className="flex items-center gap-1.5 text-[11px] text-faint-fg">
             <input
               type="number"
               value={growthPct}
               onChange={(e) => onGrowthChange(Number(e.target.value) || 0)}
               step={1}
-              className="w-14 h-7 rounded-md border border-white/[0.06] bg-slate-900/50 px-2 text-[12px] text-slate-200 tabular-nums focus:border-white/20"
+              className="w-14 h-7 rounded-md border border-line bg-card px-2 text-[12px] text-foreground tabular-nums focus:border-line-strong"
             />
             <span>%</span>
           </div>
         </div>
       </div>
       {sprintNames.length > 0 && (
-        <p className="mt-2 text-[11px] text-slate-600">
+        <p className="mt-2 text-[11px] text-faint-fg">
           Using {sprintNames.join(" · ")}
         </p>
       )}
@@ -871,14 +871,14 @@ function InputTile({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3 rounded-xl border border-white/[0.04] bg-slate-900/30 px-4 py-3 transition-colors hover:bg-slate-900/60"
+      className="group flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 transition-colors hover:bg-card"
     >
-      <Icon className="size-4 text-slate-500 group-hover:text-slate-300" />
+      <Icon className="size-4 text-faint-fg group-hover:text-foreground" />
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-medium text-slate-200">{label}</p>
-        <p className="text-[11px] text-slate-500">{hint}</p>
+        <p className="text-[13px] font-medium text-foreground">{label}</p>
+        <p className="text-[11px] text-faint-fg">{hint}</p>
       </div>
-      <ArrowRight className="size-3.5 text-slate-600 group-hover:text-slate-300 transition-colors" />
+      <ArrowRight className="size-3.5 text-faint-fg group-hover:text-foreground transition-colors" />
     </Link>
   );
 }

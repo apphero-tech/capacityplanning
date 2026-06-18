@@ -66,17 +66,17 @@ export function SettingsView({
   return (
     <div className="flex flex-col gap-6">
       {/* Sprint Parameters */}
-      <Card className="border-white/[0.06] bg-slate-900/50">
+      <Card className="border-line bg-card">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#E31837]/15">
               <CalendarDays className="size-5 text-[#E31837]" />
             </div>
             <div>
-              <CardTitle className="text-slate-100">
+              <CardTitle className="text-foreground">
                 Current Sprint Parameters
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted-fg">
                 Configuration for the active sprint
               </CardDescription>
             </div>
@@ -85,8 +85,8 @@ export function SettingsView({
         <CardContent>
           {!currentSprint ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Info className="size-8 text-slate-500 mb-3" />
-              <p className="text-sm text-slate-400">
+              <Info className="size-8 text-faint-fg mb-3" />
+              <p className="text-sm text-muted-fg">
                 No current sprint configured.
               </p>
             </div>
@@ -94,42 +94,42 @@ export function SettingsView({
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {/* Sprint Name */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   Sprint Name
                 </p>
-                <p className="text-lg font-semibold text-slate-100">
+                <p className="text-lg font-semibold text-foreground">
                   {currentSprint.name}
                 </p>
               </div>
 
               {/* Start Date */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   Start Date
                 </p>
-                <p className="text-lg font-semibold text-slate-100">
+                <p className="text-lg font-semibold text-foreground">
                   {formatDate(currentSprint.startDate)}
                 </p>
               </div>
 
               {/* End Date */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   End Date
                 </p>
-                <p className="text-lg font-semibold text-slate-100">
+                <p className="text-lg font-semibold text-foreground">
                   {formatDate(currentSprint.endDate)}
                 </p>
               </div>
 
               {/* Duration */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   Duration
                 </p>
                 <div className="flex items-center gap-2">
-                  <Clock className="size-4 text-slate-500" />
-                  <p className="text-lg font-semibold text-slate-100">
+                  <Clock className="size-4 text-faint-fg" />
+                  <p className="text-lg font-semibold text-foreground">
                     {currentSprint.durationWeeks} weeks ({currentSprint.workingDays} working days)
                   </p>
                 </div>
@@ -137,12 +137,12 @@ export function SettingsView({
 
               {/* Velocity (Proven) */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   Velocity (Proven)
                 </p>
                 <div className="flex items-center gap-2">
-                  <Target className="size-4 text-slate-500" />
-                  <p className="text-lg font-semibold text-slate-100">
+                  <Target className="size-4 text-faint-fg" />
+                  <p className="text-lg font-semibold text-foreground">
                     {currentSprint.velocityProven !== null
                       ? `${currentSprint.velocityProven.toFixed(2)} SP/hr`
                       : "Not set"}
@@ -152,12 +152,12 @@ export function SettingsView({
 
               {/* Velocity (Target) */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   Velocity (Target)
                 </p>
                 <div className="flex items-center gap-2">
-                  <Zap className="size-4 text-slate-500" />
-                  <p className="text-lg font-semibold text-slate-100">
+                  <Zap className="size-4 text-faint-fg" />
+                  <p className="text-lg font-semibold text-foreground">
                     {currentSprint.velocityTarget !== null
                       ? `${currentSprint.velocityTarget.toFixed(2)} SP/hr`
                       : "Not set"}
@@ -167,30 +167,30 @@ export function SettingsView({
 
               {/* Focus Factor */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   Focus Factor
                 </p>
-                <p className="text-lg font-semibold text-slate-100">
+                <p className="text-lg font-semibold text-foreground">
                   {Math.round(currentSprint.focusFactor * 100)}%
                 </p>
               </div>
 
               {/* Story Count */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   Story Count
                 </p>
-                <p className="text-lg font-semibold text-slate-100">
+                <p className="text-lg font-semibold text-foreground">
                   {currentSprint.storyCount ?? "Not set"}
                 </p>
               </div>
 
               {/* Story Points */}
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                   Story Points
                 </p>
-                <p className="text-lg font-semibold text-slate-100">
+                <p className="text-lg font-semibold text-foreground">
                   {currentSprint.storyPoints !== null
                     ? `${currentSprint.storyPoints} SP`
                     : "Not set"}
@@ -202,17 +202,17 @@ export function SettingsView({
       </Card>
 
       {/* Guide / Definitions */}
-      <Card className="border-white/[0.06] bg-slate-900/50">
+      <Card className="border-line bg-card">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15">
               <BookOpen className="size-5 text-violet-400" />
             </div>
             <div>
-              <CardTitle className="text-slate-100">
+              <CardTitle className="text-foreground">
                 Guide &amp; Definitions
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted-fg">
                 Glossary of terms, default values, and descriptions used
                 throughout the capacity planning model
               </CardDescription>
@@ -222,8 +222,8 @@ export function SettingsView({
         <CardContent>
           {groupedGuide.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <BookOpen className="size-8 text-slate-500 mb-3" />
-              <p className="text-sm text-slate-400">
+              <BookOpen className="size-8 text-faint-fg mb-3" />
+              <p className="text-sm text-muted-fg">
                 No guide entries found.
               </p>
             </div>
@@ -232,26 +232,26 @@ export function SettingsView({
               {groupedGuide.map(([section, entries], idx) => (
                 <div key={section}>
                   {idx > 0 && (
-                    <Separator className="bg-white/[0.06] mb-6" />
+                    <Separator className="bg-[color:var(--line)] mb-6" />
                   )}
                   <div className="mb-4">
                     <Badge
                       variant="outline"
-                      className="border-white/[0.1] bg-white/[0.03] text-slate-300 mb-3"
+                      className="border-line bg-[color:var(--muted)] text-foreground mb-3"
                     >
                       {section}
                     </Badge>
                   </div>
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-white/[0.06] hover:bg-transparent">
-                        <TableHead className="text-slate-400 w-[200px]">
+                      <TableRow className="border-line hover:bg-transparent">
+                        <TableHead className="text-muted-fg w-[200px]">
                           Term
                         </TableHead>
-                        <TableHead className="text-slate-400 w-[120px]">
+                        <TableHead className="text-muted-fg w-[120px]">
                           Default
                         </TableHead>
-                        <TableHead className="text-slate-400">
+                        <TableHead className="text-muted-fg">
                           Description
                         </TableHead>
                       </TableRow>
@@ -260,21 +260,21 @@ export function SettingsView({
                       {entries.map((entry) => (
                         <TableRow
                           key={entry.id}
-                          className="border-white/[0.06] hover:bg-white/[0.02]"
+                          className="border-line hover:bg-[color:var(--muted)]"
                         >
-                          <TableCell className="font-medium text-slate-200">
+                          <TableCell className="font-medium text-foreground">
                             {entry.term}
                           </TableCell>
-                          <TableCell className="text-slate-400">
+                          <TableCell className="text-muted-fg">
                             {entry.defaultVal ?? (
-                              <span className="text-slate-600">
+                              <span className="text-faint-fg">
                                 &mdash;
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="text-slate-400 text-sm">
+                          <TableCell className="text-muted-fg text-sm">
                             {entry.description ?? (
-                              <span className="text-slate-600">
+                              <span className="text-faint-fg">
                                 No description
                               </span>
                             )}

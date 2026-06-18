@@ -176,7 +176,7 @@ export function TransitionsView() {
       </div>
 
       {data && data.unclassified > 0 && (
-        <div className="flex items-center gap-2 text-xs text-amber-400">
+        <div className="flex items-center gap-2 text-xs text-warn">
           <AlertTriangle className="size-3.5" />
           {data.unclassified} unclassified issue(s) — a Jira filter may have drifted from the
           reference definitions.
@@ -207,10 +207,10 @@ export function TransitionsView() {
           <div className="px-3">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData} margin={{ top: 16, right: 12, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 12 }} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.16)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 12 }} tickLine={false} axisLine={{ stroke: "rgba(128,128,128,0.24)" }} />
                 <YAxis allowDecimals={false} tick={{ fill: "#94a3b8", fontSize: 12 }} tickLine={false} axisLine={false} width={36} />
-                <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<ChartTooltip />} />
+                <Tooltip cursor={{ fill: "rgba(128,128,128,0.12)" }} content={<ChartTooltip />} />
                 {view === "stream" ? (
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     {chartData.map((_, i) => (
@@ -242,10 +242,10 @@ export function TransitionsView() {
             <div className="px-3">
               <ResponsiveContainer width="100%" height={240}>
                 <LineChart data={trendData} margin={{ top: 12, right: 12, left: 0, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.16)" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "rgba(128,128,128,0.24)" }} />
                   <YAxis allowDecimals={false} tick={{ fill: "#94a3b8", fontSize: 12 }} tickLine={false} axisLine={false} width={36} />
-                  <Tooltip cursor={{ stroke: "rgba(255,255,255,0.12)" }} content={<ChartTooltip />} />
+                  <Tooltip cursor={{ stroke: "rgba(128,128,128,0.28)" }} content={<ChartTooltip />} />
                   <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 12 }} formatter={(v: string) => <span style={{ color: "#94a3b8" }}>{v}</span>} />
                   {STREAM_FLOW.map((label, i) => (
                     <Line key={i} type="monotone" dataKey={`m${i}`} name={label} stroke={STREAM_COLORS[i]} strokeWidth={2} dot={{ r: 2 }} />

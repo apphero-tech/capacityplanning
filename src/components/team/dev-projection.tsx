@@ -39,7 +39,7 @@ function GapBadge({ gap }: { gap: number }) {
     return (
       <Badge
         variant="colored"
-        className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs font-semibold"
+        className="bg-ok/10 text-ok border-ok/20 text-xs font-semibold"
       >
         <TrendingUp className="mr-1 size-3" />
         +{formatNumber(gap)} SP surplus
@@ -49,7 +49,7 @@ function GapBadge({ gap }: { gap: number }) {
   return (
     <Badge
       variant="colored"
-      className="bg-red-500/10 text-red-400 border-red-500/20 text-xs font-semibold"
+      className="bg-danger/10 text-danger border-danger/20 text-xs font-semibold"
     >
       <TrendingDown className="mr-1 size-3" />
       {formatNumber(gap)} SP deficit
@@ -113,7 +113,7 @@ export function DevProjectionPanel({ projection }: DevProjectionPanelProps) {
         {metrics.map((metric) => (
           <div
             key={metric.label}
-            className="rounded-xl border border-white/[0.06] bg-slate-900/50 p-5"
+            className="rounded-xl border border-line bg-card p-5"
           >
             <div className="flex items-center gap-2">
               <div
@@ -122,11 +122,11 @@ export function DevProjectionPanel({ projection }: DevProjectionPanelProps) {
               >
                 <metric.icon className="size-4" style={{ color: metric.color }} />
               </div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+              <p className="text-xs font-medium uppercase tracking-wider text-faint-fg">
                 {metric.label}
               </p>
             </div>
-            <p className="mt-3 text-2xl font-bold tabular-nums text-slate-100">
+            <p className="mt-3 text-2xl font-bold tabular-nums text-foreground">
               {metric.value}
             </p>
           </div>
@@ -136,39 +136,39 @@ export function DevProjectionPanel({ projection }: DevProjectionPanelProps) {
       {/* Projection cards: Proven vs Target */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Proven scenario */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
+        <Card className="border-line bg-card">
           <CardHeader>
-            <CardTitle className="text-slate-100">Proven Velocity Scenario</CardTitle>
-            <CardDescription className="text-slate-500">
+            <CardTitle className="text-foreground">Proven Velocity Scenario</CardTitle>
+            <CardDescription className="text-faint-fg">
               Based on historical velocity of {projection.velocityProven} SP/hr
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Projected SP</span>
-                <span className="text-lg font-bold tabular-nums text-slate-100">
+                <span className="text-sm text-muted-fg">Projected SP</span>
+                <span className="text-lg font-bold tabular-nums text-foreground">
                   {formatNumber(projection.projectedSPProven)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Backlog DEV SP</span>
-                <span className="text-lg font-bold tabular-nums text-slate-300">
+                <span className="text-sm text-muted-fg">Backlog DEV SP</span>
+                <span className="text-lg font-bold tabular-nums text-foreground">
                   {formatNumber(projection.backlogDevSP)}
                 </span>
               </div>
-              <div className="h-px bg-white/[0.06]" />
+              <div className="h-px bg-[color:var(--line)]" />
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Gap</span>
+                <span className="text-sm text-muted-fg">Gap</span>
                 <GapBadge gap={projection.gapProven} />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Coverage</span>
+                <span className="text-sm text-muted-fg">Coverage</span>
                 <CoverageBadge coverage={projection.coverageProven} />
               </div>
               {/* Coverage bar */}
               <div className="mt-1">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-[color:var(--muted)]">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -188,39 +188,39 @@ export function DevProjectionPanel({ projection }: DevProjectionPanelProps) {
         </Card>
 
         {/* Target scenario */}
-        <Card className="border-white/[0.06] bg-slate-900/50">
+        <Card className="border-line bg-card">
           <CardHeader>
-            <CardTitle className="text-slate-100">Target Velocity Scenario</CardTitle>
-            <CardDescription className="text-slate-500">
+            <CardTitle className="text-foreground">Target Velocity Scenario</CardTitle>
+            <CardDescription className="text-faint-fg">
               Based on target velocity of {projection.velocityTarget} SP/hr
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Projected SP</span>
-                <span className="text-lg font-bold tabular-nums text-slate-100">
+                <span className="text-sm text-muted-fg">Projected SP</span>
+                <span className="text-lg font-bold tabular-nums text-foreground">
                   {formatNumber(projection.projectedSPTarget)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Backlog DEV SP</span>
-                <span className="text-lg font-bold tabular-nums text-slate-300">
+                <span className="text-sm text-muted-fg">Backlog DEV SP</span>
+                <span className="text-lg font-bold tabular-nums text-foreground">
                   {formatNumber(projection.backlogDevSP)}
                 </span>
               </div>
-              <div className="h-px bg-white/[0.06]" />
+              <div className="h-px bg-[color:var(--line)]" />
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Gap</span>
+                <span className="text-sm text-muted-fg">Gap</span>
                 <GapBadge gap={projection.gapTarget} />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Coverage</span>
+                <span className="text-sm text-muted-fg">Coverage</span>
                 <CoverageBadge coverage={projection.coverageTarget} />
               </div>
               {/* Coverage bar */}
               <div className="mt-1">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-[color:var(--muted)]">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{

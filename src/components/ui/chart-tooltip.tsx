@@ -26,9 +26,9 @@ export function ChartTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-lg border border-white/[0.08] bg-slate-900/90 px-3 py-2 shadow-xl backdrop-blur-md">
+    <div className="rounded-lg border border-line bg-card px-3 py-2 shadow-xl backdrop-blur-md">
       {label && (
-        <p className="mb-1.5 text-[11px] font-medium text-slate-400">
+        <p className="mb-1.5 text-[11px] font-medium text-muted-fg">
           {label}
         </p>
       )}
@@ -44,8 +44,8 @@ export function ChartTooltip({
                 className="size-2 shrink-0 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <span className="text-slate-400">{displayName}</span>
-              <span className="ml-auto font-medium text-slate-100">
+              <span className="text-muted-fg">{displayName}</span>
+              <span className="ml-auto font-medium text-foreground">
                 {displayValue}
               </span>
             </div>
@@ -57,4 +57,4 @@ export function ChartTooltip({
 }
 
 /** Cursor style for BarChart / AreaChart hover — subtle translucent highlight. */
-export const chartCursorStyle = { fill: "rgba(255,255,255,0.04)" };
+export const chartCursorStyle = { fill: "rgba(128,128,128,0.12)" };

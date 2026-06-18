@@ -90,12 +90,12 @@ export function BacklogReminder({ freshness }: BacklogReminderProps) {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/80 backdrop-blur-sm">
-      <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-amber-400/60 via-amber-400/20 to-transparent" />
+    <div className="relative overflow-hidden rounded-xl border border-line bg-gradient-to-r from-card/80 via-card/60 to-card/80 backdrop-blur-sm">
+      <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-warn/60 via-warn/20 to-transparent" />
 
       <div className="flex items-center gap-4 px-5 py-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/[0.08]">
-          <RefreshCw className="size-3.5 text-amber-400/80" />
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-warn/[0.08]">
+          <RefreshCw className="size-3.5 text-warn" />
         </div>
 
         <Link
@@ -103,21 +103,21 @@ export function BacklogReminder({ freshness }: BacklogReminderProps) {
           className="group flex flex-1 items-center gap-3 min-w-0"
         >
           <div className="flex items-center gap-2 text-[13px]">
-            <span className="font-medium text-slate-200">
+            <span className="font-medium text-foreground">
               Update backlog
             </span>
-            <span className="text-slate-500">—</span>
-            <span className="font-medium text-slate-300 group-hover:text-slate-100">
+            <span className="text-faint-fg">—</span>
+            <span className="font-medium text-foreground group-hover:text-foreground">
               {selectedSprint.name}
             </span>
             {roleLabel && (
-              <span className="text-slate-600 hidden sm:inline">
+              <span className="text-faint-fg hidden sm:inline">
                 {roleLabel}
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-amber-400/60">
+          <div className="flex items-center gap-1.5 text-xs text-warn">
             <Clock className="size-3" />
             <span>{timeLabel}</span>
           </div>
@@ -125,7 +125,7 @@ export function BacklogReminder({ freshness }: BacklogReminderProps) {
 
         <button
           onClick={handleDismiss}
-          className="rounded-md p-1 text-slate-600 transition-colors hover:bg-white/[0.04] hover:text-slate-400"
+          className="rounded-md p-1 text-faint-fg transition-colors hover:bg-[color:var(--muted)] hover:text-muted-fg"
           title="Dismiss for today"
         >
           <X className="size-3.5" />

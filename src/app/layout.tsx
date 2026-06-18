@@ -20,13 +20,21 @@ export const metadata: Metadata = {
   description: "A local capacity-planning instrument.",
 }
 
+// Set the theme class before paint to avoid a flash. Default is dark unless
+// the user has explicitly chosen light (persisted in localStorage by the
+// ThemeToggle). :root is the light palette, .dark the dark one.
+const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'){document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}})();`
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className={`${interTight.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >

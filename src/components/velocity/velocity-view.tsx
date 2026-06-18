@@ -25,17 +25,17 @@ function fmt(n: number | null | undefined, decimals = 1): string {
 }
 
 const SOURCE_LABEL: Record<VelocitySource, { label: string; className: string }> = {
-  calculated: { label: "actual",    className: "text-emerald-400" },
+  calculated: { label: "actual",    className: "text-ok" },
   "rolling-avg": { label: "avg-3",  className: "text-violet-400" },
-  manual:     { label: "manual",    className: "text-amber-400" },
-  inherited:  { label: "inherited", className: "text-slate-500" },
+  manual:     { label: "manual",    className: "text-warn" },
+  inherited:  { label: "inherited", className: "text-faint-fg" },
 };
 
 function confidenceColor(pct: number | null | undefined): string {
-  if (pct == null) return "text-slate-600";
-  if (pct >= 90) return "text-emerald-400";
-  if (pct >= 70) return "text-amber-400";
-  return "text-red-400";
+  if (pct == null) return "text-faint-fg";
+  if (pct >= 90) return "text-ok";
+  if (pct >= 70) return "text-warn";
+  return "text-danger";
 }
 
 export function VelocityView() {
@@ -132,7 +132,7 @@ export function VelocityView() {
       {/* Trend chart — only render when we have data */}
       {velocityTrendData.length > 0 && (
         <section>
-          <h3 className="text-[13px] font-medium text-slate-300 mb-3">Velocity trend</h3>
+          <h3 className="text-[13px] font-medium text-foreground mb-3">Velocity trend</h3>
           <VelocityTrendChart data={velocityTrendData} />
         </section>
       )}
@@ -140,42 +140,42 @@ export function VelocityView() {
       {/* Data entry table */}
       <section>
         <div className="mb-3">
-          <h3 className="text-[13px] font-medium text-slate-300">Sprint history</h3>
-          <p className="text-[12px] text-slate-500 mt-0.5">
+          <h3 className="text-[13px] font-medium text-foreground">Sprint history</h3>
+          <p className="text-[12px] text-faint-fg mt-0.5">
             Click any Commit or Done value to edit. Velocity = Done ÷ DEV hrs.
           </p>
         </div>
         <Table>
           <TableHeader>
-            <TableRow className="border-white/[0.04] hover:bg-transparent">
-              <TableHead className="text-[11px] font-medium text-slate-500">Sprint</TableHead>
-              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+            <TableRow className="border-line hover:bg-transparent">
+              <TableHead className="text-[11px] font-medium text-faint-fg">Sprint</TableHead>
+              <TableHead className="text-[11px] font-medium text-faint-fg text-right w-24">
                 DEV hrs
               </TableHead>
-              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+              <TableHead className="text-[11px] font-medium text-faint-fg text-right w-24">
                 Committed
               </TableHead>
-              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+              <TableHead className="text-[11px] font-medium text-faint-fg text-right w-24">
                 Delivered
               </TableHead>
-              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-20">
+              <TableHead className="text-[11px] font-medium text-faint-fg text-right w-20">
                 Conf
               </TableHead>
-              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+              <TableHead className="text-[11px] font-medium text-faint-fg text-right w-24">
                 Velocity
               </TableHead>
-              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-24">
+              <TableHead className="text-[11px] font-medium text-faint-fg text-right w-24">
                 Target
               </TableHead>
-              <TableHead className="text-[11px] font-medium text-slate-500 text-right w-20">
+              <TableHead className="text-[11px] font-medium text-faint-fg text-right w-20">
                 Source
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sprints.length === 0 ? (
-              <TableRow className="border-white/[0.04]">
-                <TableCell colSpan={8} className="text-center text-slate-500 py-8">
+              <TableRow className="border-line">
+                <TableCell colSpan={8} className="text-center text-faint-fg py-8">
                   No sprints yet — define them in the Sprint Plan page.
                 </TableCell>
               </TableRow>
@@ -193,8 +193,8 @@ export function VelocityView() {
                 return (
                   <TableRow
                     key={s.id}
-                    className={`border-white/[0.04] hover:bg-white/[0.02] ${
-                      isCurrent ? "bg-white/[0.02]" : ""
+                    className={`border-line hover:bg-[color:var(--muted)] ${
+                      isCurrent ? "bg-[color:var(--muted)]" : ""
                     }`}
                   >
                     <TableCell className="font-medium">
@@ -202,10 +202,10 @@ export function VelocityView() {
                         {s.isCurrent && (
                           <span className="size-1.5 rounded-full bg-[#E31837]" />
                         )}
-                        <span className="text-slate-100">{s.name}</span>
+                        <span className="text-foreground">{s.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums text-slate-400">
+                    <TableCell className="text-right tabular-nums text-muted-fg">
                       {forecast ? fmt(forecast.netDevHrs) : "—"}
                     </TableCell>
                     <TableCell className="text-right">
@@ -235,7 +235,7 @@ export function VelocityView() {
                         ? `${fmt(forecast.confidencePercent, 0)}%`
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums text-slate-200">
+                    <TableCell className="text-right tabular-nums text-foreground">
                       {forecast && forecast.velocityProven > 0
                         ? fmt(forecast.velocityProven, 2)
                         : "—"}
@@ -246,12 +246,12 @@ export function VelocityView() {
                         s.status === "next" ||
                         s.status === "planning" ||
                         s.status === "future") ? (
-                        <span className="text-slate-200 font-medium">
+                        <span className="text-foreground font-medium">
                           {fmt(targetSP, 0)}{" "}
-                          <span className="text-slate-500 font-normal">SP</span>
+                          <span className="text-faint-fg font-normal">SP</span>
                         </span>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-faint-fg">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -260,7 +260,7 @@ export function VelocityView() {
                           {srcInfo.label}
                         </span>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-faint-fg">—</span>
                       )}
                     </TableCell>
                   </TableRow>

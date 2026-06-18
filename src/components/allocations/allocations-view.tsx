@@ -71,11 +71,11 @@ function getCellColor(pct: number): string {
   // Monochrome intensity ramp — a percentage is just a number, no need to
   // scream in red. Stronger allocation = more contrasty text, zero stays
   // invisible.
-  if (pct === 0) return "text-slate-700";
-  if (pct <= 25) return "text-slate-400";
-  if (pct <= 50) return "text-slate-300";
-  if (pct <= 75) return "text-slate-200";
-  return "text-slate-50 font-semibold";
+  if (pct === 0) return "text-faint-fg";
+  if (pct <= 25) return "text-muted-fg";
+  if (pct <= 50) return "text-foreground";
+  if (pct <= 75) return "text-foreground";
+  return "text-foreground font-semibold";
 }
 
 function getTotalAllocation(cap: InitialCapacity): number {
@@ -145,7 +145,7 @@ function EditablePercentCell({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="h-6 w-14 text-center text-xs px-1 border-white/10 bg-slate-800 text-slate-200"
+        className="h-6 w-14 text-center text-xs px-1 border-line bg-[color:var(--paper-elev)] text-foreground"
       />
     );
   }
@@ -154,9 +154,9 @@ function EditablePercentCell({
     <button
       onClick={handleStart}
       disabled={saving}
-      className={`w-full text-center text-[12px] tabular-nums rounded cursor-pointer hover:bg-white/[0.03] transition-colors px-1 py-1 ${getCellColor(pct)}`}
+      className={`w-full text-center text-[12px] tabular-nums rounded cursor-pointer hover:bg-[color:var(--muted)] transition-colors px-1 py-1 ${getCellColor(pct)}`}
     >
-      {pct > 0 ? `${pct}%` : <span className="text-slate-700">&mdash;</span>}
+      {pct > 0 ? `${pct}%` : <span className="text-faint-fg">&mdash;</span>}
     </button>
   );
 }
@@ -208,7 +208,7 @@ function EditableTextCell({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="h-6 w-full text-xs px-1 border-white/10 bg-slate-800 text-slate-200"
+        className="h-6 w-full text-xs px-1 border-line bg-[color:var(--paper-elev)] text-foreground"
       />
     );
   }
@@ -217,9 +217,9 @@ function EditableTextCell({
     <button
       onClick={handleStart}
       disabled={saving}
-      className={`text-left cursor-pointer hover:text-slate-100 transition-colors ${className}`}
+      className={`text-left cursor-pointer hover:text-foreground transition-colors ${className}`}
     >
-      {value || <span className="text-slate-600 italic">-</span>}
+      {value || <span className="text-faint-fg italic">-</span>}
     </button>
   );
 }
@@ -272,7 +272,7 @@ function EditableNumberCell({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="h-6 w-16 text-right text-xs px-1 border-white/10 bg-slate-800 text-slate-200"
+        className="h-6 w-16 text-right text-xs px-1 border-line bg-[color:var(--paper-elev)] text-foreground"
       />
     );
   }
@@ -281,7 +281,7 @@ function EditableNumberCell({
     <button
       onClick={handleStart}
       disabled={saving}
-      className="text-right cursor-pointer text-slate-300 hover:text-slate-100 transition-colors"
+      className="text-right cursor-pointer text-foreground hover:text-foreground transition-colors"
     >
       {value}
     </button>
@@ -338,59 +338,59 @@ function AddMemberDialog({ onAdd }: { onAdd: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50">
+        <Button variant="outline" size="sm" className="border-line bg-[color:var(--paper-elev)] text-foreground hover:bg-[color:var(--muted)]">
           <Plus className="size-4 mr-1.5" />
           Add Member
         </Button>
       </DialogTrigger>
-      <DialogContent className="border-white/[0.06] bg-slate-900 text-slate-100">
+      <DialogContent className="border-line bg-card text-foreground">
         <DialogHeader>
           <DialogTitle>Add Team Member</DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-muted-fg">
             Add a new team member to the allocation matrix.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Last Name</label>
+              <label className="text-xs text-muted-fg mb-1 block">Last Name</label>
               <Input
                 value={form.lastName}
                 onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
                 required
-                className="border-white/10 bg-slate-800 text-slate-200"
+                className="border-line bg-[color:var(--paper-elev)] text-foreground"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">First Name</label>
+              <label className="text-xs text-muted-fg mb-1 block">First Name</label>
               <Input
                 value={form.firstName}
                 onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
                 required
-                className="border-white/10 bg-slate-800 text-slate-200"
+                className="border-line bg-[color:var(--paper-elev)] text-foreground"
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Role</label>
+            <label className="text-xs text-muted-fg mb-1 block">Role</label>
             <Input
               value={form.role}
               onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
               required
-              className="border-white/10 bg-slate-800 text-slate-200"
+              className="border-line bg-[color:var(--paper-elev)] text-foreground"
             />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Location</label>
+              <label className="text-xs text-muted-fg mb-1 block">Location</label>
               <Select
                 value={form.location || "_empty"}
                 onValueChange={(v) => setForm((f) => ({ ...f, location: (v === "_empty" ? "" : v) as Country }))}
               >
-                <SelectTrigger className="border-white/10 bg-slate-800 text-slate-200">
+                <SelectTrigger className="border-line bg-[color:var(--paper-elev)] text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-white/[0.06] bg-slate-900">
+                <SelectContent className="border-line bg-card">
                   {LOCATIONS.map((l) => (
                     <SelectItem key={l || "_empty"} value={l || "_empty"}>{l || "(none)"}</SelectItem>
                   ))}
@@ -398,36 +398,36 @@ function AddMemberDialog({ onAdd }: { onAdd: () => void }) {
               </Select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">FT/PT</label>
+              <label className="text-xs text-muted-fg mb-1 block">FT/PT</label>
               <Select
                 value={form.ftPt}
                 onValueChange={(v) => setForm((f) => ({ ...f, ftPt: v as FtPt }))}
               >
-                <SelectTrigger className="border-white/10 bg-slate-800 text-slate-200">
+                <SelectTrigger className="border-line bg-[color:var(--paper-elev)] text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-white/[0.06] bg-slate-900">
+                <SelectContent className="border-line bg-card">
                   <SelectItem value="FT">FT</SelectItem>
                   <SelectItem value="PT">PT</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Hrs/Week</label>
+              <label className="text-xs text-muted-fg mb-1 block">Hrs/Week</label>
               <Input
                 type="number"
                 min={1}
                 value={form.hrsPerWeek}
                 onChange={(e) => setForm((f) => ({ ...f, hrsPerWeek: parseFloat(e.target.value) || 37.5 }))}
-                className="border-white/10 bg-slate-800 text-slate-200"
+                className="border-line bg-[color:var(--paper-elev)] text-foreground"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="text-slate-400">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="text-muted-fg">
               Cancel
             </Button>
-            <Button type="submit" disabled={saving} className="bg-[#E31837] hover:bg-[#c01530] text-white">
+            <Button type="submit" disabled={saving} className="bg-[#E31837] hover:bg-[#c01530] text-[color:var(--primary-foreground)]">
               {saving ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Plus className="size-4 mr-1.5" />}
               Add
             </Button>
@@ -602,20 +602,20 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
           value={orgFilter}
           onChange={setOrgFilter}
         />
-        <p className="text-[12px] text-slate-500 tabular-nums">
-          <span className="text-slate-300 font-medium">{totalMembers}</span>
+        <p className="text-[12px] text-faint-fg tabular-nums">
+          <span className="text-foreground font-medium">{totalMembers}</span>
           {" "}{totalMembers === 1 ? "person" : "people"}
-          <span className="text-slate-700 mx-1.5">·</span>
+          <span className="text-faint-fg mx-1.5">·</span>
           avg{" "}
-          <span className="text-slate-300 font-medium">{avgHrsPerWeek.toFixed(1)}</span>
+          <span className="text-foreground font-medium">{avgHrsPerWeek.toFixed(1)}</span>
           {" "}hrs/wk
         </p>
         <div className="ml-auto flex items-center gap-2">
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="h-8 w-[150px] border-white/10 bg-slate-900/60 text-[13px] text-slate-300">
+            <SelectTrigger className="h-8 w-[150px] border-line bg-card text-[13px] text-foreground">
               <SelectValue placeholder="All roles" />
             </SelectTrigger>
-            <SelectContent className="border-white/[0.06] bg-slate-900">
+            <SelectContent className="border-line bg-card">
               <SelectItem value="all">All roles</SelectItem>
               {roles.map((r) => (
                 <SelectItem key={r} value={r}>
@@ -641,34 +641,34 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
       <div>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/[0.04] hover:bg-transparent">
-                <TableHead className="text-[11px] font-medium text-slate-500 min-w-[200px]">
+              <TableRow className="border-line hover:bg-transparent">
+                <TableHead className="text-[11px] font-medium text-faint-fg min-w-[200px]">
                   Name
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 min-w-[80px]">
+                <TableHead className="text-[11px] font-medium text-faint-fg min-w-[80px]">
                   Org
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 min-w-[100px]">
+                <TableHead className="text-[11px] font-medium text-faint-fg min-w-[100px]">
                   Location
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500">
+                <TableHead className="text-[11px] font-medium text-faint-fg">
                   Role
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-center w-12">
+                <TableHead className="text-[11px] font-medium text-faint-fg text-center w-12">
                   FT
                 </TableHead>
-                <TableHead className="text-[11px] font-medium text-slate-500 text-right w-16">
+                <TableHead className="text-[11px] font-medium text-faint-fg text-right w-16">
                   Hrs
                 </TableHead>
                 {visibleAllocationColumns.map((col) => (
                   <TableHead
                     key={col.key}
-                    className="text-[11px] font-medium text-slate-500 text-center min-w-[60px]"
+                    className="text-[11px] font-medium text-faint-fg text-center min-w-[60px]"
                   >
                     {col.short}
                   </TableHead>
                 ))}
-                <TableHead className="text-[11px] font-medium text-slate-500 text-center w-14">
+                <TableHead className="text-[11px] font-medium text-faint-fg text-center w-14">
                   Total
                 </TableHead>
                 <TableHead className="text-center w-8"></TableHead>
@@ -676,10 +676,10 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow className="border-white/[0.06]">
+                <TableRow className="border-line">
                   <TableCell
                     colSpan={5 + ALLOCATION_COLUMNS.length + 2}
-                    className="text-center text-slate-500 py-8"
+                    className="text-center text-faint-fg py-8"
                   >
                     No allocation data found.
                   </TableCell>
@@ -694,7 +694,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                   return (
                     <TableRow
                       key={cap.id}
-                      className={`border-white/[0.06] hover:bg-white/[0.02] ${isDeleting ? "opacity-50" : ""}`}
+                      className={`border-line hover:bg-[color:var(--muted)] ${isDeleting ? "opacity-50" : ""}`}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2.5">
@@ -705,8 +705,8 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                             title={cap.isActive ? "Active — click to mark inactive" : "Inactive — click to activate"}
                             className={`size-1.5 rounded-full shrink-0 transition-colors ${
                               cap.isActive
-                                ? "bg-emerald-400 hover:bg-emerald-300"
-                                : "bg-slate-700 hover:bg-slate-500"
+                                ? "bg-ok hover:bg-ok"
+                                : "bg-[color:var(--muted)] hover:bg-[color:var(--paper-elev)]"
                             }`}
                           />
                           <div className={`flex gap-1 ${cap.isActive ? "" : "opacity-50"}`}>
@@ -714,13 +714,13 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                               value={cap.firstName}
                               onSave={(v) => saveField(cap.id, "firstName", v)}
                               saving={isSaving}
-                              className="font-medium text-slate-100"
+                              className="font-medium text-foreground"
                             />
                             <EditableTextCell
                               value={cap.lastName}
                               onSave={(v) => saveField(cap.id, "lastName", v)}
                               saving={isSaving}
-                              className="font-medium text-slate-100"
+                              className="font-medium text-foreground"
                             />
                           </div>
                         </div>
@@ -730,7 +730,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                           value={cap.organization}
                           onSave={(v) => saveField(cap.id, "organization", v)}
                           saving={isSaving}
-                          className="text-slate-400 text-xs"
+                          className="text-muted-fg text-xs"
                         />
                       </TableCell>
                       <TableCell>
@@ -738,7 +738,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                           value={cap.location || ""}
                           onSave={(v) => saveField(cap.id, "location", v)}
                           saving={isSaving}
-                          className="text-slate-400 text-xs"
+                          className="text-muted-fg text-xs"
                         />
                       </TableCell>
                       <TableCell>
@@ -746,7 +746,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                           value={cap.role}
                           onSave={(v) => saveField(cap.id, "role", v)}
                           saving={isSaving}
-                          className="text-slate-400 text-xs"
+                          className="text-muted-fg text-xs"
                         />
                       </TableCell>
                       <TableCell className="text-center">
@@ -754,7 +754,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                           type="button"
                           onClick={() => saveField(cap.id, "ftPt", cap.ftPt === "FT" ? "PT" : "FT")}
                           disabled={isSaving}
-                          className="text-[12px] text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-[12px] text-muted-fg hover:text-foreground transition-colors"
                           title="Click to toggle FT/PT"
                         >
                           {cap.ftPt}
@@ -782,8 +782,8 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                       <TableCell
                         className={`text-center text-xs font-semibold ${
                           isComplete
-                            ? "text-emerald-400"
-                            : "text-amber-400"
+                            ? "text-ok"
+                            : "text-warn"
                         }`}
                       >
                         {Math.round(total * 100)}%
@@ -792,7 +792,7 @@ export function AllocationsView({ capacities }: AllocationsViewProps) {
                         <button
                           onClick={() => handleDelete(cap.id, `${cap.firstName} ${cap.lastName}`)}
                           disabled={isDeleting}
-                          className="p-1 rounded hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
+                          className="p-1 rounded hover:bg-danger/20 text-faint-fg hover:text-danger transition-colors"
                           title="Remove member"
                         >
                           {isDeleting ? (

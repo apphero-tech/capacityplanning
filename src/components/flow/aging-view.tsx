@@ -229,9 +229,9 @@ export function AgingView() {
     const staleBlocks = r.blockers.filter((b) => b.blockState === "stale");
     const blkClass = (b: (typeof r.blockers)[number]) =>
       b.blockState === "resolved"
-        ? "text-faint-fg decoration-slate-700"
+        ? "text-faint-fg decoration-line"
         : b.blockState === "stale"
-          ? "text-amber-400 decoration-amber-500/50"
+          ? "text-warn decoration-warn/50"
           : "text-destructive decoration-destructive/50";
 
     const m = momentum(r);
@@ -261,7 +261,7 @@ export function AgingView() {
                 title={`Assigned ${fmtDateTime(r.assignedAt)}`}
                 className={cn(
                   "font-mono font-semibold tabular-nums",
-                  aStale ? "text-destructive" : aWarn ? "text-amber-400" : "text-muted-foreground",
+                  aStale ? "text-destructive" : aWarn ? "text-warn" : "text-muted-foreground",
                 )}
               >
                 {a < 1 ? "<1" : Math.floor(a)}
@@ -277,8 +277,8 @@ export function AgingView() {
           {(() => {
             if (m === "unknown") return <span className="text-faint-fg">—</span>;
             const cfg = {
-              moving: { c: "text-emerald-400", t: "Moving" },
-              quiet: { c: "text-amber-400", t: "Quiet" },
+              moving: { c: "text-ok", t: "Moving" },
+              quiet: { c: "text-warn", t: "Quiet" },
               stuck: { c: "text-destructive", t: "Stuck" },
             }[m];
             const tip = [
@@ -300,7 +300,7 @@ export function AgingView() {
             <span className="text-destructive">none</span>
           ) : (
             <span className={cn(
-              m === "stuck" ? "text-destructive" : m === "quiet" ? "text-amber-400" : "text-muted-foreground",
+              m === "stuck" ? "text-destructive" : m === "quiet" ? "text-warn" : "text-muted-foreground",
             )}>
               {r.daysSinceActivity}
             </span>
@@ -311,7 +311,7 @@ export function AgingView() {
           {r.blockedState === "yes" ? (
             <span className="font-medium text-destructive">{r.blockedLabels.join(", ") || "Blocked"}</span>
           ) : r.blockedState === "other" ? (
-            <span className="font-medium text-amber-400">{r.blockedLabels.join(", ")}</span>
+            <span className="font-medium text-warn">{r.blockedLabels.join(", ")}</span>
           ) : r.blockedState === "no" ? (
             <span className="text-muted-fg">No</span>
           ) : (
@@ -341,13 +341,13 @@ export function AgingView() {
                   </span>
                 ))}
                 {staleBlocks.length > 0 ? (
-                  <span className="font-mono text-[10px] text-amber-400">⚠ blocker in testing (not failed) — should be unblocked</span>
+                  <span className="font-mono text-[10px] text-warn">⚠ blocker in testing (not failed) — should be unblocked</span>
                 ) : blockingNow.length === 0 ? (
-                  <span className="font-mono text-[10px] text-amber-400">⚠ flagged, no open blocker</span>
+                  <span className="font-mono text-[10px] text-warn">⚠ flagged, no open blocker</span>
                 ) : null}
               </div>
             ) : (
-              <span className="font-mono text-[10px] text-amber-400">⚠ flagged, no open blocker</span>
+              <span className="font-mono text-[10px] text-warn">⚠ flagged, no open blocker</span>
             )
           ) : staleBlocks.length > 0 ? (
             // Not flagged, but a "is blocked by" link points at a testing (not
@@ -355,14 +355,14 @@ export function AgingView() {
             <div className="flex flex-col gap-0.5">
               {staleBlocks.map((b) => (
                 <span key={b.key} title={b.summary}>
-                  <IssueLink issueKey={b.key} className="text-amber-400 decoration-amber-500/50" />{" "}
+                  <IssueLink issueKey={b.key} className="text-warn decoration-warn/50" />{" "}
                   <span className="text-muted-fg">({b.status})</span>
                 </span>
               ))}
-              <span className="font-mono text-[10px] text-amber-400">⚠ blocker in testing (not failed) — should be unblocked</span>
+              <span className="font-mono text-[10px] text-warn">⚠ blocker in testing (not failed) — should be unblocked</span>
             </div>
           ) : blockingNow.length > 0 ? (
-            <span className="font-mono text-[10px] text-amber-400">⚠ open blocker, flag not set</span>
+            <span className="font-mono text-[10px] text-warn">⚠ open blocker, flag not set</span>
           ) : (
             <span className="text-faint-fg">—</span>
           )}
@@ -370,7 +370,7 @@ export function AgingView() {
         {/* Days in status — moved to the far right (least prominent). */}
         <TableCell className={cn(
           "text-right font-mono font-semibold tabular-nums",
-          stale ? "text-destructive" : warn ? "text-amber-400" : "text-foreground",
+          stale ? "text-destructive" : warn ? "text-warn" : "text-foreground",
         )}>
           {r.days === null ? "—" : r.days < 1 ? "<1" : Math.floor(r.days)}
           {stale && " ●"}
@@ -389,11 +389,11 @@ export function AgingView() {
         </summary>
         <div className="flex flex-col gap-2 border-t border-line px-4 py-3 text-[13px] text-muted-foreground">
           <div>
-            <span className="font-semibold text-amber-400">Stale</span> — <span className="text-foreground">time.</span>{" "}
+            <span className="font-semibold text-warn">Stale</span> — <span className="text-foreground">time.</span>{" "}
             Days in status / with assignee vs the “Stale after” threshold (amber ≥ threshold, red ● ≥ 2×). Purely from dates.
           </div>
           <div>
-            <span className="font-semibold text-rose-400">Stuck</span> — <span className="text-foreground">activity.</span>{" "}
+            <span className="font-semibold text-danger">Stuck</span> — <span className="text-foreground">activity.</span>{" "}
             From the latest activity — a comment, or a change to status, assignee, due date, or refined acceptance criteria: 🟢 Moving (moved within the last business day) · 🟡 Quiet · 🔴 Stuck (no activity ≥ 3 business days).
           </div>
           <div>
@@ -452,7 +452,7 @@ export function AgingView() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             <span><b className="text-foreground">{stats.total}</b> stories counted{trackView !== "all" ? ` (${trackView})` : ""}</span>
-            <span><b className="text-amber-400">{stats.stale}</b> <span className="text-amber-400/70">({pct(stats.stale)}%)</span> at/beyond {dataThreshold}d</span>
+            <span><b className="text-warn">{stats.stale}</b> <span className="text-warn">({pct(stats.stale)}%)</span> at/beyond {dataThreshold}d</span>
             <span><b className="text-destructive">{stats.blocked}</b> <span className="text-destructive/70">({pct(stats.blocked)}%)</span> flagged blocked</span>
             {trackView === "all" && (
               <span className="text-muted-fg">
@@ -533,13 +533,13 @@ export function AgingView() {
             <div className="px-3">
               <ResponsiveContainer width="100%" height={220}>
                 <ComposedChart data={trendData} margin={{ top: 12, right: 8, left: 0, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.16)" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "rgba(128,128,128,0.24)" }} />
                   {/* Left axis = Stale (line). Right axis = Blocked (bars) on its
                       own scale, so the much smaller blocked counts stay legible. */}
                   <YAxis yAxisId="stale" allowDecimals={false} tick={{ fill: "#94a3b8", fontSize: 12 }} tickLine={false} axisLine={false} width={36} />
                   <YAxis yAxisId="blocked" orientation="right" allowDecimals={false} tick={{ fill: "#cf6679", fontSize: 12 }} tickLine={false} axisLine={false} width={28} />
-                  <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<ChartTooltip />} />
+                  <Tooltip cursor={{ fill: "rgba(128,128,128,0.12)" }} content={<ChartTooltip />} />
                   <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 12 }} formatter={(v: string) => <span style={{ color: "#94a3b8" }}>{v}</span>} />
                   <Bar yAxisId="blocked" dataKey="Blocked" fill="#9E1B32" fillOpacity={0.85} barSize={10} radius={[2, 2, 0, 0]} />
                   <Line yAxisId="stale" type="monotone" dataKey="Stale" stroke="#9A6A12" strokeWidth={2} dot={{ r: 2 }} />

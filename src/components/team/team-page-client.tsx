@@ -115,7 +115,7 @@ export function TeamPageClient({
   }, [initialCapacities, selectedSprint, publicHolidays, projectHolidays, ptoEntries, storiesBySprint, selectedForecast]);
 
   if (!selectedSprint) {
-    return <p className="text-sm text-slate-400">No sprint selected.</p>;
+    return <p className="text-sm text-muted-fg">No sprint selected.</p>;
   }
 
   return (

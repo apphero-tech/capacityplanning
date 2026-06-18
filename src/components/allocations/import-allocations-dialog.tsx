@@ -95,16 +95,16 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
         <Button
           variant="outline"
           size="sm"
-          className="border-white/[0.06] bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+          className="border-line bg-[color:var(--paper-elev)] text-foreground hover:bg-[color:var(--paper-elev)]"
         >
           <Download className="size-4 mr-1.5" />
           Import
         </Button>
       </DialogTrigger>
-      <DialogContent className="border-white/[0.06] bg-slate-900 text-slate-100 max-w-xl">
+      <DialogContent className="border-line bg-card text-foreground max-w-xl">
         <DialogHeader>
           <DialogTitle>Import team allocations</DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-muted-fg">
             Drop your <span className="font-mono">Team allocation.xlsx</span> file.
             Each sheet becomes an organization (e.g. <span className="font-mono">York</span>, <span className="font-mono">Deloitte</span>). Headers are auto-detected by name so extra columns don&apos;t matter.
           </DialogDescription>
@@ -131,19 +131,19 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
               className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 cursor-pointer transition-colors ${
                 dragging
                   ? "border-[#E31837]/60 bg-[#E31837]/5"
-                  : "border-white/10 bg-slate-800/40 hover:border-white/20 hover:bg-slate-800/60"
+                  : "border-line bg-[color:var(--paper-elev)] hover:border-line-strong hover:bg-[color:var(--paper-elev)]"
               }`}
             >
-              <FileSpreadsheet className="size-10 text-slate-500 mb-3" />
-              <p className="text-sm text-slate-300 font-medium mb-1">
+              <FileSpreadsheet className="size-10 text-faint-fg mb-3" />
+              <p className="text-sm text-foreground font-medium mb-1">
                 Drop .xlsx here or click to browse
               </p>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-faint-fg">
                 One sheet per organization · headers in row 1 or 2
               </p>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={replaceAll}
@@ -156,14 +156,14 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
         )}
 
         {busy && (
-          <div className="flex items-center justify-center gap-2 py-6 text-slate-300">
+          <div className="flex items-center justify-center gap-2 py-6 text-foreground">
             <Loader2 className="size-4 animate-spin" />
             Reading spreadsheet…
           </div>
         )}
 
         {error && (
-          <div className="flex items-start gap-2 rounded-md border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">
+          <div className="flex items-start gap-2 rounded-md border border-danger/50 bg-danger/30 p-3 text-sm text-danger">
             <AlertTriangle className="size-4 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
@@ -171,31 +171,31 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
 
         {result && (
           <div className="grid gap-3 text-xs">
-            <div className="flex items-center gap-2 rounded-md border border-emerald-900/40 bg-emerald-950/20 p-3 text-emerald-300">
+            <div className="flex items-center gap-2 rounded-md border border-ok/40 bg-ok/20 p-3 text-ok">
               <CheckCircle2 className="size-4 shrink-0" />
               <span>
                 Imported {result.imported} team member{result.imported !== 1 ? "s" : ""}
                 {result.replaced && result.deleted > 0 && (
-                  <span className="text-slate-400"> (replaced {result.deleted} previous)</span>
+                  <span className="text-muted-fg"> (replaced {result.deleted} previous)</span>
                 )}
               </span>
             </div>
 
             <section>
-              <h4 className="text-slate-300 font-medium mb-1.5">Per sheet</h4>
-              <ul className="rounded-md border border-white/[0.06] bg-slate-800/40 divide-y divide-white/[0.04]">
+              <h4 className="text-foreground font-medium mb-1.5">Per sheet</h4>
+              <ul className="rounded-md border border-line bg-[color:var(--paper-elev)] divide-y divide-[color:var(--line)]">
                 {result.perSheet.map((p) => (
                   <li key={p.sheet} className="px-3 py-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-200 font-medium">
-                        {p.sheet} <span className="text-slate-500">→ org &quot;{p.organization}&quot;</span>
+                      <span className="text-foreground font-medium">
+                        {p.sheet} <span className="text-faint-fg">→ org &quot;{p.organization}&quot;</span>
                       </span>
-                      <span className="text-slate-300">
+                      <span className="text-foreground">
                         {p.imported}/{p.rows} imported
                       </span>
                     </div>
                     {p.skippedNoRole > 0 && (
-                      <p className="text-[11px] text-slate-500 mt-0.5">
+                      <p className="text-[11px] text-faint-fg mt-0.5">
                         {p.skippedNoRole} placeholder row{p.skippedNoRole !== 1 ? "s" : ""} skipped (no role — not a resource yet)
                       </p>
                     )}
@@ -206,12 +206,12 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
 
             {result.errors.length > 0 && (
               <section>
-                <h4 className="text-amber-300 font-medium mb-1.5">
+                <h4 className="text-warn font-medium mb-1.5">
                   {result.errors.length} skipped row{result.errors.length !== 1 ? "s" : ""}
                 </h4>
-                <ul className="rounded-md border border-amber-500/20 bg-amber-500/5 divide-y divide-amber-500/10 max-h-32 overflow-auto">
+                <ul className="rounded-md border border-warn/20 bg-warn/5 divide-y divide-warn/10 max-h-32 overflow-auto">
                   {result.errors.map((er, i) => (
-                    <li key={i} className="px-3 py-1 text-amber-200">
+                    <li key={i} className="px-3 py-1 text-warn">
                       <span className="font-mono">{er.sheet}</span> row {er.row}: {er.reason}
                     </li>
                   ))}
@@ -226,7 +226,7 @@ export function ImportAllocationsDialog({ onImported }: { onImported: () => void
             type="button"
             variant="ghost"
             onClick={() => setOpen(false)}
-            className="text-slate-400"
+            className="text-muted-fg"
           >
             {result ? "Close" : "Cancel"}
           </Button>
