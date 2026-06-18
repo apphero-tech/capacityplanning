@@ -171,6 +171,21 @@ export function AgingView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sprintId]);
 
+  // Charlie's rule: for a future sprint the Development stream isn't "in
+  // season" yet — the work is still being refined/designed upstream, so those
+  // stories sitting still is normal and shouldn't be flagged as aged/stuck.
+  // Drop Development from the Aging view (tables, stats, export) for future
+  // sprints; current and past sprints keep every stream.
+  const isFutureSprint = React.useMemo(() => {
+    const s = SPRINTS.find((x) => x.id === sprintId);
+    return !!s && s.start > today;
+  }, [sprintId, today]);
+
+  // Development is hidden for future sprints — don't leave it selected.
+  React.useEffect(() => {
+    if (isFutureSprint && streamView === "Development") setStreamView("all");
+  }, [isFutureSprint, streamView]);
+
   // One point per calendar day = the last snapshot of that day. History is
   // chronological, so the last write for a date wins.
   const trendData = React.useMemo(() => {
@@ -185,11 +200,16 @@ export function AgingView() {
   // the stats, AND now filters the table (only stories aged ≥ threshold show).
   const dataThreshold = threshold;
 
+  const baseRows = React.useMemo(() => {
+    const rows = data?.rows ?? [];
+    return isFutureSprint ? rows.filter((r) => r.stream !== "Development") : rows;
+  }, [data, isFutureSprint]);
+
   // Track filter first, then demo filter, then the age threshold. The summary
   // stats below are derived from the *visible* rows so they update live.
   const trackRows = React.useMemo(
-    () => (data ? data.rows.filter((r) => trackView === "all" || r.track === trackView) : []),
-    [data, trackView],
+    () => baseRows.filter((r) => trackView === "all" || r.track === trackView),
+    [baseRows, trackView],
   );
   // Apply the stream scope (a single stream = that stream's board view).
   const scopeRows = React.useMemo(
@@ -207,7 +227,7 @@ export function AgingView() {
     [scopeRows, demoView, threshold, activityView],
   );
   const demoCount = scopeRows.filter((r) => r.isDemo).length;
-  const marketingCount = data ? data.rows.filter((r) => r.track === "Marketing").length : 0;
+  const marketingCount = baseRows.filter((r) => r.track === "Marketing").length;
   // Percentages are computed against the full counted universe (all on-flow,
   // non-demo stories in the current track + stream scope, regardless of age) —
   // not the threshold-filtered view, so they're meaningful (% stale, % blocked).
@@ -456,11 +476,14 @@ export function AgingView() {
             <span><b className="text-destructive">{stats.blocked}</b> <span className="text-destructive/70">({pct(stats.blocked)}%)</span> flagged blocked</span>
             {trackView === "all" && (
               <span className="text-muted-fg">
-                {data.rows.length - marketingCount} CRM · {marketingCount} Marketing
+                {baseRows.length - marketingCount} CRM · {marketingCount} Marketing
               </span>
             )}
             {demoCount > 0 && (
               <span className="text-muted-fg">{demoCount} in demo (not counted late)</span>
+            )}
+            {isFutureSprint && (
+              <span className="text-faint-fg">Development hidden — future sprint (not in season)</span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -482,7 +505,8 @@ export function AgingView() {
                 { value: "all", label: "All streams" },
                 { value: "Refining", label: "REF" },
                 { value: "Design", label: "DES" },
-                { value: "Development", label: "DEV" },
+                // Development isn't in season for a future sprint — hide it.
+                ...(isFutureSprint ? [] : [{ value: "Development" as const, label: "DEV" }]),
                 { value: "Testing", label: "QA" },
               ]}
             />
