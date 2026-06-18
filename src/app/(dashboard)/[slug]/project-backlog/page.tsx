@@ -3,7 +3,7 @@ import { isExcludedStory } from "@/lib/capacity-engine";
 import { getProjectOverview } from "@/lib/project-overview";
 import { ProjectView } from "@/components/project/project-view";
 import { BacklogTable } from "@/components/backlog/backlog-table";
-import { BacklogAutoImportButton } from "@/components/backlog/auto-import-button";
+import { BacklogRefreshButton } from "@/components/backlog/backlog-refresh-button";
 import { PageHeader } from "@/components/layout/page-header";
 import type { SprintStory } from "@/types";
 
@@ -41,8 +41,8 @@ export default async function ProjectBacklogPage() {
     <div className="flex flex-col gap-10" data-stagger>
       <PageHeader
         title="Project Backlog"
-        subtitle="End-to-end scope. Import the Jira backlog here to refresh every sprint in one motion — every other tab reads from this source."
-        actions={<BacklogAutoImportButton />}
+        subtitle="End-to-end scope. Refresh pulls every sprint's stories straight from Jira in one motion — every other tab reads from this source."
+        actions={<BacklogRefreshButton />}
       />
       <ProjectView overview={overview} />
 

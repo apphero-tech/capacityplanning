@@ -12,7 +12,7 @@
  * ever imported by route handlers (which run on the server). Never import it
  * into a Client Component.
  */
-import { BOARD_ID, BLOCKED_FIELD, POD_FIELD } from "./constants";
+import { BOARD_ID, BLOCKED_FIELD, POD_FIELD, STORY_POINTS_FIELD } from "./constants";
 import type { JiraIssue, JiraIssuePage } from "./types";
 
 const PAGE_SIZE = 100;
@@ -78,6 +78,22 @@ export function fetchBoardIssues(jql: string, extraFields = ""): Promise<JiraIss
     (startAt) =>
       `/rest/agile/1.0/board/${BOARD_ID}/issue?jql=${encodeURIComponent(jql)}` +
       `&fields=${encodeURIComponent(fields)}&expand=changelog` +
+      `&startAt=${startAt}&maxResults=${PAGE_SIZE}`,
+  );
+}
+
+/**
+ * Backlog refresh: a sprint's Story issues with just the fields the backlog
+ * needs (story points + pod). No changelog — much lighter than
+ * fetchSprintIssues. The Agile API already scopes by sprint, so each story
+ * comes back under the sprint it lives in today.
+ */
+export function fetchSprintStories(sprintId: number): Promise<JiraIssue[]> {
+  const fields = `summary,status,issuetype,${STORY_POINTS_FIELD},${POD_FIELD}`;
+  return fetchAllPages(
+    (startAt) =>
+      `/rest/agile/1.0/sprint/${sprintId}/issue?jql=${encodeURIComponent("type = Story")}` +
+      `&fields=${encodeURIComponent(fields)}` +
       `&startAt=${startAt}&maxResults=${PAGE_SIZE}`,
   );
 }
