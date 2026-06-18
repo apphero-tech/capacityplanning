@@ -1,10 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Capacity Planning — multi-tenant Postgres schema (Supabase)
+// Capacity Planning — local SQLite schema
 //
 // Every table that holds workspace-scoped data carries a non-null
-// `workspaceId` foreign key with ON DELETE CASCADE. Row-Level Security
-// policies (set at the database level outside this schema) enforce that
-// a Postgres role can only see rows for workspaces it's a member of.
+// `workspaceId` foreign key with ON DELETE CASCADE. Scoping is enforced at
+// the application level (see src/lib/data.ts). Single-user, local-only.
 // ─────────────────────────────────────────────────────────────────────────
 
 generator client {
@@ -31,7 +30,6 @@ model Workspace {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  memberships      Membership[]
   sprints          Sprint[]
   teamMembers      TeamMember[]
   stories          Story[]
@@ -42,22 +40,6 @@ model Workspace {
   guideEntries     GuideEntry[]
   sprintStories    SprintStory[]
   phases           Phase[]
-}
-
-model Membership {
-  id          String   @id @default(uuid())
-  // Supabase auth user id — kept as UUID, no FK because auth.users lives in
-  // a separate schema. We trust the auth layer.
-  userId      String
-  workspaceId String
-  role        String   @default("MEMBER")
-  createdAt   DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, workspaceId])
-  @@index([workspaceId])
-  @@index([userId])
 }
 
 // ─── Project data — every model is workspace-scoped ───────────────────────

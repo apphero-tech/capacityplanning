@@ -50,3 +50,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# local backup of the pre-migration DB (keep, don't commit)
+*.oldarch-backup

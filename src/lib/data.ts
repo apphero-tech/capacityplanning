@@ -1,14 +1,10 @@
 /**
  * Data access layer for the capacity planning app.
  *
- * Reads from Supabase Postgres via Prisma Client. Every query is scoped
- * to the current workspace — resolved lazily from the auth session by
+ * Reads from the local SQLite database via Prisma Client. Every query is
+ * scoped to the current workspace — resolved lazily by
  * `getCurrentWorkspaceId()` so callers don't have to thread workspaceId
  * through every component.
- *
- * Mutations expect the caller to be a member of the workspace; Postgres
- * Row-Level Security enforces that on top of the app-level scoping for
- * defence in depth.
  */
 
 import { differenceInBusinessDays } from "date-fns";

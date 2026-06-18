@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
   // ExcelJS's load() typings expect a `Buffer` without the ArrayBuffer
   // generic that `Buffer.from(await file.arrayBuffer())` produces in newer
   // @types/node. The runtime accepts the value either way; the cast is
-  // purely to satisfy TS during the Vercel build.
+  // purely to satisfy TS during the build.
   const buffer = Buffer.from(await file.arrayBuffer()) as unknown as Buffer;
   const wb = new ExcelJS.Workbook();
   try {
