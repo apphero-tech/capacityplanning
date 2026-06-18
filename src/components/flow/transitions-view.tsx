@@ -40,6 +40,21 @@ import { ErrorBanner, RefreshButton, ExportButton, IssueLink, fmtDateTime } from
 
 type StreamResponse = StreamResult & { takenAt: string };
 
+// Cached at module scope so re-opening the tab reuses the last result instead
+// of re-hitting Jira; only the manual Refresh button (force) re-fetches.
+// Lost on a full page reload.
+let transitionsCache: { data: StreamResponse; history: StreamHistoryPoint[] } | null = null;
+
+async function fetchStreamHistory(): Promise<StreamHistoryPoint[]> {
+  try {
+    const res = await fetch("/api/jira/stream/history", { cache: "no-store" });
+    const json = await res.json();
+    return res.ok ? (json.history ?? []) : [];
+  } catch {
+    return []; // trend is best-effort
+  }
+}
+
 export function TransitionsView() {
   const today = new Date().toISOString().slice(0, 10);
   const exportSprint = React.useMemo(() => defaultSprintId(today), [today]);
@@ -51,31 +66,29 @@ export function TransitionsView() {
   const [measure, setMeasure] = React.useState<"stories" | "points">("points");
   const [view, setView] = React.useState<"stream" | "day">("stream");
 
-  const loadHistory = React.useCallback(async () => {
-    try {
-      const res = await fetch("/api/jira/stream/history", { cache: "no-store" });
-      const json = await res.json();
-      if (res.ok) setHistory(json.history ?? []);
-    } catch {
-      /* trend is best-effort */
+  const load = React.useCallback(async (force = false) => {
+    // Reuse the cached result on tab re-entry; only Refresh (force) re-fetches.
+    if (!force && transitionsCache) {
+      setData(transitionsCache.data);
+      setHistory(transitionsCache.history);
+      return;
     }
-  }, []);
-
-  const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/jira/stream", { cache: "no-store" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      const hist = await fetchStreamHistory();
       setData(json as StreamResponse);
-      await loadHistory();
+      setHistory(hist);
+      transitionsCache = { data: json as StreamResponse, history: hist };
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
-  }, [loadHistory]);
+  }, []);
 
   React.useEffect(() => {
     void load();
@@ -130,7 +143,7 @@ export function TransitionsView() {
         </p>
         <div className="flex items-center gap-3">
           <ExportButton sprintId={exportSprint} />
-          <RefreshButton loading={loading} onClick={load} takenAt={data?.takenAt ?? null} />
+          <RefreshButton loading={loading} onClick={() => load(true)} takenAt={data?.takenAt ?? null} />
         </div>
       </div>
 

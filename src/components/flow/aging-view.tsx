@@ -84,6 +84,21 @@ function sortRows(rows: AgingRow[], key: SortKey, dir: SortDir): AgingRow[] {
   });
 }
 
+// Per-sprint cache, kept at module scope so it survives client-side tab
+// navigation: opening the tab again reuses it instead of re-hitting Jira.
+// Only the manual Refresh button (force) bypasses it. Lost on a full reload.
+const agingCache = new Map<number, { data: AgingResponse; history: AgingHistoryPoint[] }>();
+
+async function fetchAgingHistory(sid: number): Promise<AgingHistoryPoint[]> {
+  try {
+    const res = await fetch(`/api/jira/aging/history?sprintId=${sid}`, { cache: "no-store" });
+    const json = await res.json();
+    return res.ok ? (json.history ?? []) : [];
+  } catch {
+    return []; // trend is best-effort
+  }
+}
+
 export function AgingView() {
   const today = new Date().toISOString().slice(0, 10);
   const [sprintId, setSprintId] = React.useState<number>(() => defaultSprintId(today));
@@ -123,17 +138,14 @@ export function AgingView() {
     </TableHead>
   );
 
-  const loadHistory = React.useCallback(async (sid: number) => {
-    try {
-      const res = await fetch(`/api/jira/aging/history?sprintId=${sid}`, { cache: "no-store" });
-      const json = await res.json();
-      if (res.ok) setHistory(json.history ?? []);
-    } catch {
-      /* trend is best-effort */
+  const load = React.useCallback(async (force = false) => {
+    // Reuse the cached result on tab re-entry; only Refresh (force) re-fetches.
+    if (!force && agingCache.has(sprintId)) {
+      const c = agingCache.get(sprintId)!;
+      setData(c.data);
+      setHistory(c.history);
+      return;
     }
-  }, []);
-
-  const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -143,14 +155,16 @@ export function AgingView() {
       );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      const hist = await fetchAgingHistory(sprintId);
       setData(json as AgingResponse);
-      await loadHistory(sprintId);
+      setHistory(hist);
+      agingCache.set(sprintId, { data: json as AgingResponse, history: hist });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
-  }, [sprintId, threshold, loadHistory]);
+  }, [sprintId, threshold]);
 
   React.useEffect(() => {
     void load();
@@ -428,7 +442,7 @@ export function AgingView() {
             threshold={threshold}
             takenAt={data?.takenAt ?? null}
           />
-          <RefreshButton loading={loading} onClick={load} takenAt={data?.takenAt ?? null} />
+          <RefreshButton loading={loading} onClick={() => load(true)} takenAt={data?.takenAt ?? null} />
         </div>
       </div>
 
