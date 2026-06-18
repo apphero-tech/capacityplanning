@@ -90,14 +90,18 @@ export function DashboardEditorial({ overview, storiesBySprint }: Props) {
   const activeScenario =
     SCENARIO_OPTIONS.find((s) => s.growth === growthPct)?.key ?? null;
 
-  /* ----- target sprint = the one in flight today (falls back to "next") ----- */
+  /* ----- target = the NEXT sprint to plan, not the one already in flight.
+     The dashboard answers "can we deliver the upcoming sprint with the team
+     we'll have?" — the in-flight sprint is tracked by the burndown instead.
+     Falls back to planning → current → first. ----- */
   const target = useMemo(() => {
     const ordered = [...allSprints]
       .filter((s) => !s.isDemo)
       .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
     return (
-      ordered.find((s) => s.isCurrent) ??
       ordered.find((s) => s.status === "next") ??
+      ordered.find((s) => s.status === "planning") ??
+      ordered.find((s) => s.isCurrent) ??
       null
     );
   }, [allSprints]);
