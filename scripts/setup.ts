@@ -45,13 +45,17 @@ function ensureEnv() {
     console.log("Added DATABASE_URL to existing .env");
     return;
   }
-  // If DATABASE_URL points somewhere other than prisma/dev.db, rewrite it — the
-  // app hardcodes prisma/dev.db, so a divergent URL means the Prisma CLI and the
-  // app would operate on two different databases (we hit this bug before).
-  if (!/DATABASE_URL=.*prisma\/dev\.db/.test(current)) {
-    const fixed = current.replace(/DATABASE_URL=.*/g, ENV_CONTENT.trim());
+  // DATABASE_URL must be the exact relative form `file:./prisma/dev.db`. An
+  // absolute path from another machine's setup (e.g. a different home dir)
+  // still contains "prisma/dev.db" but points at a directory that doesn't
+  // exist here — better-sqlite3 then fails with "cannot open database because
+  // the directory does not exist". Match the exact line so any divergent URL
+  // (absolute path, old Postgres/Supabase URL) gets rewritten.
+  const EXPECTED_DB_LINE = ENV_CONTENT.trim(); // DATABASE_URL="file:./prisma/dev.db"
+  if (!current.includes(EXPECTED_DB_LINE)) {
+    const fixed = current.replace(/DATABASE_URL=.*/g, EXPECTED_DB_LINE);
     fs.writeFileSync(ENV_PATH, fixed);
-    console.log("Corrected DATABASE_URL in .env to point at prisma/dev.db");
+    console.log("Corrected DATABASE_URL in .env to the relative file:./prisma/dev.db");
     return;
   }
   console.log(".env already configured");
