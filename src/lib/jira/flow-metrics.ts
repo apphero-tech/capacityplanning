@@ -285,6 +285,10 @@ export interface AgingRow {
   blockedState: BlockedState;
   blockedLabels: string[];
   blockers: Blocker[];
+  /** ISO timestamp the Blocked flag was last set to "Blocked", or null. */
+  blockedSince?: string | null;
+  /** Calendar days since the Blocked flag was set; null when not blocked / unknown. */
+  daysBlocked?: number | null;
   /** Current assignee display name, or null if unassigned. */
   assigneeName: string | null;
   /** ISO timestamp the story was assigned to the current assignee. */
@@ -365,6 +369,25 @@ export function computeAging(
     const { stream, order } = statusStream(statusId);
     const { pod, track } = podTrack(f);
 
+    // When was the Blocked flag last set? The most recent changelog change whose
+    // new value is "Blocked". null when not currently blocked or unrecorded.
+    let blockedSince: string | null = null;
+    if (bi.state === "yes") {
+      let latestB: number | null = null;
+      histories(iss).forEach((h) =>
+        (h.items ?? []).forEach((it) => {
+          const fid = String(it.fieldId ?? "");
+          const fname = String(it.field ?? "").toLowerCase();
+          if (fid !== BLOCKED_FIELD && fname !== "blocked") return;
+          if ((it.toString ?? "").trim().toLowerCase() !== "blocked") return;
+          const t = new Date(h.created).getTime();
+          if (latestB === null || t > latestB) latestB = t;
+        }),
+      );
+      if (latestB !== null) blockedSince = new Date(latestB).toISOString();
+    }
+    const daysBlocked = blockedSince ? (now - new Date(blockedSince).getTime()) / DAY_MS : null;
+
     // When was the story assigned to whoever holds it now? The most recent
     // changelog "assignee" change INTO the current assignee; else its creation.
     const assigneeId = f.assignee?.accountId ?? null;
@@ -410,6 +433,8 @@ export function computeAging(
       blockedState: bi.state,
       blockedLabels: bi.labels,
       blockers: getBlockers(f),
+      blockedSince,
+      daysBlocked,
       assigneeName,
       assignedAt,
       daysWithAssignee,

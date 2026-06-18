@@ -45,6 +45,11 @@ function blockedLabel(r: AgingRow): string {
   return "—";
 }
 
+/** The blocker key(s) that actually bear on the story (resolved ones dropped). */
+function blockedByKeys(r: AgingRow): string {
+  return r.blockers.filter((b) => b.blockState !== "resolved").map((b) => b.key).join(", ");
+}
+
 function groupByStream(rows: AgingRow[]): Array<{ stream: string; rows: AgingRow[] }> {
   return STREAM_ORDER.map((stream) => ({
     stream,
@@ -84,24 +89,28 @@ export function AgingExports({
   const buildCsv = (): string => {
     const lines: string[] = [];
     // Single clear header row — easy to open in Excel/Sheets and sort.
-    lines.push("Key,Track,Pod,Stream,Status,Summary,Days in status,Assignee,Days w/ assignee,Activity,Idle (days no activity),Blocked,Blocker note");
+    // One value per column; mirrors the on-screen table order, plus the
+    // filtering dimensions (Track/Pod/Stream/Status) and a free-text note.
+    lines.push("Key,Summary,Track,Pod,Stream,Status,Assignee,Days w/ assignee,Activity,Idle (days no activity),Blocked,Days blocked,Blocked by,Days in status,Blocker note");
     groups.forEach((g) => {
       g.rows.forEach((r) => {
         const m = momentum(r);
         lines.push([
           // Clickable key: Excel / Google Sheets render =HYPERLINK as a link.
           csvCell(`=HYPERLINK("${JIRA_BROWSE_URL}/${r.key}","${r.key}")`),
+          csvCell(r.summary),
           csvCell(r.track),
           csvCell(r.pod ?? ""),
           csvCell(g.stream),
           csvCell(r.status.replace(/​/g, "")),
-          csvCell(r.summary),
-          csvCell(dayLabel(r.days)),
           csvCell(r.assigneeName ?? "Unassigned"),
           csvCell(r.daysWithAssignee == null ? "" : Math.floor(r.daysWithAssignee)),
           csvCell(m === "unknown" ? "" : m),
           csvCell(r.daysSinceActivity ?? ""),
           csvCell(blockedLabel(r)),
+          csvCell(r.daysBlocked == null ? "" : Math.floor(r.daysBlocked)),
+          csvCell(blockedByKeys(r)),
+          csvCell(dayLabel(r.days)),
           csvCell(blockerNote(r)),
         ].join(","));
       });

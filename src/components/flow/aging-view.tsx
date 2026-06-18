@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import {
-  LineChart,
+  ComposedChart,
   Line,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -150,19 +151,15 @@ export function AgingView() {
           ? "text-amber-400 decoration-amber-500/50"
           : "text-destructive decoration-destructive/50";
 
+    const m = momentum(r);
+
     return (
       <TableRow key={r.key} className={cn(r.isDemo && "opacity-60")}>
         <TableCell><IssueLink issueKey={r.key} /></TableCell>
         <TableCell className="text-foreground">
           <div className="max-w-[340px] truncate" title={r.summary}>{r.summary}</div>
         </TableCell>
-        <TableCell className={cn(
-          "text-right font-mono font-semibold tabular-nums",
-          stale ? "text-destructive" : warn ? "text-amber-400" : "text-foreground",
-        )}>
-          {r.days === null ? "—" : r.days < 1 ? "<1" : Math.floor(r.days)}
-          {stale && " ●"}
-        </TableCell>
+        {/* Assignee */}
         <TableCell className="whitespace-nowrap text-xs">
           {r.assigneeName ? (
             <span className="text-foreground">{r.assigneeName}</span>
@@ -170,6 +167,7 @@ export function AgingView() {
             <span className="text-muted-fg">Unassigned</span>
           )}
         </TableCell>
+        {/* Days with current assignee */}
         <TableCell className="text-right text-xs">
           {r.assigneeName && r.daysWithAssignee !== null ? (() => {
             const a = r.daysWithAssignee;
@@ -191,9 +189,9 @@ export function AgingView() {
             <span className="text-faint-fg">—</span>
           )}
         </TableCell>
+        {/* Activity — Moving / Quiet / Stuck */}
         <TableCell className="text-xs">
           {(() => {
-            const m = momentum(r);
             if (m === "unknown") return <span className="text-faint-fg">—</span>;
             const cfg = {
               moving: { c: "text-emerald-400", t: "Moving" },
@@ -207,14 +205,25 @@ export function AgingView() {
                 : "",
             ].filter(Boolean).join("\n") || "No activity recorded";
             return (
-              <span className={cn("font-mono", cfg.c)} title={tip}>
-                {cfg.t}
-                {m !== "moving" && r.daysSinceActivity != null ? ` ${r.daysSinceActivity}d` : ""}
-                {m === "stuck" && r.daysSinceActivity == null ? " (none)" : ""}
-              </span>
+              <span className={cn("font-mono", cfg.c)} title={tip}>{cfg.t}</span>
             );
           })()}
         </TableCell>
+        {/* Idle — business days since last activity (the "stuck for N days") */}
+        <TableCell className="text-right font-mono text-xs tabular-nums">
+          {m === "unknown" ? (
+            <span className="text-faint-fg">—</span>
+          ) : r.daysSinceActivity == null ? (
+            <span className="text-destructive">none</span>
+          ) : (
+            <span className={cn(
+              m === "stuck" ? "text-destructive" : m === "quiet" ? "text-amber-400" : "text-muted-foreground",
+            )}>
+              {r.daysSinceActivity}
+            </span>
+          )}
+        </TableCell>
+        {/* Blocked — flag */}
         <TableCell className="text-xs">
           {r.blockedState === "yes" ? (
             <span className="font-medium text-destructive">{r.blockedLabels.join(", ") || "Blocked"}</span>
@@ -226,6 +235,17 @@ export function AgingView() {
             <span className="text-faint-fg">—</span>
           )}
         </TableCell>
+        {/* Days blocked — calendar days since the flag was set */}
+        <TableCell className="text-right font-mono text-xs tabular-nums">
+          {r.blockedState === "yes" && r.daysBlocked != null ? (
+            <span className="font-semibold text-destructive">
+              {r.daysBlocked < 1 ? "<1" : Math.floor(r.daysBlocked)}
+            </span>
+          ) : (
+            <span className="text-faint-fg">—</span>
+          )}
+        </TableCell>
+        {/* Blocked by — the linked blocker key(s) */}
         <TableCell className="text-xs">
           {/* Only list blockers when the story is actually flagged blocked. */}
           {r.blockedState === "yes" ? (
@@ -263,6 +283,14 @@ export function AgingView() {
           ) : (
             <span className="text-faint-fg">—</span>
           )}
+        </TableCell>
+        {/* Days in status — moved to the far right (least prominent). */}
+        <TableCell className={cn(
+          "text-right font-mono font-semibold tabular-nums",
+          stale ? "text-destructive" : warn ? "text-amber-400" : "text-foreground",
+        )}>
+          {r.days === null ? "—" : r.days < 1 ? "<1" : Math.floor(r.days)}
+          {stale && " ●"}
         </TableCell>
       </TableRow>
     );
@@ -405,21 +433,24 @@ export function AgingView() {
           <div className="px-5">
             <div className="text-sm font-medium text-foreground">Trend</div>
             <div className="text-xs text-muted-fg">
-              Stale and blocked stories, by day (whole sprint).
+              By day (whole sprint) — Stale (line, left axis) · Blocked (bars, right axis).
             </div>
           </div>
           {trendData.length > 1 ? (
             <div className="px-3">
               <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={trendData} margin={{ top: 12, right: 12, left: 0, bottom: 4 }}>
+                <ComposedChart data={trendData} margin={{ top: 12, right: 8, left: 0, bottom: 4 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} />
-                  <YAxis allowDecimals={false} tick={{ fill: "#94a3b8", fontSize: 12 }} tickLine={false} axisLine={false} width={36} />
-                  <Tooltip cursor={{ stroke: "rgba(255,255,255,0.12)" }} content={<ChartTooltip />} />
+                  {/* Left axis = Stale (line). Right axis = Blocked (bars) on its
+                      own scale, so the much smaller blocked counts stay legible. */}
+                  <YAxis yAxisId="stale" allowDecimals={false} tick={{ fill: "#94a3b8", fontSize: 12 }} tickLine={false} axisLine={false} width={36} />
+                  <YAxis yAxisId="blocked" orientation="right" allowDecimals={false} tick={{ fill: "#cf6679", fontSize: 12 }} tickLine={false} axisLine={false} width={28} />
+                  <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<ChartTooltip />} />
                   <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 12 }} formatter={(v: string) => <span style={{ color: "#94a3b8" }}>{v}</span>} />
-                  <Line type="monotone" dataKey="Stale" stroke="#9A6A12" strokeWidth={2} dot={{ r: 2 }} />
-                  <Line type="monotone" dataKey="Blocked" stroke="#9E1B32" strokeWidth={2} dot={{ r: 2 }} />
-                </LineChart>
+                  <Bar yAxisId="blocked" dataKey="Blocked" fill="#9E1B32" fillOpacity={0.85} barSize={10} radius={[2, 2, 0, 0]} />
+                  <Line yAxisId="stale" type="monotone" dataKey="Stale" stroke="#9A6A12" strokeWidth={2} dot={{ r: 2 }} />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           ) : (
@@ -450,12 +481,14 @@ export function AgingView() {
                     <TableRow>
                       <TableHead>Key</TableHead>
                       <TableHead>Summary</TableHead>
-                      <TableHead className="text-right">Days in status</TableHead>
                       <TableHead>Assignee</TableHead>
                       <TableHead className="text-right">Days w/ them</TableHead>
                       <TableHead>Activity</TableHead>
+                      <TableHead className="text-right">Idle (days)</TableHead>
                       <TableHead>Blocked</TableHead>
+                      <TableHead className="text-right">Days blocked</TableHead>
                       <TableHead>Blocked by</TableHead>
+                      <TableHead className="text-right">Days in status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -481,7 +514,7 @@ export function AgingView() {
                           return (
                             <React.Fragment key={st}>
                               <TableRow className="border-y border-line bg-muted/40 hover:bg-muted/40">
-                                <TableCell colSpan={8} className="py-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                                <TableCell colSpan={10} className="py-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                                   {st.replace(/​/g, "")}
                                   <span className="ml-2 text-faint-fg">· {rows.length}</span>
                                 </TableCell>
